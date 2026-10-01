@@ -95,6 +95,8 @@ stateDiagram-v2
 | Bekleme teklifi | "Beklediğiniz saat boşaldı" + son onay saati | `offer:{kayıt}` |
 | Maça 24 saatten az | "Maç hatırlatması" | `reminder:{id}` |
 | Maça 48 saatten az, kapora ödenmemiş | "Kapora bekleniyor" | `deposit-reminder:{id}` |
+| Takım maçı eklendi / iptal edildi | Kaptan dışındaki üyelere | `team-match:{maç}:{kişi}`, `team-match-cancelled:{maç}:{kişi}` |
+| Takım maçına 24 saatten az | "Takım maçı yaklaşıyor": güncel sayılar + kişinin yanıtı; "Gelmiyorum" diyenlere gitmez. Maç 24 saatten az kala eklendiyse gitmez (ekleme bildirimi yeni). | `team-match-reminder:{maç}:{kişi}` |
 
 Uygulama içi bildirim her zaman yazılır. E-posta (varsayılan açık) ve SMS (varsayılan kapalı, telefon
 gerekli) müşterinin tercihidir. Misafir rezervasyonunda telefon varsa yalnızca demo SMS oluşur.

@@ -164,4 +164,8 @@ public class TeamMatch {
 		return theirScore;
 	}
 
+	public Instant getCreatedAt() {
+		return createdAt;
+	}
+
 }

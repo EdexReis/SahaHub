@@ -188,6 +188,47 @@ class TeamMatchIT {
 	}
 
 	@Test
+	void reminder24HoursBefore_notToNotGoing_once() {
+		Squad s = squad();
+		Long m = freeMatch(s); // 3 Mart 20:00; şimdi 2 Mart 09:00 (35 saat önce)
+		Long cancelled = service.create(s.captain(), s.teamId(), null, DAY.atTime(19, 0), "Yer", null, null);
+		service.cancel(s.captain(), cancelled);
+		service.answer(s.p1(), m, Answer.GOING);
+		service.answer(s.p2(), m, Answer.NOT_GOING);
+
+		service.enqueueReminders();
+		assertThat(reminders(m)).as("24 saatten önce gitmez").isZero();
+
+		clock.set(DAY.atTime(8, 0).atZone(TestData.IST).toInstant());
+		Long late = service.create(s.captain(), s.teamId(), null, DAY.atTime(21, 0), "Yer", null, null);
+		service.enqueueReminders();
+		service.enqueueReminders(); // görev tekrar çalışır; ikinci hatırlatma oluşmaz
+		assertThat(jdbc.queryForList("select user_id from notification where dedup_key like ?", Long.class,
+				"team-match-reminder:" + m + ":%"))
+			.as("kaptan (yanıtsız) ve p1 (geliyor); p2 gelmiyor dedi").containsExactlyInAnyOrder(s.captain().id(), s.p1().id());
+		assertThat(jdbc.queryForObject("select body from notification where dedup_key = ?", String.class,
+				"team-match-reminder:" + m + ":" + s.captain().id()))
+			.contains("Rakip FK", "1 geliyor, 0 kararsız, 1 yanıt vermedi", "Henüz yanıt vermediniz");
+		assertThat(jdbc.queryForObject("select count(*) from notification_outbox where dedup_key like ?", Integer.class,
+				"team-match-reminder:" + m + ":%")).as("e-posta tercihi açık üyelere outbox satırı").isPositive();
+		assertThat(reminders(cancelled)).as("iptal edilen maç").isZero();
+		assertThat(reminders(late)).as("24 saatten az kala eklenen maç: ekleme bildirimi yeterli").isZero();
+
+		// Maç başladıktan sonra hatırlatma yok
+		Squad t = squad();
+		clock.set(DAY.atTime(8, 0).atZone(TestData.IST).toInstant().minus(Duration.ofDays(2)));
+		Long past = service.create(t.captain(), t.teamId(), null, DAY.atTime(7, 0), "Yer", null, null);
+		clock.set(DAY.atTime(8, 0).atZone(TestData.IST).toInstant());
+		service.enqueueReminders();
+		assertThat(reminders(past)).isZero();
+	}
+
+	int reminders(Long matchId) {
+		return jdbc.queryForObject("select count(*) from notification where dedup_key like ?", Integer.class,
+				"team-match-reminder:" + matchId + ":%");
+	}
+
+	@Test
 	void pagesAndLogo() throws Exception {
 		Squad s = squad();
 		Long m = freeMatch(s);
