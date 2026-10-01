@@ -28,7 +28,19 @@ public class Tournament {
 	public static final int MAX_ENTRIES = 20;
 
 	public enum Format {
-		LEAGUE
+
+		LEAGUE("Lig"), KNOCKOUT("Eleme (kupa)");
+
+		private final String label;
+
+		Format(String label) {
+			this.label = label;
+		}
+
+		public String label() {
+			return label;
+		}
+
 	}
 
 	public enum Status {
@@ -100,13 +112,21 @@ public class Tournament {
 
 	public Tournament(Long businessId, Long branchId, String name, boolean doubleRound, int pointsWin, int pointsDraw,
 			int pointsLoss, Long createdBy, Instant now) {
+		this(businessId, branchId, name, Format.LEAGUE, doubleRound, pointsWin, pointsDraw, pointsLoss, createdBy, now);
+	}
+
+	public Tournament(Long businessId, Long branchId, String name, Format format, boolean doubleRound, int pointsWin,
+			int pointsDraw, int pointsLoss, Long createdBy, Instant now) {
+		if (format == Format.KNOCKOUT && doubleRound) {
+			throw new IllegalArgumentException("Eleme usulünde çift devre olmaz");
+		}
 		if (pointsWin < pointsDraw || pointsDraw < pointsLoss) {
 			throw new IllegalArgumentException("Puanlar galibiyet ≥ beraberlik ≥ mağlubiyet olmalı");
 		}
 		this.businessId = businessId;
 		this.branchId = branchId;
 		this.name = name.strip();
-		this.format = Format.LEAGUE;
+		this.format = format;
 		this.doubleRound = doubleRound;
 		this.pointsWin = pointsWin;
 		this.pointsDraw = pointsDraw;
@@ -126,6 +146,15 @@ public class Tournament {
 		require(Status.ACTIVE);
 		this.status = Status.FINISHED;
 		this.finishedAt = now;
+	}
+
+	public boolean isKnockout() {
+		return format == Format.KNOCKOUT;
+	}
+
+	/** Bu formatta en fazla kaç takım olabilir. */
+	public int maxEntries() {
+		return isKnockout() ? Bracket.MAX_ENTRIES : MAX_ENTRIES;
 	}
 
 	public boolean isDraft() {

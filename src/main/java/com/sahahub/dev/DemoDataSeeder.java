@@ -63,6 +63,7 @@ import com.sahahub.community.domain.TeamMember;
 import com.sahahub.community.domain.TeamMemberRepository;
 import com.sahahub.community.domain.TeamRepository;
 import com.sahahub.notification.app.NotificationWriter;
+import com.sahahub.tournament.domain.Bracket;
 import com.sahahub.tournament.domain.RoundRobin;
 import com.sahahub.tournament.domain.Tournament;
 import com.sahahub.tournament.domain.TournamentEntry;
@@ -369,6 +370,7 @@ class DemoDataSeeder implements ApplicationRunner {
 		Reservation firstOfSeries = reservations.findBySeriesIdOrderBySeriesIndex(series.getId()).getFirst();
 		seedCommunity(captain, customer, longName, firstOfSeries, today, now);
 		seedLeague(yesil, kadikoy, k3, manager1, today, now);
+		seedCup(kuzey, cankaya, c1, owner2, today, now);
 		// Kurgusal saha çizimleri (gerçek fotoğraf değil); yükleme ile aynı doğrulamadan geçer
 		photos.attachForDemo(k1, illustration(new java.awt.Color(0x1F7A47), true));
 		photos.attachForDemo(k2, illustration(new java.awt.Color(0x2E8B57), false));
@@ -434,6 +436,48 @@ class DemoDataSeeder implements ApplicationRunner {
 			}
 		}
 		t.start(now.minus(Duration.ofDays(10)));
+	}
+
+	/**
+	 * Eleme usulü kupa: Çankaya'da 6 takım. İlk tur 3 gün önce oynandı (biri penaltılarla), iki üst tohum bay
+	 * geçti; yarı finaller 4 gün sonra A Sahası'nda planlı. Final, yarı finaller oynanınca açılır.
+	 */
+	private void seedCup(Business business, Branch branch, Pitch pitch, AppUser owner, LocalDate today, Instant now) {
+		Tournament t = tournaments.save(new Tournament(business.getId(), branch.getId(), "Çankaya Bahar Kupası",
+				Tournament.Format.KNOCKOUT, false, 3, 1, 0, owner.getId(), now.minus(Duration.ofDays(10))));
+		List<Long> ids = new java.util.ArrayList<>();
+		for (String n : List.of("Çankaya Kartalları", "Ankara Gençlik", "Kızılay SK", "Bahçeli Yıldızları",
+				"Tunalı FK", "Kurgusal Spor")) {
+			ids.add(entries.save(new TournamentEntry(t.getId(), n, now.minus(Duration.ofDays(10)))).getId());
+		}
+		java.util.Map<String, Long> winners = new java.util.HashMap<>();
+		int hour = 20;
+		boolean penalties = false;
+		for (Bracket.Slot s : Bracket.build(ids, winners).getFirst()) {
+			if (!s.ready()) {
+				continue;
+			}
+			TournamentMatch m = matches.save(TournamentMatch.knockout(t.getId(), 1, s.slot(), s.home(), s.away()));
+			TimeRange play = play(today.minusDays(3), hour++, 60);
+			m.schedule(pitch.getId(), play);
+			occupancy.occupy(pitch.getId(), play, PitchOccupancy.Source.TOURNAMENT_MATCH, m.getId());
+			if (penalties) {
+				m.recordPenaltyResult(2, s.away(), now); // 2-2, penaltılarla deplasman
+			}
+			else {
+				m.recordResult(3, 1, now);
+			}
+			penalties = true;
+			winners.put(Bracket.key(1, s.slot()), m.getWinnerEntryId());
+		}
+		hour = 20;
+		for (Bracket.Slot s : Bracket.build(ids, winners).get(1)) {
+			TournamentMatch m = matches.save(TournamentMatch.knockout(t.getId(), 2, s.slot(), s.home(), s.away()));
+			TimeRange play = play(today.plusDays(4), hour++, 60);
+			m.schedule(pitch.getId(), play);
+			occupancy.occupy(pitch.getId(), play, PitchOccupancy.Source.TOURNAMENT_MATCH, m.getId());
+		}
+		t.start(now.minus(Duration.ofDays(7)));
 	}
 
 	/** Kuşbakışı saha çizimi (PNG). Demo veride fotoğraf yerine kullanılır; kurgusaldır. */

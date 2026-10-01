@@ -99,7 +99,12 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
      (bir maç doluysa hiçbiri planlanmaz).
    - Takvimde 6 gün sonrasına gidin: Mini Saha'da lacivert kenarlı **lig maçı** kutuları; o saatlere
      rezervasyon yapılamaz.
-7. Resepsiyon hesabıyla **Ligler** sekmesi görünmez; `/isletme/subeler/1/ligler` adresi 403 verir. Maçlar
+7. **Ligler → Çankaya Bahar Kupası** (eleme): eşleşme ağacı, ilk turu bay geçen iki üst tohum ve penaltıyla
+   biten çeyrek final. Yarı finaller 4 gün sonraya planlı; skor ancak maç başladıktan sonra girilebilir.
+   Hemen denemek için `sahip@kuzeyhali.test` ile **Ligler → Yeni lig veya turnuva → Eleme** açın, 3 takım
+   ekleyin, **Eşleşmeleri oluştur**, maçı birkaç dakika sonrasına planlayın; maç saati gelince skoru girin.
+   Berabere girerseniz penaltı galibi istenir; maç bitince final kendiliğinden açılır.
+8. Resepsiyon hesabıyla **Ligler** sekmesi görünmez; `/isletme/subeler/1/ligler` adresi 403 verir. Maçlar
    takvimde yine görünür.
 
 ## 8. Raporlar ve yönetim (Aşama 6)

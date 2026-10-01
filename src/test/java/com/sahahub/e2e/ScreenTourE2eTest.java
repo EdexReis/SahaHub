@@ -97,6 +97,11 @@ class ScreenTourE2eTest extends E2eTestBase {
 			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kadıköy Kış Ligi 2026")).click();
 			assertThat(p.locator("table.standings")).isVisible();
 			check(p, size, "33-league");
+			p.navigate("/ligler");
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Çankaya Bahar Kupası")).click();
+			assertThat(p.locator(".bracket")).isVisible();
+			assertThat(p.locator(".bracket")).containsText("Bay");
+			check(p, size, "35-cup");
 			ctx.close();
 
 			BrowserContext c2 = newContext(size.width(), size.height());
