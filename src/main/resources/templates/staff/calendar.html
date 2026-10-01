@@ -4,11 +4,12 @@
 <body>
 <main id="main" class="staff-shell">
 	<div class="staff-main">
+		<nav th:replace="~{fragments/staffnav :: subnav(${cal.branchId}, 'takvim')}"></nav>
 		<!-- Araç çubuğu -->
 		<div class="cal-toolbar">
 			<div class="cal-title">
 				<p class="eyebrow truncate" th:text="${cal.businessName} + ' · ' + ${cal.role.label()}">İşletme · Resepsiyon</p>
-				<h1 class="truncate" th:if="${cal.mode.name() == 'DAY'}" th:text="${cal.branchName} + ' · ' + ${@fmt.dayMonth(cal.day)}">Şube · 1 Ekim Çarşamba</h1>
+				<h1 class="truncate" th:if="${cal.mode.name() == 'DAY'}" th:text="${cal.branchName} + ' · ' + ${@fmt.dayMonth(cal.day)}" th:title="${cal.branchName} + ' · ' + ${@fmt.dayMonth(cal.day)}">Şube · 1 Ekim Çarşamba</h1>
 				<h1 class="truncate" th:if="${cal.mode.name() == 'WEEK'}" th:text="${cal.branchName} + ' · ' + ${#temporals.format(cal.weekStart, 'd MMM')} + ' haftası'">Şube · hafta</h1>
 			</div>
 
@@ -103,7 +104,7 @@
 						<a th:if="${it.kind().name() == 'RESERVATION'}" class="ev"
 						   th:classappend="${'ev-' + it.status().name() + (it.compact() ? ' compact' : '') + (it.checkedIn() ? ' checked-in' : '')}"
 						   th:href="@{/isletme/rezervasyonlar/{c}(c=${it.code()})}"
-						   th:hx-get="@{/isletme/rezervasyonlar/{c}(c=${it.code()})}" th:aria-label="${c.title()} + ', ' + ${it.subtitle()} + ', ' + ${it.title()} + ', ' + ${it.status().label()} + (${it.checkedIn()} ? ', geldi' : '')" th:aria-current="${r != null and r.code() == it.code()} ? 'true'"
+						   th:hx-get="@{/isletme/rezervasyonlar/{c}(c=${it.code()})}" th:aria-label="${c.title()} + ', ' + ${it.subtitle()} + ', ' + ${it.title()} + ', ' + ${it.status().label()} + (${it.checkedIn()} ? ', geldi' : '') + (${it.payLabel() != null} ? ', ' + ${it.payLabel()} : '')" th:aria-current="${r != null and r.code() == it.code()} ? 'true'"
 						   hx-target="#panel" hx-indicator="#panel"
 						   th:style="|grid-row:${it.rowStart()} / span ${it.rowSpan()}|">
 							<span class="ev-sub" th:text="${it.subtitle()}">21:00–22:00</span>
@@ -111,6 +112,9 @@
 							<span class="ev-flag" th:if="${!it.compact() and it.status().name() == 'HELD'}">Geçici tutma</span>
 							<span class="ev-flag" th:if="${!it.compact() and it.checkedIn()}">✓ Geldi</span>
 							<span class="ev-flag" th:if="${!it.compact() and it.status().name() == 'NO_SHOW'}">Gelmedi</span>
+							<span class="ev-pay" th:if="${it.payLabel() != null and it.rowSpan() > 4}" th:classappend="'pay-' + ${it.payState()}" th:text="${it.payLabel()}">Kapora bekleniyor</span>
+							<span class="ev-paytag" th:if="${it.payState() != null and it.rowSpan() <= 4}" th:classappend="'pay-' + ${it.payState()}"
+							      th:text="${@fmt.payShort(it.payState())}" th:title="${it.payLabel()}">Kapora</span>
 						</a>
 						<div th:if="${it.kind().name() == 'BUFFER'}" class="ev ev-buffer" aria-hidden="true"
 						     th:style="|grid-row:${it.rowStart()} / span ${it.rowSpan()}|">hazırlık</div>
@@ -146,6 +150,27 @@
 		<th:block th:if="${r == null and panel == 'quick-booking'}" th:insert="~{staff/panels :: quick-booking}"/>
 		<th:block th:if="${r == null and panel == 'block'}" th:insert="~{staff/panels :: block}"/>
 		<th:block th:if="${r == null and panel == null}">
+			<section class="alerts" th:if="${alerts.any()}" aria-label="Bekleyen işler">
+				<th:block th:if="${!#lists.isEmpty(alerts.pendingDeposits())}">
+					<h2 class="alerts-title">Kapora bekleniyor <span class="count-pill" th:text="${#lists.size(alerts.pendingDeposits())}">2</span></h2>
+					<ul class="alert-list">
+						<li th:each="a : ${alerts.pendingDeposits()}"><a th:href="${a.href()}" th:hx-get="${a.href()}" hx-target="#panel" hx-indicator="#panel"><span th:text="${a.title()}">3 Eki 21:00</span><span class="tiny muted" th:text="${a.detail()}">Kapora</span></a></li>
+					</ul>
+				</th:block>
+				<th:block th:if="${!#lists.isEmpty(alerts.pendingTransfers())}">
+					<h2 class="alerts-title">Havale doğrulanacak <span class="count-pill" th:text="${#lists.size(alerts.pendingTransfers())}">1</span></h2>
+					<ul class="alert-list">
+						<li th:each="a : ${alerts.pendingTransfers()}"><a th:href="${a.href()}"><span th:text="${a.title()}">Ad</span><span class="tiny muted" th:text="${a.detail()}">300 ₺</span></a></li>
+					</ul>
+				</th:block>
+				<th:block th:if="${!#lists.isEmpty(alerts.failedRefunds())}">
+					<h2 class="alerts-title danger">İade başarısız <span class="count-pill" th:text="${#lists.size(alerts.failedRefunds())}">1</span></h2>
+					<ul class="alert-list">
+						<li th:each="a : ${alerts.failedRefunds()}"><a th:href="${a.href()}"><span th:text="${a.title()}">İade</span><span class="tiny muted" th:text="${a.detail()}">Neden</span></a></li>
+					</ul>
+				</th:block>
+			</section>
+			<p class="small" th:unless="${alerts.cashOpen()}"><span class="paybadge pay-UNPAID">Kasa kapalı</span></p>
 			<div class="panel-head"><h2>Sıradaki maçlar</h2></div>
 			<ul class="upcoming" th:if="${!#lists.isEmpty(cal.upcoming)}">
 				<li th:each="u : ${cal.upcoming}">

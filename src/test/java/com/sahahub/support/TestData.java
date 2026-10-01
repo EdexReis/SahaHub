@@ -26,6 +26,11 @@ import com.sahahub.identity.domain.StaffMembership;
 import com.sahahub.identity.domain.StaffMembershipRepository;
 import com.sahahub.identity.domain.StaffRole;
 import com.sahahub.identity.security.AppUserPrincipal;
+import com.sahahub.pricing.domain.Coupon;
+import com.sahahub.pricing.domain.CouponRepository;
+import com.sahahub.pricing.domain.DepositPolicy;
+import com.sahahub.pricing.domain.ExtraService;
+import com.sahahub.pricing.domain.ExtraServiceRepository;
 
 /** Testler için kısa yoldan kayıt oluşturan yardımcı. Her çağrı yeni, benzersiz kayıtlar üretir. */
 public class TestData {
@@ -45,10 +50,15 @@ public class TestData {
 	private final BranchOpeningHoursRepository hours;
 	private final PitchRepository pitches;
 	private final PasswordEncoder encoder;
+	private final ExtraServiceRepository extras;
+	private final CouponRepository coupons;
 
 	public TestData(TransactionTemplate tx, AppUserRepository users, StaffMembershipRepository memberships,
 			BusinessRepository businesses, BranchRepository branches, BranchOpeningHoursRepository hours,
-			PitchRepository pitches, PasswordEncoder encoder) {
+			PitchRepository pitches, PasswordEncoder encoder, ExtraServiceRepository extras,
+			CouponRepository coupons) {
+		this.extras = extras;
+		this.coupons = coupons;
 		this.tx = tx;
 		this.users = users;
 		this.memberships = memberships;
@@ -103,6 +113,21 @@ public class TestData {
 			}
 			return br;
 		});
+	}
+
+	/** Şubenin kapora kuralını değiştirir (yalnızca bundan sonraki rezervasyonlara uygulanır). */
+	public void deposit(Venue v, DepositPolicy policy) {
+		tx.executeWithoutResult(status -> branches.findById(v.branch().getId()).orElseThrow().changeDepositPolicy(policy));
+	}
+
+	public ExtraService extra(Venue v, String name, String price) {
+		return tx.execute(status -> extras.save(new ExtraService(v.branch().getId(), name, new BigDecimal(price),
+				Instant.parse("2026-01-01T00:00:00Z"))));
+	}
+
+	public Coupon coupon(Venue v, String code, Coupon.Kind kind, String value, int maxUses) {
+		return tx.execute(status -> coupons.save(new Coupon(v.business().getId(), code, kind, new BigDecimal(value),
+				maxUses, null, null, Instant.parse("2026-01-01T00:00:00Z"))));
 	}
 
 	public AppUserPrincipal customer() {

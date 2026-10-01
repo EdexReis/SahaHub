@@ -18,6 +18,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -52,6 +53,18 @@ import com.sahahub.pricing.domain.PriceCalculator;
 import com.sahahub.pricing.domain.PriceQuote;
 import com.sahahub.pricing.domain.PriceRule;
 import com.sahahub.pricing.domain.PriceRuleRepository;
+import com.sahahub.payment.domain.CashSession;
+import com.sahahub.payment.domain.CashSessionRepository;
+import com.sahahub.payment.domain.Expense;
+import com.sahahub.payment.domain.ExpenseRepository;
+import com.sahahub.payment.domain.Payment;
+import com.sahahub.payment.domain.PaymentRepository;
+import com.sahahub.payment.provider.SimulatedPaymentProvider;
+import com.sahahub.pricing.domain.Coupon;
+import com.sahahub.pricing.domain.CouponRepository;
+import com.sahahub.pricing.domain.DepositPolicy;
+import com.sahahub.pricing.domain.ExtraService;
+import com.sahahub.pricing.domain.ExtraServiceRepository;
 import com.sahahub.shared.domain.TimeRange;
 
 /**
@@ -85,12 +98,21 @@ class DemoDataSeeder implements ApplicationRunner {
 	private final ReservationRepository reservations;
 	private final ReservationPriceLineRepository priceLines;
 	private final OccupancyService occupancy;
+	private final ExtraServiceRepository extras;
+	private final CouponRepository coupons;
+	private final PaymentRepository payments;
+	private final CashSessionRepository cashSessions;
+	private final ExpenseRepository expenses;
+	private final SimulatedPaymentProvider simProvider;
+	private final JdbcTemplate jdbc;
 
 	DemoDataSeeder(TransactionTemplate tx, PasswordEncoder encoder, Clock clock, AppUserRepository users,
 			StaffMembershipRepository memberships, BusinessRepository businesses, BranchRepository branches,
 			BranchOpeningHoursRepository hours, BranchSpecialDayRepository specialDays, PitchRepository pitches,
 			PitchBlockRepository blocks, PriceRuleRepository priceRules, ReservationRepository reservations,
-			ReservationPriceLineRepository priceLines, OccupancyService occupancy) {
+			ReservationPriceLineRepository priceLines, OccupancyService occupancy, ExtraServiceRepository extras,
+			CouponRepository coupons, PaymentRepository payments, CashSessionRepository cashSessions,
+			ExpenseRepository expenses, SimulatedPaymentProvider simProvider, JdbcTemplate jdbc) {
 		this.tx = tx;
 		this.encoder = encoder;
 		this.clock = clock;
@@ -106,6 +128,13 @@ class DemoDataSeeder implements ApplicationRunner {
 		this.reservations = reservations;
 		this.priceLines = priceLines;
 		this.occupancy = occupancy;
+		this.extras = extras;
+		this.coupons = coupons;
+		this.payments = payments;
+		this.cashSessions = cashSessions;
+		this.expenses = expenses;
+		this.simProvider = simProvider;
+		this.jdbc = jdbc;
 	}
 
 	@Override
@@ -146,6 +175,20 @@ class DemoDataSeeder implements ApplicationRunner {
 		specialDays.save(new BranchSpecialDay(atasehir.getId(), today.plusDays(9), DayHours.CLOSED,
 				"Zemin yenileme (kurgusal tatil günü)"));
 
+		// Aşama 3: kapora kuralları (IBAN'lar kurgusaldır)
+		kadikoy.changeDepositPolicy(new DepositPolicy(DepositPolicy.Type.PERCENT, new BigDecimal("30")));
+		kadikoy.changeBankIban("TR00 0000 0000 0000 0000 0000 01");
+		atasehir.changeDepositPolicy(new DepositPolicy(DepositPolicy.Type.FIXED, new BigDecimal("300")));
+		atasehir.changeBankIban("TR00 0000 0000 0000 0000 0000 02");
+		for (Branch b : List.of(kadikoy, atasehir)) {
+			extras.save(new ExtraService(b.getId(), "Krampon kiralama", new BigDecimal("60"), now));
+			extras.save(new ExtraService(b.getId(), "Hakem", new BigDecimal("450"), now));
+			extras.save(new ExtraService(b.getId(), "İçecek paketi (14 kişilik)", new BigDecimal("350"), now));
+		}
+		coupons.save(new Coupon(yesil.getId(), "HOSGELDIN", Coupon.Kind.PERCENT, new BigDecimal("10"), 100, null, null,
+				now));
+		coupons.save(new Coupon(yesil.getId(), "ILKMAC", Coupon.Kind.FIXED, new BigDecimal("200"), 1, null, null, now));
+
 		memberships.save(StaffMembership.owner(owner1.getId(), yesil.getId(), now));
 		memberships.save(StaffMembership.forBranch(manager1.getId(), yesil.getId(), kadikoy.getId(),
 				StaffRole.BRANCH_MANAGER, now));
@@ -176,6 +219,8 @@ class DemoDataSeeder implements ApplicationRunner {
 		Branch cankaya = branch(kuzey, "Çankaya", "Örnek Bulvarı No: 00", "Çankaya", "Ankara", "0312 000 00 01", now);
 		weekly(cankaya, LocalTime.of(10, 0), LocalTime.of(0, 0), LocalTime.of(10, 0), LocalTime.of(0, 0));
 		memberships.save(StaffMembership.owner(owner2.getId(), kuzey.getId(), now));
+		extras.save(new ExtraService(cankaya.getId(), "Hakem", new BigDecimal("400"), now));
+		coupons.save(new Coupon(kuzey.getId(), "KUZEY50", Coupon.Kind.FIXED, new BigDecimal("50"), 20, null, null, now));
 		Pitch c1 = pitch(cankaya, "A Sahası", 14, Surface.ARTIFICIAL_TURF, "1100", false, 60, 60, 0, now);
 		Pitch c2 = pitch(cankaya, "B Sahası", 12, Surface.ARTIFICIAL_TURF, "1000", true, 90, 90, 0, now);
 		priceRules.save(new PriceRule(c1.getId(), "Akşam", EnumSet.allOf(DayOfWeek.class), LocalTime.of(19, 0), null,
@@ -185,17 +230,19 @@ class DemoDataSeeder implements ApplicationRunner {
 		// Bugün Kadıköy'ün akşamı yoğun: takvimin dolu görünümü bununla denenir.
 		int[] eveningHours = { 18, 19, 20, 21, 22, 23 };
 		String[] guests = { "Ali Vural", "Kaan Er", "Okan Tunç", "Mert Aydın", "Barış Uçar", "Can Ekinci" };
+		List<Reservation> evening = new java.util.ArrayList<>();
 		for (int i = 0; i < eveningHours.length; i++) {
-			staffBooked(kadikoy, k1, today, eveningHours[i], 60, null, guests[i], Channel.PHONE, reception1, now);
+			evening.add(staffBooked(kadikoy, k1, today, eveningHours[i], 60, null, guests[i], Channel.PHONE, reception1,
+					now));
 		}
-		customerBooked(kadikoy, k2, today, 20, customer, now);
+		Reservation denizToday = customerBooked(kadikoy, k2, today, 20, customer, now);
 		customerBooked(kadikoy, k2, today, 21, longName, now);
 		staffBooked(kadikoy, k2, today, 22, 90, null, "Şirket Turnuvası (Kurgusal A.Ş.)", Channel.WALK_IN,
 				manager1, now);
 		staffBooked(kadikoy, k3, today, 19, 60, captain, null, Channel.PHONE, reception1, now);
 		staffBooked(kadikoy, k1, today.plusDays(1), 0, 60, null, "Gece Ligi", Channel.PHONE, reception1, now);
 		customerHeld(kadikoy, k2, today.plusDays(1), 21, captain, now);
-		customerBooked(kadikoy, k1, today.plusDays(2), 21, customer, now);
+		Reservation denizLater = customerBooked(kadikoy, k1, today.plusDays(2), 21, customer, now);
 		customerBooked(atasehir, a1, today.plusDays(3), 20, captain, now);
 		customerBooked(cankaya, c1, today.plusDays(1), 20, customer, now);
 		staffBooked(cankaya, c2, today.plusDays(1), 19, 90, null, "Çankaya Kartalları", Channel.PHONE, owner2, now);
@@ -210,6 +257,33 @@ class DemoDataSeeder implements ApplicationRunner {
 		Reservation cancelled = customerBooked(kadikoy, k1, today.plusDays(4), 20, customer, now);
 		cancelled.cancel(customer.getId(), "Müşteri iptali", now);
 		occupancy.release(PitchOccupancy.Source.RESERVATION, cancelled.getId());
+
+		// Ödemeler ve kasa (Aşama 3). Dünkü kasa kapanmış (50 ₺ açık), bugünkü kasa açık.
+		Instant yesterdayOpen = today.minusDays(1).atTime(9, 0).atZone(IST).toInstant();
+		CashSession yesterday = cashSessions.save(new CashSession(kadikoy.getId(), new BigDecimal("500"),
+				reception1.getId(), yesterdayOpen));
+		cash(done, done.getTotalAmount(), yesterday, reception1, yesterdayOpen.plus(Duration.ofHours(12)));
+		pos(noShow, noShow.depositPolicy().depositFor(noShow.getTotalAmount()), reception1,
+				yesterdayOpen.plus(Duration.ofHours(10)));
+		expenses.save(new Expense(yesil.getId(), kadikoy.getId(), Expense.Category.UTILITIES, new BigDecimal("1200"),
+				"Elektrik faturası (kurgusal)", null, manager1.getId(), yesterdayOpen.plus(Duration.ofHours(2))));
+		BigDecimal expected = new BigDecimal("500").add(done.getTotalAmount());
+		yesterday.close(expected, expected.subtract(new BigDecimal("50")), "Bozuk para eksiği (kurgusal)",
+				reception1.getId(), yesterdayOpen.plus(Duration.ofHours(15)));
+		cashSessions.saveAndFlush(yesterday); // kapanış yazılmadan yeni kasa açılamaz (tek açık kasa kısıtı)
+
+		Instant todayOpen = today.atTime(9, 0).atZone(IST).toInstant();
+		CashSession todaySession = cashSessions.save(new CashSession(kadikoy.getId(), new BigDecimal("500"),
+				reception1.getId(), todayOpen.isAfter(now) ? now : todayOpen));
+		cash(evening.get(0), evening.get(0).depositPolicy().depositFor(evening.get(0).getTotalAmount()), todaySession,
+				reception1, now);
+		pos(evening.get(1), evening.get(1).getTotalAmount(), reception1, now);
+		expenses.save(new Expense(yesil.getId(), kadikoy.getId(), Expense.Category.SUPPLIES, new BigDecimal("250"),
+				"Çim fırçası (kurgusal)", todaySession.getId(), manager1.getId(), now));
+		onlinePaid(denizToday, denizToday.depositPolicy().depositFor(denizToday.getTotalAmount()), now);
+		payments.save(Payment.pendingCharge(denizLater.getBusinessId(), denizLater.getBranchId(), denizLater.getId(),
+				Payment.Method.BANK_TRANSFER, new BigDecimal("500"), "TRY", "demo-transfer-" + denizLater.getId(),
+				"Deniz Arslan", null, customer.getId(), now));
 
 		// Bakım kapatmaları
 		block(k3, today, 14, 17, PitchBlock.Reason.MAINTENANCE, "Çim fırçalama", manager1, now);
@@ -271,6 +345,7 @@ class DemoDataSeeder implements ApplicationRunner {
 		PriceQuote q = PriceCalculator.quote(r.playRange(), IST, p.getBaseHourlyPrice(), p.getCurrency(),
 				priceRules.findByPitchIdAndActiveTrue(p.getId()));
 		r.applyPrice(q.total(), q.currency());
+		r.snapshotDepositPolicy(branches.findById(p.getBranchId()).orElseThrow().depositPolicy());
 		Reservation saved = reservations.save(r);
 		for (int i = 0; i < q.lines().size(); i++) {
 			priceLines.save(new ReservationPriceLine(saved.getId(), i + 1, q.lines().get(i)));
@@ -285,6 +360,28 @@ class DemoDataSeeder implements ApplicationRunner {
 				day.atTime(toHour, 0).atZone(IST).toInstant());
 		PitchBlock block = blocks.save(new PitchBlock(p.getId(), range, reason, note, by.getId(), now));
 		occupancy.occupy(p.getId(), range, PitchOccupancy.Source.BLOCK, block.getId());
+	}
+
+	private void cash(Reservation r, BigDecimal amount, CashSession session, AppUser staff, Instant at) {
+		payments.save(Payment.collected(r.getBusinessId(), r.getBranchId(), r.getId(), Payment.Method.CASH, amount,
+				"TRY", "demo-cash-" + r.getId(), session.getId(), null, staff.getId(), at));
+	}
+
+	private void pos(Reservation r, BigDecimal amount, AppUser staff, Instant at) {
+		payments.save(Payment.collected(r.getBusinessId(), r.getBranchId(), r.getId(), Payment.Method.MANUAL_POS,
+				amount, "TRY", "demo-pos-" + r.getId(), null, null, staff.getId(), at));
+	}
+
+	/** Simülasyon sağlayıcısında başarılı olmuş bir çevrim içi kapora (iade denemesi için gerçek kayıtlı). */
+	private void onlinePaid(Reservation r, BigDecimal amount, Instant at) {
+		String key = "demo-online-" + r.getId();
+		Payment p = Payment.pendingCharge(r.getBusinessId(), r.getBranchId(), r.getId(), Payment.Method.ONLINE_SIM,
+				amount, "TRY", key, null, "Kapora", r.getCustomerId(), at);
+		String ref = simProvider.createCharge(key, amount, "TRY", "demo").providerRef();
+		jdbc.update("update sim_charge set status = 'SUCCEEDED' where provider_ref = ?", ref);
+		p.attachProviderRef(ref);
+		p.succeed(at);
+		payments.save(p);
 	}
 
 	private static TimeRange play(LocalDate day, int hour, int minutes) {

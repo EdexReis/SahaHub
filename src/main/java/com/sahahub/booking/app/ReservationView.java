@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.sahahub.booking.domain.Channel;
 import com.sahahub.booking.domain.ReservationStatus;
+import com.sahahub.pricing.domain.PriceBreakdown;
 
 /**
  * Rezervasyonun ekranda gösterilen hâli. Entity yerine bu kayıt (record) şablonlara verilir:
@@ -20,7 +21,7 @@ public record ReservationView(String code, ReservationStatus status, Channel cha
 		String currency, List<Line> lines, ZonedDateTime holdExpiresAt, boolean customerCanCancel,
 		ZonedDateTime customerCancelDeadline, String customerName, String contactPhone, String note,
 		ZonedDateTime checkedInAt, String cancelReason, ZonedDateTime createdAt, LocalDate businessDay,
-		Actions actions, ZonedDateTime checkInOpensAt) {
+		Actions actions, ZonedDateTime checkInOpensAt, BigDecimal deposit, Long businessId) {
 
 	/** Personelin şu an yapabileceği işlemler (sunucu yine de her komutta yeniden doğrular). */
 	public record Actions(boolean checkIn, boolean complete, boolean noShow, boolean move, boolean cancel) {
@@ -36,8 +37,27 @@ public record ReservationView(String code, ReservationStatus status, Channel cha
 		return !start.toLocalDate().equals(businessDay);
 	}
 
-	public record Line(String label, ZonedDateTime start, ZonedDateTime end, int minutes, BigDecimal hourlyRate,
-			BigDecimal amount) {
+	/** Fiyat kalemi. PITCH kalemlerinde zaman ve saatlik ücret, EXTRA'da adet, indirimlerde oran/gerekçe dolu. */
+	public record Line(Long id, PriceBreakdown.Kind kind, String label, ZonedDateTime start, ZonedDateTime end,
+			Integer minutes, BigDecimal hourlyRate, Integer quantity, BigDecimal unitAmount, BigDecimal percent,
+			String reason, BigDecimal amount) {
+
+		public boolean pitch() {
+			return kind == PriceBreakdown.Kind.PITCH;
+		}
+
+		public boolean discount() {
+			return kind == PriceBreakdown.Kind.COUPON || kind == PriceBreakdown.Kind.STAFF_DISCOUNT;
+		}
+
+	}
+
+	public boolean depositRequired() {
+		return deposit.signum() > 0;
+	}
+
+	public boolean hasCoupon() {
+		return lines.stream().anyMatch(l -> l.kind() == PriceBreakdown.Kind.COUPON);
 	}
 
 	public boolean held() {

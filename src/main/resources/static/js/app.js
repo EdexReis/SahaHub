@@ -32,6 +32,11 @@
 		if (msg && !window.confirm(msg)) e.preventDefault();
 	}, true);
 
+	// Yazdır düğmesi (satır içi script CSP ile yasak olduğu için buradan bağlanır)
+	document.addEventListener("click", function (e) {
+		if (e.target.matches && e.target.matches("[data-print]")) window.print();
+	});
+
 	// Değişince formu gönder (takvim tarih seçici): <input data-autosubmit>
 	document.addEventListener("change", function (e) {
 		if (e.target.matches && e.target.matches("[data-autosubmit]")) e.target.form.submit();

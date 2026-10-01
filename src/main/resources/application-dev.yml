@@ -9,3 +9,7 @@ server:
         secure: false
 sahahub:
   demo-data: true
+  payment:
+    simulation:
+      # Yalnızca yerel geliştirme için; .env içinde PAYMENT_SIM_WEBHOOK_SECRET verilirse o kullanılır
+      webhook-secret: ${PAYMENT_SIM_WEBHOOK_SECRET:yerel-gelistirme-sim-anahtari}

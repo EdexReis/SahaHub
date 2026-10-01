@@ -2,14 +2,21 @@
 <html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
 <head><title>Rezervasyon özeti · SahaHub</title></head>
 <body>
-<main id="main" class="page page-narrow">
+<main id="main" class="page page-narrow" th:with="s=${pay.payments().summary()}, base='/rezervasyon/' + ${r.code()}">
 	<p class="small" style="margin-bottom:8px"><a th:href="@{/rezervasyonlarim}">← Rezervasyonlarım</a></p>
 	<div class="page-head">
 		<div style="min-width:0">
 			<p class="eyebrow" th:text="'Rezervasyon ' + ${r.code()}">Rezervasyon ABC</p>
-			<h1 th:text="${r.held()} ? 'Rezervasyonu onayla' : 'Rezervasyon özeti'">Rezervasyon özeti</h1>
+			<h1 th:text="${r.held()} ? 'Rezervasyonu tamamla' : 'Rezervasyon özeti'">Rezervasyon özeti</h1>
 		</div>
 		<span class="status" th:classappend="'status-' + ${r.status().name()}" th:text="${r.status().label()}">Onaylandı</span>
+	</div>
+
+	<div class="alert alert-info" role="status" th:if="${param.odeme != null and param.odeme[0] == 'delayed_success'}">
+		Ödemeniz alındı, sağlayıcının onayı bekleniyor. Onay gelince bu sayfa güncellenir; sayfayı birazdan yenileyin.
+	</div>
+	<div class="alert alert-error" role="alert" th:if="${param.odeme != null and param.odeme[0] == 'fail'}">
+		Ödeme başarısız oldu. Saatiniz hâlâ tutuluyorsa yeniden deneyebilirsiniz.
 	</div>
 
 	<div class="hold-timer" th:if="${r.held()}" th:data-expires="${r.holdExpiresAt().toInstant()}" data-disables="#confirm-btn">
@@ -30,35 +37,102 @@
 		</dl>
 
 		<hr class="rule">
-		<h2 style="font-size:16px">Fiyat ayrıntısı</h2>
-		<table class="price-table">
-			<tbody>
-			<tr th:each="l : ${r.lines()}">
-				<td><span th:text="${l.label()}">Standart</span><br>
-					<span class="tiny muted" th:text="${@fmt.timeRange(l.start(), l.end())} + ' · ' + ${l.minutes()} + ' dk × ' + ${@fmt.money(l.hourlyRate(), r.currency())} + '/saat'">…</span></td>
-				<td th:text="${@fmt.money(l.amount(), r.currency())}">1.400,00 ₺</td>
-			</tr>
-			</tbody>
-			<tfoot><tr><td>Toplam</td><td th:text="${@fmt.money(r.total(), r.currency())}">1.400,00 ₺</td></tr></tfoot>
-		</table>
-		<p class="notice-demo">Bu sürümde çevrim içi ödeme yoktur. Ücret sahada ödenir.</p>
+		<h2 class="section-title">Fiyat</h2>
+		<table th:replace="~{fragments/money :: lines(${r}, ${r.held()} ? ${base} : null, false)}"></table>
 
-		<div th:if="${r.held()}" class="btn-row" style="margin-top:16px">
-			<form th:action="@{/rezervasyon/{c}/onayla(c=${r.code()})}" method="post" style="flex:1 1 220px">
-				<button id="confirm-btn" class="btn btn-primary btn-block" type="submit">Rezervasyonu onayla</button>
+		<!-- Geçici tutmada müşteri ek hizmet ve kupon ekleyebilir -->
+		<div class="addons" th:if="${r.held()}">
+			<form th:if="${!#lists.isEmpty(pay.extras())}" th:action="@{__${base}__/ek-hizmet}" method="post" class="addon-row">
+				<label class="sr-only" for="extra">Ek hizmet</label>
+				<select class="select" id="extra" name="extraId">
+					<option th:each="e : ${pay.extras()}" th:value="${e.id()}" th:text="${e.name()} + ' (' + ${@fmt.moneyShort(e.unitPrice(), r.currency())} + ')'">Krampon</option>
+				</select>
+				<label class="sr-only" for="qty">Adet</label>
+				<select class="select qty" id="qty" name="quantity">
+					<option th:each="q : ${ {1,2,3,4,5,6,7,8,9,10,12,14} }" th:value="${q}" th:text="${q} + ' adet'">1</option>
+				</select>
+				<button class="btn btn-secondary btn-sm" type="submit">Ekle</button>
 			</form>
-			<form th:action="@{/rezervasyon/{c}/iptal(c=${r.code()})}" method="post">
-				<button class="btn btn-secondary" type="submit">Vazgeç</button>
+			<form th:unless="${r.hasCoupon()}" th:action="@{__${base}__/kupon}" method="post" class="addon-row">
+				<label class="sr-only" for="coupon">Kupon kodu</label>
+				<input class="input" id="coupon" name="kupon" placeholder="Kupon kodu" autocomplete="off" maxlength="30">
+				<button class="btn btn-secondary btn-sm" type="submit">Uygula</button>
 			</form>
 		</div>
+
+		<hr class="rule">
+		<h2 class="section-title">Ödeme</h2>
+		<div th:replace="~{fragments/money :: summary(${s})}"></div>
+
+		<!-- Geçici tutma: kapora varsa çevrim içi ödeme ile onaylanır -->
+		<th:block th:if="${r.held()}">
+			<div th:if="${r.depositRequired()}" class="pay-actions">
+				<p class="small" th:text="'Rezervasyonun onaylanması için ' + ${@fmt.money(r.deposit(), r.currency())} + ' kapora gerekiyor. Kalanı sahada ödenir.'">…</p>
+				<form th:action="@{__${base}__/odeme}" method="post">
+					<input type="hidden" name="secenek" value="DEPOSIT">
+					<input type="hidden" name="anahtar" th:value="${@fmt.newKey()}">
+					<button id="confirm-btn" class="btn btn-primary btn-block" type="submit"
+					        th:text="'Kaporayı öde: ' + ${@fmt.money(s.depositRemaining(), r.currency())}">Kaporayı öde</button>
+				</form>
+				<form th:action="@{__${base}__/odeme}" method="post">
+					<input type="hidden" name="secenek" value="FULL">
+					<input type="hidden" name="anahtar" th:value="${@fmt.newKey()}">
+					<button class="btn btn-secondary btn-block" type="submit"
+					        th:text="'Tamamını öde: ' + ${@fmt.money(s.balance(), r.currency())}">Tamamını öde</button>
+				</form>
+			</div>
+			<div th:unless="${r.depositRequired()}" class="pay-actions">
+				<form th:action="@{__${base}__/onayla}" method="post">
+					<button id="confirm-btn" class="btn btn-primary btn-block" type="submit">Rezervasyonu onayla</button>
+				</form>
+				<p class="small muted" style="margin:0">Ücret sahada ödenir. İsterseniz şimdi de ödeyebilirsiniz:</p>
+				<form th:action="@{__${base}__/odeme}" method="post">
+					<input type="hidden" name="secenek" value="FULL">
+					<input type="hidden" name="anahtar" th:value="${@fmt.newKey()}">
+					<button class="btn btn-secondary btn-block" type="submit"
+					        th:text="'Çevrim içi öde: ' + ${@fmt.money(s.balance(), r.currency())}">Çevrim içi öde</button>
+				</form>
+			</div>
+			<p class="notice-demo"><strong>Demo:</strong> Çevrim içi ödeme bir simülasyondur; kart bilgisi istenmez, gerçek para çekilmez.</p>
+			<form th:action="@{__${base}__/iptal}" method="post">
+				<button class="btn btn-text" type="submit">Vazgeç, saati bırak</button>
+			</form>
+		</th:block>
+
+		<!-- Onaylı rezervasyon: havale bildirimi -->
+		<details class="transfer" th:if="${r.status().name() == 'CONFIRMED' and s.balance().subtract(s.pending()).signum() > 0 and pay.bankIban() != null}">
+			<summary>Havale/EFT ile ödedim</summary>
+			<p class="small">IBAN: <span class="num" th:text="${pay.bankIban()}">TR00</span>. Açıklamaya rezervasyon kodunu
+				(<strong th:text="${r.code()}">ABC</strong>) yazın. Şube doğruladığında ödenmiş görünür.</p>
+			<form th:action="@{__${base}__/havale}" method="post">
+				<input type="hidden" name="anahtar" th:value="${@fmt.newKey()}">
+				<div class="field-row">
+					<div class="field">
+						<label for="tr-amount">Tutar (₺)</label>
+						<input class="input num" id="tr-amount" name="amount" inputmode="decimal" required
+						       th:value="${s.balance().subtract(s.pending())}">
+					</div>
+					<div class="field">
+						<label for="tr-name">Gönderen adı</label>
+						<input class="input" id="tr-name" name="payerName" required maxlength="120" th:value="${r.customerName()}">
+					</div>
+				</div>
+				<button class="btn btn-secondary btn-sm" type="submit">Bildirimi gönder</button>
+			</form>
+		</details>
+
+		<th:block th:if="${!#lists.isEmpty(pay.payments().rows())}">
+			<h3 class="section-title" style="margin-top:16px">Ödeme hareketleri</h3>
+			<ul th:replace="~{fragments/money :: history(${pay.payments().rows()})}"></ul>
+		</th:block>
 
 		<th:block th:if="${r.status().name() == 'CONFIRMED'}">
 			<hr class="rule">
 			<p class="small" th:if="${r.customerCanCancel()}"
-			   th:text="'İptal için son an: ' + ${@fmt.dateTime(r.customerCancelDeadline())} + '.'">…</p>
+			   th:text="'İptal için son an: ' + ${@fmt.dateTime(r.customerCancelDeadline())} + '. Çevrim içi ödemeniz otomatik iade edilir.'">…</p>
 			<p class="small" th:unless="${r.customerCanCancel()}"
 			   th:text="'Çevrim içi iptal süresi ' + ${@fmt.dateTime(r.customerCancelDeadline())} + ' itibarıyla doldu. İptal için şubeyi arayın.'">…</p>
-			<form th:if="${r.customerCanCancel()}" th:action="@{/rezervasyon/{c}/iptal(c=${r.code()})}" method="post"
+			<form th:if="${r.customerCanCancel()}" th:action="@{__${base}__/iptal}" method="post"
 			      data-confirm="Rezervasyonu iptal etmek istediğinize emin misiniz?">
 				<button class="btn btn-danger" type="submit">Rezervasyonu iptal et</button>
 			</form>
@@ -66,8 +140,9 @@
 
 		<p class="small muted" th:if="${r.status().name() == 'EXPIRED'}" style="margin-top:16px">
 			Tutma süresi doldu ve saat serbest bırakıldı.
-			<a th:href="@{/sahalar/{id}(id=${r.pitchId()}, tarih=${r.start().toLocalDate()})}">Saati yeniden seç</a>
+			<a th:href="@{/sahalar/{id}(id=${r.pitchId()}, tarih=${r.businessDay()})}">Saati yeniden seç</a>
 		</p>
+		<p class="small" style="margin-top:16px"><a th:href="@{__${base}__/ozet}">Rezervasyon/ödeme özetini yazdır</a></p>
 	</div>
 </main>
 </body>

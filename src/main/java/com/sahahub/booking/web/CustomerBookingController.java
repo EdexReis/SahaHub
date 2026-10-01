@@ -15,6 +15,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.sahahub.booking.app.CustomerBookingService;
 import com.sahahub.booking.domain.HoldExpiredException;
 import com.sahahub.identity.security.AppUserPrincipal;
+import com.sahahub.payment.app.PaymentPanelService;
 
 /** Müşterinin rezervasyon akışı: saat tut → özet → onayla; rezervasyonlarım; iptal. */
 @Controller
@@ -23,9 +24,11 @@ public class CustomerBookingController {
 	private static final int PAGE_SIZE = 10;
 
 	private final CustomerBookingService booking;
+	private final PaymentPanelService payments;
 
-	public CustomerBookingController(CustomerBookingService booking) {
+	public CustomerBookingController(CustomerBookingService booking, PaymentPanelService payments) {
 		this.booking = booking;
+		this.payments = payments;
 	}
 
 	/**
@@ -42,6 +45,7 @@ public class CustomerBookingController {
 	@GetMapping("/rezervasyon/{code}")
 	public String view(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable String code, Model model) {
 		model.addAttribute("r", booking.view(me, code));
+		model.addAttribute("pay", payments.forCustomer(me, code));
 		return "customer/reservation";
 	}
 

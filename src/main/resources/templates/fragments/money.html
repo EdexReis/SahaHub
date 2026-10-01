@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Fiyat kalemleri. removeBase boş değilse kaldırılabilir kalemlerde "Kaldır" düğmesi çıkar.
+     canRemoveDiscount: personel indirimi kaldırma yetkisi. -->
+<table th:fragment="lines(r, removeBase, canRemoveDiscount)" class="price-table" aria-label="Fiyat ayrıntısı">
+	<tbody>
+	<tr th:each="l : ${r.lines()}" th:classappend="${l.discount()} ? 'is-discount'">
+		<td>
+			<span th:text="${l.label()}">Standart ücret</span>
+			<span class="tiny muted" th:if="${l.percent() != null}" th:text="' ' + ${@fmt.percent(l.percent())}">%10</span>
+			<br>
+			<span class="tiny muted" th:if="${l.pitch()}"
+			      th:text="${@fmt.timeRange(l.start(), l.end())} + ' · ' + ${l.minutes()} + ' dk × ' + ${@fmt.money(l.hourlyRate(), r.currency())} + '/saat'">20:00–21:00</span>
+			<span class="tiny muted" th:if="${l.kind().name() == 'EXTRA'}"
+			      th:text="${l.quantity()} + ' × ' + ${@fmt.money(l.unitAmount(), r.currency())}">1 × 50 ₺</span>
+			<span class="tiny muted" th:if="${l.reason() != null}" th:text="'Gerekçe: ' + ${l.reason()}">Gerekçe</span>
+			<form th:if="${removeBase != null and !l.pitch() and (l.kind().name() != 'STAFF_DISCOUNT' or canRemoveDiscount)}"
+			      th:action="@{__${removeBase}__/kalem/{id}/kaldir(id=${l.id()})}" method="post" class="inline-remove">
+				<button class="btn btn-text btn-sm" type="submit" th:aria-label="${l.label()} + ' kalemini kaldır'">Kaldır</button>
+			</form>
+		</td>
+		<td th:text="${@fmt.money(l.amount(), r.currency())}">1.400,00 ₺</td>
+	</tr>
+	</tbody>
+	<tfoot><tr><td>Toplam</td><td th:text="${@fmt.money(r.total(), r.currency())}">1.400,00 ₺</td></tr></tfoot>
+</table>
+
+<!-- Ödeme özeti: ödeme durumu rezervasyon durumundan ayrıdır -->
+<div th:fragment="summary(s)" class="pay-summary">
+	<div class="pay-state">
+		<span class="paybadge" th:classappend="'pay-' + ${s.state().name()}" th:text="${s.state().label()}">Kapora bekleniyor</span>
+	</div>
+	<dl class="kv small">
+		<dt th:if="${s.deposit().signum() > 0}">Kapora</dt>
+		<dd th:if="${s.deposit().signum() > 0}" th:text="${@fmt.money(s.deposit(), s.currency())}">300 ₺</dd>
+		<dt>Ödenen</dt><dd th:text="${@fmt.money(s.paid(), s.currency())}">0 ₺</dd>
+		<dt th:if="${s.pending().signum() > 0}">Sonucu bekleyen</dt>
+		<dd th:if="${s.pending().signum() > 0}" th:text="${@fmt.money(s.pending(), s.currency())}">0 ₺</dd>
+		<dt th:if="${s.balance().signum() > 0}">Kalan</dt>
+		<dd th:if="${s.balance().signum() > 0}"><strong th:text="${@fmt.money(s.balance(), s.currency())}">1.100 ₺</strong></dd>
+		<dt th:if="${s.overpaid().signum() > 0}">İade edilecek</dt>
+		<dd th:if="${s.overpaid().signum() > 0}"><strong th:text="${@fmt.money(s.overpaid(), s.currency())}">300 ₺</strong></dd>
+	</dl>
+</div>
+
+<!-- Ödeme hareketleri (yalnızca liste; düğmeler ekran tarafında) -->
+<ul th:fragment="history(rows)" class="pay-history" th:if="${!#lists.isEmpty(rows)}">
+	<li th:each="p : ${rows}" th:classappend="'st-' + ${p.status().name()}">
+		<span class="num" th:text="${@fmt.dateTime(p.createdAt())}">1 Eki 2026 20:00</span>
+		<span th:text="${p.kind().label()} + ' · ' + ${p.method().label()}">Tahsilat · Nakit</span>
+		<strong th:text="(${p.kind().name() == 'CHARGE'} ? '' : '−') + ${@fmt.money(p.amount(), p.currency())}">500 ₺</strong>
+		<span class="tiny" th:if="${p.status().name() != 'SUCCEEDED'}" th:text="${p.status().label()}">Bekliyor</span>
+		<span class="tiny muted" th:if="${p.payerName() != null}" th:text="'Gönderen: ' + ${p.payerName()}">Gönderen</span>
+		<span class="tiny muted" th:if="${p.note() != null}" th:text="${p.note()}">Not</span>
+		<span class="tiny error-inline" th:if="${p.failureReason() != null}" th:text="${p.failureReason()}">Neden</span>
+	</li>
+</ul>
+
+</body>
+</html>

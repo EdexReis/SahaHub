@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title th:text="${pricing.branchName()} + ' · Fiyatlandırma · SahaHub'">Fiyatlandırma · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide" th:with="b=${pricing.branchId()}">
+	<nav th:replace="~{fragments/staffnav :: subnav(${pricing.branchId()}, 'fiyatlar')}"></nav>
+	<div class="page-head">
+		<div><p class="eyebrow" th:text="${pricing.branchName()}">Şube</p><h1>Fiyatlandırma</h1></div>
+	</div>
+	<p class="small muted">Değişiklikler yalnızca yeni rezervasyonlara uygulanır; mevcut rezervasyonların fiyatı rezervasyon anında kopyalanmıştır.</p>
+
+	<!-- Sahalar: taban ücret ve kurallar -->
+	<section class="panel pitch-pricing" th:each="p : ${pricing.pitches()}" th:aria-label="${p.name()}">
+		<div class="pp-head">
+			<h2 class="section-title" th:text="${p.name()}">Saha 1</h2>
+			<form th:action="@{/isletme/subeler/{id}/fiyatlar/taban(id=${b})}" method="post" class="inline-form">
+				<input type="hidden" name="pitchId" th:value="${p.pitchId()}">
+				<label th:for="'base-' + ${p.pitchId()}" class="small">Standart saatlik ücret (₺)</label>
+				<input class="input num" th:id="'base-' + ${p.pitchId()}" name="price" inputmode="decimal" th:value="${p.basePrice()}" required style="width:120px">
+				<button class="btn btn-secondary btn-sm" type="submit">Kaydet</button>
+			</form>
+		</div>
+		<div class="table-wrap" th:if="${!#lists.isEmpty(p.rules())}">
+			<table class="table">
+				<thead><tr><th scope="col">Kural</th><th scope="col">Saat</th><th scope="col">Geçerlilik</th><th scope="col">Ücret</th><th scope="col">Öncelik</th><th scope="col"><span class="sr-only">İşlem</span></th></tr></thead>
+				<tbody>
+				<tr th:each="rule : ${p.rules()}">
+					<td><span th:text="${rule.name()}">Akşam</span><br>
+						<span class="tiny muted"><th:block th:each="d, st : ${rule.days()}" th:text="${@fmt.dayShort(d)} + (${st.last} ? '' : ' ')">Pzt</th:block></span></td>
+					<td class="num" th:text="${rule.start()} + '–' + (${rule.end()} == null ? '24:00' : ${rule.end()})">18:00–24:00</td>
+					<td class="small" th:text="${rule.validFrom() == null and rule.validTo() == null} ? 'Sürekli' : (${rule.validFrom()} ?: '…') + ' → ' + (${rule.validTo()} ?: '…')">Sürekli</td>
+					<td class="num" th:text="${@fmt.moneyShort(rule.hourlyPrice(), 'TRY')}">1.800 ₺</td>
+					<td class="num" th:text="${rule.priority()}">10</td>
+					<td>
+						<form th:action="@{/isletme/subeler/{id}/fiyatlar/kurallar/{r}/kaldir(id=${b}, r=${rule.id()})}" method="post" data-confirm="Kural kaldırılsın mı?">
+							<button class="btn btn-text btn-sm" type="submit">Kaldır</button>
+						</form>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+		<details class="row-actions">
+			<summary>Kural ekle</summary>
+			<form th:action="@{/isletme/subeler/{id}/fiyatlar/kurallar(id=${b})}" method="post">
+				<input type="hidden" name="pitchId" th:value="${p.pitchId()}">
+				<div class="field-row">
+					<div class="field"><label th:for="'rn-' + ${p.pitchId()}">Ad</label><input class="input" th:id="'rn-' + ${p.pitchId()}" name="name" required maxlength="80" placeholder="Ör. Hafta içi akşam"></div>
+					<div class="field"><label th:for="'rp-' + ${p.pitchId()}">Saatlik ücret (₺)</label><input class="input num" th:id="'rp-' + ${p.pitchId()}" name="hourlyPrice" inputmode="decimal" required></div>
+				</div>
+				<fieldset>
+					<legend>Günler</legend>
+					<label class="choice" th:each="d : ${days}"><input type="checkbox" name="days" th:value="${d.name()}" checked> <span th:text="${@fmt.dayShort(d)}">Pzt</span></label>
+				</fieldset>
+				<div class="field-row">
+					<div class="field"><label th:for="'rs-' + ${p.pitchId()}">Başlangıç</label><input class="input num" type="time" step="900" th:id="'rs-' + ${p.pitchId()}" name="start" required value="18:00"></div>
+					<div class="field"><label th:for="'re-' + ${p.pitchId()}">Bitiş (boş = 24:00)</label><input class="input num" type="time" step="900" th:id="'re-' + ${p.pitchId()}" name="end"></div>
+				</div>
+				<div class="field-row">
+					<div class="field"><label th:for="'rf-' + ${p.pitchId()}">Geçerlilik başlangıcı</label><input class="input num" type="date" th:id="'rf-' + ${p.pitchId()}" name="validFrom"></div>
+					<div class="field"><label th:for="'rt-' + ${p.pitchId()}">Geçerlilik bitişi</label><input class="input num" type="date" th:id="'rt-' + ${p.pitchId()}" name="validTo"></div>
+				</div>
+				<div class="field"><label th:for="'rpr-' + ${p.pitchId()}">Öncelik</label><input class="input num" type="number" th:id="'rpr-' + ${p.pitchId()}" name="priority" value="10" style="width:120px">
+					<p class="hint">Aynı dakikaya birden fazla kural uyarsa önceliği yüksek olan uygulanır.</p></div>
+				<button class="btn btn-primary btn-sm" type="submit">Kuralı ekle</button>
+			</form>
+		</details>
+	</section>
+
+	<div class="cash-grid">
+		<!-- Kapora -->
+		<section class="panel" aria-labelledby="dep-title">
+			<h2 id="dep-title" class="section-title">Kapora ve havale</h2>
+			<form th:action="@{/isletme/subeler/{id}/fiyatlar/kapora(id=${b})}" method="post">
+				<fieldset>
+					<legend>Kapora kuralı</legend>
+					<label class="choice" th:each="t : ${depositTypes}"><input type="radio" name="type" th:value="${t.name()}" th:checked="${pricing.deposit().type() == t}"> <span th:text="${t.label()}">Yok</span></label>
+				</fieldset>
+				<div class="field"><label for="dep-val">Tutar (₺) veya yüzde</label>
+					<input class="input num" id="dep-val" name="value" inputmode="decimal" th:value="${pricing.deposit().value()}" style="width:160px">
+					<p class="hint">Kapora varsa müşterinin çevrim içi rezervasyonu kapora ödenince onaylanır. Kapora indirimlerden sonraki toplamdan hesaplanır.</p></div>
+				<div class="field"><label for="iban">IBAN (havale bildirimi için)</label>
+					<input class="input num" id="iban" name="iban" maxlength="34" th:value="${pricing.bankIban()}"></div>
+				<button class="btn btn-secondary btn-sm" type="submit">Kaydet</button>
+			</form>
+		</section>
+
+		<!-- Ek hizmetler -->
+		<section class="panel" aria-labelledby="ext-title">
+			<h2 id="ext-title" class="section-title">Ek hizmetler</h2>
+			<ul class="pay-history" th:if="${!#lists.isEmpty(pricing.extras())}">
+				<li th:each="e : ${pricing.extras()}">
+					<span th:text="${e.name()}">Hakem</span>
+					<strong th:text="${@fmt.moneyShort(e.unitPrice(), 'TRY')}">400 ₺</strong>
+					<form th:action="@{/isletme/subeler/{id}/fiyatlar/ek-hizmetler/{e}/kaldir(id=${b}, e=${e.id()})}" method="post" class="inline-remove">
+						<button class="btn btn-text btn-sm" type="submit">Kaldır</button>
+					</form>
+				</li>
+			</ul>
+			<form th:action="@{/isletme/subeler/{id}/fiyatlar/ek-hizmetler(id=${b})}" method="post">
+				<div class="field-row">
+					<div class="field"><label for="ex-name">Hizmet</label><input class="input" id="ex-name" name="name" required maxlength="80" placeholder="Ör. Hakem"></div>
+					<div class="field"><label for="ex-price">Birim fiyat (₺)</label><input class="input num" id="ex-price" name="price" inputmode="decimal" required></div>
+				</div>
+				<button class="btn btn-secondary btn-sm" type="submit">Ekle</button>
+			</form>
+		</section>
+
+		<!-- Kuponlar (yalnızca işletme sahibi) -->
+		<section class="panel" aria-labelledby="cp-title" th:if="${pricing.canManageCoupons()}">
+			<h2 id="cp-title" class="section-title">Kuponlar <span class="tiny muted">(işletmenin tüm şubelerinde geçerli)</span></h2>
+			<ul class="pay-history" th:if="${!#lists.isEmpty(pricing.coupons())}">
+				<li th:each="c : ${pricing.coupons()}" th:classappend="${!c.active()} ? 'st-FAILED'">
+					<span class="num coupon-code" th:text="${c.code()}">KOD</span>
+					<span th:text="${c.kind().name() == 'PERCENT'} ? ${@fmt.percent(c.value())} : ${@fmt.moneyShort(c.value(), 'TRY')}">%10</span>
+					<span class="tiny muted" th:text="${c.usedCount()} + ' / ' + ${c.maxUses()} + ' kullanım' + (${c.active()} ? '' : ' · pasif')">0/10</span>
+					<form th:if="${c.active()}" th:action="@{/isletme/subeler/{id}/fiyatlar/kuponlar/{c}/kaldir(id=${b}, c=${c.id()})}" method="post" class="inline-remove">
+						<button class="btn btn-text btn-sm" type="submit">Devre dışı bırak</button>
+					</form>
+				</li>
+			</ul>
+			<form th:action="@{/isletme/subeler/{id}/fiyatlar/kuponlar(id=${b})}" method="post">
+				<div class="field-row">
+					<div class="field"><label for="cp-code">Kod</label><input class="input num" id="cp-code" name="code" required maxlength="30" placeholder="YAZ10"></div>
+					<div class="field"><label for="cp-kind">Tür</label>
+						<select class="select" id="cp-kind" name="kind"><option value="PERCENT">Yüzde</option><option value="FIXED">Sabit tutar</option></select></div>
+				</div>
+				<div class="field-row">
+					<div class="field"><label for="cp-val">Değer</label><input class="input num" id="cp-val" name="value" inputmode="decimal" required></div>
+					<div class="field"><label for="cp-max">Kullanım sınırı</label><input class="input num" id="cp-max" name="maxUses" type="number" min="1" value="100" required></div>
+				</div>
+				<div class="field-row">
+					<div class="field"><label for="cp-from">Başlangıç</label><input class="input num" id="cp-from" type="date" name="validFrom"></div>
+					<div class="field"><label for="cp-to">Bitiş</label><input class="input num" id="cp-to" type="date" name="validTo"></div>
+				</div>
+				<button class="btn btn-secondary btn-sm" type="submit">Kupon oluştur</button>
+			</form>
+		</section>
+	</div>
+</main>
+</body>
+</html>

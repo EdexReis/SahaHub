@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title th:text="${cash.branchName()} + ' · Kasa · SahaHub'">Kasa · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide">
+	<nav th:replace="~{fragments/staffnav :: subnav(${cash.branchId()}, 'kasa')}"></nav>
+	<div class="page-head">
+		<div><p class="eyebrow" th:text="${cash.branchName()}">Şube</p><h1>Kasa</h1></div>
+	</div>
+
+	<div class="cash-grid">
+		<!-- Açık kasa / kasa aç -->
+		<section class="panel" aria-labelledby="session-title">
+			<h2 id="session-title" class="section-title">Günlük kasa</h2>
+			<th:block th:if="${cash.open() == null}">
+				<p class="small">Kasa kapalı. Nakit tahsilat ve nakit iade için kasayı açın.</p>
+				<form th:action="@{/isletme/subeler/{id}/kasa/ac(id=${cash.branchId()})}" method="post">
+					<div class="field">
+						<label for="float">Kasadaki açılış parası (₺)</label>
+						<input class="input num" id="float" name="openingFloat" inputmode="decimal" value="0" required>
+					</div>
+					<button class="btn btn-primary" type="submit">Kasayı aç</button>
+				</form>
+			</th:block>
+			<th:block th:if="${cash.open() != null}" th:with="o=${cash.open()}">
+				<p class="small muted" th:text="'Açılış: ' + ${@fmt.dateTime(o.openedAt())}">Açılış</p>
+				<table class="price-table">
+					<tbody>
+					<tr><td>Açılış parası</td><td th:text="${@fmt.money(o.openingFloat(), cash.currency())}">500 ₺</td></tr>
+					<tr><td>Nakit hareketler (tahsilat − iade − ters kayıt)</td><td th:text="${@fmt.money(o.cashMovements(), cash.currency())}">0 ₺</td></tr>
+					<tr><td>Kasadan ödenen giderler</td><td th:text="'−' + ${@fmt.money(o.cashExpenses(), cash.currency())}">0 ₺</td></tr>
+					</tbody>
+					<tfoot><tr><td>Kasada olması gereken</td><td th:text="${@fmt.money(o.expected(), cash.currency())}">500 ₺</td></tr></tfoot>
+				</table>
+				<form th:action="@{/isletme/subeler/{id}/kasa/kapat(id=${cash.branchId()})}" method="post" style="margin-top:16px"
+				      data-confirm="Kasa kapatılsın mı? Kapanıştan sonra bu kasaya hareket eklenemez.">
+					<div class="field-row">
+						<div class="field">
+							<label for="counted">Sayılan tutar (₺)</label>
+							<input class="input num" id="counted" name="counted" inputmode="decimal" required>
+						</div>
+						<div class="field">
+							<label for="cnote">Not</label>
+							<input class="input" id="cnote" name="note" maxlength="500" placeholder="Fark varsa açıklayın">
+						</div>
+					</div>
+					<button class="btn btn-secondary" type="submit">Kasayı kapat</button>
+				</form>
+			</th:block>
+		</section>
+
+		<!-- Bugünkü hareketler -->
+		<section class="panel" aria-labelledby="today-title">
+			<h2 id="today-title" class="section-title">Bugünkü tahsilatlar (net)</h2>
+			<dl class="day-stats compact-stats">
+				<div><dt>Nakit</dt><dd class="num" th:text="${@fmt.moneyShort(cash.todayCash(), cash.currency())}">0</dd></div>
+				<div><dt>POS (manuel)</dt><dd class="num" th:text="${@fmt.moneyShort(cash.todayPos(), cash.currency())}">0</dd></div>
+				<div><dt>Havale</dt><dd class="num" th:text="${@fmt.moneyShort(cash.todayTransfer(), cash.currency())}">0</dd></div>
+				<div><dt>Çevrim içi (sim.)</dt><dd class="num" th:text="${@fmt.moneyShort(cash.todayOnline(), cash.currency())}">0</dd></div>
+			</dl>
+			<p class="tiny muted">Tahsilat, tahsil edilen paradır; rezervasyon bedeliyle aynı şey değildir. İadeler ve ters kayıtlar düşülmüştür.</p>
+			<ul class="pay-history" th:if="${!#lists.isEmpty(cash.todayPayments())}">
+				<li th:each="p : ${cash.todayPayments()}">
+					<span class="num" th:text="${@fmt.time(p.at())}">20:00</span>
+					<span th:text="${p.kind().label()} + ' · ' + ${p.method().label()}">Tahsilat · Nakit</span>
+					<strong th:text="(${p.kind().name() == 'CHARGE'} ? '' : '−') + ${@fmt.money(p.amount(), cash.currency())}">500</strong>
+				</li>
+			</ul>
+			<p class="small muted" th:if="${#lists.isEmpty(cash.todayPayments())}">Bugün henüz tahsilat yok.</p>
+		</section>
+
+		<!-- Giderler -->
+		<section class="panel" aria-labelledby="exp-title">
+			<h2 id="exp-title" class="section-title">Giderler</h2>
+			<form th:if="${cash.canManageExpenses()}" th:action="@{/isletme/subeler/{id}/giderler(id=${cash.branchId()})}" method="post">
+				<div class="field-row">
+					<div class="field">
+						<label for="ecat">Tür</label>
+						<select class="select" id="ecat" name="category">
+							<option th:each="c : ${categories}" th:value="${c.name()}" th:text="${c.label()}">Bakım</option>
+						</select>
+					</div>
+					<div class="field">
+						<label for="eamt">Tutar (₺)</label>
+						<input class="input num" id="eamt" name="amount" inputmode="decimal" required>
+					</div>
+				</div>
+				<div class="field">
+					<label for="edesc">Açıklama</label>
+					<input class="input" id="edesc" name="description" required maxlength="300">
+				</div>
+				<label class="choice"><input type="checkbox" name="fromCash" value="true" th:disabled="${cash.open() == null}"> Kasadan ödendi</label>
+				<button class="btn btn-secondary btn-sm" type="submit">Gideri kaydet</button>
+			</form>
+			<p class="small muted" th:unless="${cash.canManageExpenses()}">Gider kaydı yönetici yetkisi gerektirir.</p>
+			<ul class="pay-history" th:if="${!#lists.isEmpty(cash.expenses())}">
+				<li th:each="e : ${cash.expenses()}">
+					<span class="num" th:text="${@fmt.dateTime(e.at())}">1 Eki</span>
+					<span th:text="${e.category().label()} + (${e.fromCash()} ? ' · kasadan' : '')">Bakım</span>
+					<strong th:text="${@fmt.money(e.amount(), cash.currency())}">300</strong>
+					<span class="tiny muted" th:text="${e.description()}">Açıklama</span>
+					<form th:if="${cash.canManageExpenses() and e.reversible()}" th:action="@{/isletme/subeler/{b}/giderler/{id}/ters-kayit(b=${cash.branchId()}, id=${e.id()})}"
+					      method="post" data-confirm="Bu gider ters kayıtla düzeltilsin mi?" class="inline-remove">
+						<button class="btn btn-text btn-sm" type="submit">Ters kayıt</button>
+					</form>
+				</li>
+			</ul>
+		</section>
+
+		<!-- Geçmiş kapanışlar -->
+		<section class="panel" aria-labelledby="hist-title" th:if="${!#lists.isEmpty(cash.history())}">
+			<h2 id="hist-title" class="section-title">Son kapanışlar</h2>
+			<div class="table-wrap">
+				<table class="table">
+					<thead><tr><th scope="col">Kapanış</th><th scope="col">Beklenen</th><th scope="col">Sayılan</th><th scope="col">Fark</th></tr></thead>
+					<tbody>
+					<tr th:each="h : ${cash.history()}">
+						<td th:text="${@fmt.dateTime(h.closedAt())}">1 Eki</td>
+						<td class="num" th:text="${@fmt.money(h.expected(), cash.currency())}">0</td>
+						<td class="num" th:text="${@fmt.money(h.counted(), cash.currency())}">0</td>
+						<td class="num" th:classappend="${h.difference().signum() != 0} ? 'error-inline'"
+						    th:text="${h.difference().signum() > 0 ? '+' : ''} + ${@fmt.money(h.difference(), cash.currency())}">0</td>
+					</tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+	</div>
+	<p class="notice-demo">Bu ekran resmi muhasebe kaydı değildir; işletmenin günlük takibi içindir.</p>
+</main>
+</body>
+</html>

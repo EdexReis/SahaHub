@@ -16,6 +16,12 @@
 | 10 | Entity yerine record DTO'lar şablona gider, `open-in-view: false` | Görünüm katmanı veritabanına erişemez; tembel yükleme sürprizi olmaz. |
 | 11 | Oturum tabanlı kimlik + CSRF + CSP | Sunucu render'lı uygulama için en basit güvenli seçim. |
 | 12 | `Clock` bean'i | "Şimdi" testte sabitlenir; iptal sınırı gibi kurallar kesin anda denenir. |
+| 13 | Ödeme durumu saklanmaz, hareketlerden hesaplanır | Hareketlerle çelişen "ödendi" bayrağı oluşamaz; rezervasyon durumu ile ödeme durumu ayrı kalır. |
+| 14 | Ödeme hareketleri silinmez/değişmez; ters kayıt ve iade | Geçmiş izlenebilir; düzeltmeler de kayıtlıdır. |
+| 15 | Her ödeme isteğinde idempotency anahtarı (DB UNIQUE), webhook olayında `(provider, event_id)` UNIQUE | Çift tıklama, ağ tekrarı ve yinelenen bildirim çift tahsilat/iade üretmez. |
+| 16 | `PaymentProvider` adaptörü + simülasyon sağlayıcı (ayrı tablolar, imzalı webhook, gecikmeli teslim) | Gerçek sağlayıcı aynı arayüzle eklenir; senaryolar (gecikme, yinelenen, geç ödeme) gerçekçi denenir. |
+| 17 | Geç ödeme ve müşteri iptalinde otomatik iade `@TransactionalEventListener(AFTER_COMMIT)` ile | İade, olayı doğuran değişiklik kesinleşmeden başlamaz; kendi transaction'ında çalışır. |
+| 18 | Para girişi `MoneyInputFormatter` | Türkçe "1.400,50" ve "1400.50" yazımı kabul edilir. |
 
 ## 2. Paketler (modüller)
 
@@ -25,12 +31,21 @@ com.sahahub
 ├── identity      kullanıcı, personel ataması, rol→izin matrisi, AccessGuard, Spring Security
 ├── business      işletme, şube, çalışma saatleri, saha, bakım bloğu, katalog okuma
 ├── pricing       fiyat kuralı ve saf fiyat hesaplayıcı
-├── booking       rezervasyon, doluluk, uygun saat hesabı, personel takvimi, süre dolumu görevi
+├── booking       rezervasyon, doluluk, uygun saat hesabı, personel takvimi, süre dolumu görevi,
+│                 ek hizmet/kupon/indirim kalemleri (ReservationPricingService)
+├── payment       ödeme hareketleri, kasa, giderler, webhook; provider/ altında sağlayıcı adaptörü
+│                 ve simülasyon sağlayıcısı
 ├── platform      platform yöneticisi işlemleri
 └── dev           yalnızca dev profilinde demo veri
 ```
 
-Henüz olmayan modüller (sonraki aşamalar): `payment`, `team`, `tournament`, `notification`, `reporting`.
+Henüz olmayan modüller (sonraki aşamalar): `team`, `tournament`, `notification`, `reporting`.
+
+**Bağımlılık yönü**: `payment → booking → business/pricing → identity → shared`. Rezervasyon modülünün
+ödeme bilgisine ihtiyacı olan iki yer (takvim etiketi, kapora ödenmeden onay engeli) için
+`booking.app.PaymentStatusPort` arayüzü tanımlıdır; uygulamasını `payment.app.PaymentQueries` verir
+(Dependency Inversion). Rezervasyon iptali `ReservationCancelled` olayı olarak yayımlanır; ödeme modülü
+commit sonrası dinler. Web katmanı (controller'lar) birden fazla modülü birleştirebilir.
 
 Her modülde katmanlar:
 
@@ -102,6 +117,23 @@ erDiagram
     RESERVATION ||--o| PITCH_OCCUPANCY : "source RESERVATION"
     PITCH_BLOCK ||--o| PITCH_OCCUPANCY : "source BLOCK"
     BUSINESS ||--o{ AUDIT_EVENT : ""
+    BRANCH ||--o{ EXTRA_SERVICE : ""
+    BUSINESS ||--o{ COUPON : ""
+    RESERVATION ||--o{ PAYMENT : "hareketler"
+    PAYMENT |o--o{ PAYMENT : "iade/ters kayıt → tahsilat"
+    BRANCH ||--o{ CASH_SESSION : "tek açık kasa"
+    CASH_SESSION |o--o{ PAYMENT : "nakit"
+    BRANCH ||--o{ EXPENSE : ""
+    CASH_SESSION |o--o{ EXPENSE : "kasadan"
+
+    PAYMENT {
+        varchar kind "CHARGE REFUND REVERSAL"
+        varchar method "CASH MANUAL_POS BANK_TRANSFER ONLINE_SIM"
+        varchar status "PENDING SUCCEEDED FAILED"
+        numeric amount "her zaman pozitif"
+        varchar idempotency_key "UNIQUE"
+        varchar provider_ref "UNIQUE"
+    }
 
     PITCH_OCCUPANCY {
         bigint pitch_id
@@ -125,6 +157,8 @@ erDiagram
 
 ## 7. Silme ve arşiv kuralı
 
-Rezervasyon, doluluk, fiyat kalemi ve denetim kayıtları **fiziksel olarak silinmez**. İptal/süre dolumu
+Rezervasyon, doluluk, fiyat kalemi, ödeme hareketi, kasa, gider ve denetim kayıtları **fiziksel olarak
+silinmez**. Ek hizmet/indirim kalemi `voided_at`, ödeme ters kayıt/iade, gider ters kayıt, ek hizmet ve kupon
+`active=false` ile kapatılır. İptal/süre dolumu
 durum alanıyla, doluluk `active=false` ile, saha `active=false` ile, şube `archived=true` ile,
 işletme `status=ARCHIVED/SUSPENDED` ile kapatılır.

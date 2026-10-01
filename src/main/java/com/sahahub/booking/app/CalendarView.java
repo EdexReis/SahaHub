@@ -46,7 +46,7 @@ public record CalendarView(Long branchId, String branchName, String businessName
 	 */
 	public record Item(Kind kind, int rowStart, int rowSpan, String code, String title, String subtitle,
 			ReservationStatus status, Channel channel, boolean checkedIn, Long pitchId, LocalDateTime start,
-			Long blockId) {
+			Long blockId, String payState, String payLabel) {
 
 		public boolean compact() {
 			return rowSpan <= 3;

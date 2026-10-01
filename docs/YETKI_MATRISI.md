@@ -23,11 +23,17 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | `RESERVATION_CANCEL` personel iptali (gerekçe zorunlu) | ✓ | ✓ | ✓ | çalışıyor |
 | `RESERVATION_STATUS_UPDATE` geldi/tamamlandı/gelmedi | ✓ | ✓ | ✓ | çalışıyor |
 | `PITCH_BLOCK_MANAGE` saha kapatma | ✓ | ✓ | ✗ | çalışıyor |
-| `PITCH_MANAGE` saha düzenleme | ✓ | ✓ | ✗ | ekran yok (Aşama 3+) |
-| `PRICE_MANAGE` fiyat kuralları | ✓ | ✓ | ✗ | ekran yok (Aşama 3) |
+| `PITCH_MANAGE` saha düzenleme | ✓ | ✓ | ✗ | ekran yok |
+| `PRICE_MANAGE` taban ücret, fiyat kuralları, ek hizmetler, kapora | ✓ | ✓ | ✗ | çalışıyor |
 | `STAFF_MANAGE` personel atama | ✓ | ✗ | ✗ | ekran yok |
 | `REPORT_VIEW` raporlar | ✓ | ✓ | ✗ | Aşama 6 |
 | `AUDIT_VIEW` denetim kayıtları | ✓ | ✗ | ✗ | Aşama 6 |
+| `PAYMENT_COLLECT` nakit/POS tahsilat, havale doğrulama, ters kayıt | ✓ | ✓ | ✓ | çalışıyor |
+| `PAYMENT_REFUND` iade | ✓ | ✓ | ✗ | çalışıyor |
+| `DISCOUNT_APPLY` personel indirimi (gerekçeli) | ✓ | ✓ | ✗ | çalışıyor |
+| `CASH_MANAGE` kasa açma/kapama | ✓ | ✓ | ✓ | çalışıyor |
+| `EXPENSE_MANAGE` gider kaydı | ✓ | ✓ | ✗ | çalışıyor |
+| `COUPON_MANAGE` işletme geneli kupon | ✓ | ✗ | ✗ | çalışıyor (yalnızca sahip; işletme düzeyi kontrol) |
 
 ## Müşteri ve platform kuralları
 
@@ -36,6 +42,9 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | Rezervasyonu görme/onaylama/iptal | Yalnızca `customer_id` kendisi olan kayıt; değilse 404 |
 | Saat tutma | Aynı anda en fazla 3 onaylanmamış tutma |
 | İptal | Geçici tutma her zaman; onaylı rezervasyon maçtan şube ayarı kadar (varsayılan 24 saat) öncesine kadar, sınır anı dahil |
+| Ek hizmet, kupon | Yalnızca kendi geçici tutmasında (onaydan sonra şubeye başvurur) |
+| Çevrim içi ödeme | Yalnızca kendi geçici tutması; simülasyon sayfasını yalnızca ödemenin sahibi görür |
+| Havale bildirimi | Yalnızca kendi onaylı rezervasyonu |
 | Platform: işletme askıya alma | Gerekçe zorunlu, `PLATFORM_BUSINESS_STATUS_CHANGED` denetim kaydı |
 
 ## Kontrol nasıl yapılır?

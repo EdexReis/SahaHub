@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,12 +46,15 @@ public class StaffReservationService {
 	private final OccupancyService occupancy;
 	private final ReservationViewFactory views;
 	private final AppUserRepository users;
+	private final ReservationPricingService pricing;
+	private final ApplicationEventPublisher events;
 	private final AuditService audit;
 	private final Clock clock;
 
 	public StaffReservationService(CatalogService catalog, AccessGuard guard, ReservationRepository reservations,
 			ReservationWriter writer, OccupancyService occupancy, ReservationViewFactory views,
-			AppUserRepository users, AuditService audit, Clock clock) {
+			AppUserRepository users, ReservationPricingService pricing, ApplicationEventPublisher events,
+			AuditService audit, Clock clock) {
 		this.catalog = catalog;
 		this.guard = guard;
 		this.reservations = reservations;
@@ -58,6 +62,8 @@ public class StaffReservationService {
 		this.occupancy = occupancy;
 		this.views = views;
 		this.users = users;
+		this.pricing = pricing;
+		this.events = events;
 		this.audit = audit;
 		this.clock = clock;
 	}
@@ -114,6 +120,8 @@ public class StaffReservationService {
 		Reservation r = lockForStaff(user, code, Permission.RESERVATION_CANCEL);
 		r.cancel(user.id(), reason, Instant.now(clock));
 		occupancy.release(PitchOccupancy.Source.RESERVATION, r.getId());
+		pricing.releaseCoupons(r.getId());
+		events.publishEvent(new ReservationCancelled(r.getId(), false));
 		audit.record(user.id(), r.getBusinessId(), "RESERVATION_CANCELLED_BY_STAFF", "Reservation", r.getId(),
 				"code=" + code + ", reason=" + reason.strip());
 	}

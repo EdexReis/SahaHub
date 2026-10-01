@@ -42,6 +42,20 @@ public class AccessGuard {
 			.orElseThrow(() -> new AccessDeniedException("Bu işlem için yetkiniz yok."));
 	}
 
+	/**
+	 * İşletme geneli işlemler (ör. kupon). Yalnızca işletmenin tamamını kapsayan görev (OWNER) sayılır;
+	 * şube personelinin görevi işletme geneline yetki vermez.
+	 */
+	@Transactional(readOnly = true)
+	public void requireBusiness(AppUserPrincipal user, Long businessId, Permission permission) {
+		boolean allowed = user != null && memberships.findByUserIdAndBusinessIdAndActiveTrue(user.id(), businessId)
+			.stream()
+			.anyMatch(m -> m.getRole() == StaffRole.OWNER && RolePermissions.allows(m.getRole(), permission));
+		if (!allowed) {
+			throw new AccessDeniedException("Bu işlem için yetkiniz yok.");
+		}
+	}
+
 	@Transactional(readOnly = true)
 	public boolean can(AppUserPrincipal user, Long businessId, Long branchId, Permission permission) {
 		return effectiveRole(user, businessId, branchId).filter(role -> RolePermissions.allows(role, permission))

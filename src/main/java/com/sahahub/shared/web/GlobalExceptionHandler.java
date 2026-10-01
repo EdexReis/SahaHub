@@ -8,6 +8,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.sahahub.shared.domain.BusinessRuleException;
@@ -47,6 +48,19 @@ public class GlobalExceptionHandler {
 		}
 		redirect.addFlashAttribute("flashError", ex.getMessage());
 		return "redirect:" + safeBackPath(request);
+	}
+
+	/**
+	 * Formdaki bir alan beklenen türe çevrilemedi (ör. tutar alanına "abc"). Teknik hata yerine
+	 * kullanıcıya anlaşılır mesaj gösterilir.
+	 */
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public String typeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request,
+			HttpServletResponse response, Model model, RedirectAttributes redirect) {
+		String message = java.math.BigDecimal.class.equals(ex.getRequiredType())
+				? "Geçerli bir tutar girin (ör. 1.250,50)."
+				: "Girilen değerlerden biri geçersiz.";
+		return businessRule(new BusinessRuleException(message), request, response, model, redirect);
 	}
 
 	/** Referer başlığından yalnızca yol kısmını alır; başka siteye yönlendirmeyi engeller. */

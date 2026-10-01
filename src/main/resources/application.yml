@@ -57,6 +57,14 @@ sahahub:
     # Suresi dolan tutmalari serbest birakan gorevin calisma araligi:
     expiry-sweep-interval: PT30S
     expiry-job-enabled: true
+  payment:
+    simulation:
+      # Simülasyon sağlayıcısının webhook imza anahtarı. Gerçek ödeme yoktur; yine de anahtar repoda tutulmaz.
+      webhook-secret: ${PAYMENT_SIM_WEBHOOK_SECRET:}
+      # "Gecikmeli bildirim" senaryosunda bildirimin gecikmesi
+      delay: PT60S
+      dispatch-interval: PT5S
+      dispatch-enabled: true
   security:
     login-max-failures: 5
     login-lock-duration: PT15M

@@ -91,13 +91,146 @@
 		<dt th:if="${r.contactPhone() != null}">Telefon</dt>
 		<dd th:if="${r.contactPhone() != null}"><a th:href="'tel:' + ${#strings.replace(r.contactPhone(), ' ', '')}" th:text="${r.contactPhone()}">0555</a></dd>
 		<dt>Kanal</dt><dd th:text="${r.channel().label()}">Telefon</dd>
-		<dt>Tutar</dt><dd><strong th:text="${@fmt.money(r.total(), r.currency())}">1.400 ₺</strong></dd>
 		<dt th:if="${r.bufferMinutes() > 0}">Hazırlık</dt><dd th:if="${r.bufferMinutes() > 0}" th:text="${r.bufferMinutes()} + ' dk'">15 dk</dd>
 		<dt th:if="${r.note() != null}">Not</dt><dd th:if="${r.note() != null}" th:text="${r.note()}">Not</dd>
 		<dt th:if="${r.held()}">Tutma bitişi</dt><dd th:if="${r.held()}" th:text="${@fmt.time(r.holdExpiresAt())}">21:10</dd>
 		<dt th:if="${r.cancelReason() != null}">İptal nedeni</dt><dd th:if="${r.cancelReason() != null}" th:text="${r.cancelReason()}">…</dd>
 	</dl>
-	<p class="notice-demo">Ödeme kaydı bu sürümde yok; ücret sahada alınır.</p>
+
+	<!-- ================= Ödeme: durum, tahsilat, havale doğrulama, iade, ters kayıt ================= -->
+	<div class="panel-section" th:with="s=${pay.payments().summary()}, base='/isletme/rezervasyonlar/' + ${r.code()}">
+		<h3>Ödeme</h3>
+		<div th:replace="~{fragments/money :: summary(${s})}"></div>
+
+		<form th:if="${pay.canCollect() and s.balance().signum() > 0 and (r.status().name() == 'CONFIRMED' or r.status().name() == 'COMPLETED' or r.status().name() == 'NO_SHOW')}"
+		      th:action="@{__${base}__/tahsilat}" method="post" class="collect-form">
+			<input type="hidden" name="anahtar" th:value="${@fmt.newKey()}">
+			<fieldset>
+				<legend>Tahsilat al</legend>
+				<label class="choice"><input type="radio" name="method" value="CASH" th:checked="${pay.cashOpen()}" th:disabled="${!pay.cashOpen()}"> Nakit</label>
+				<label class="choice"><input type="radio" name="method" value="MANUAL_POS" th:checked="${!pay.cashOpen()}"> POS (manuel kayıt)</label>
+			</fieldset>
+			<p class="tiny muted" th:unless="${pay.cashOpen()}">Nakit için önce <a th:href="@{/isletme/subeler/{id}/kasa(id=${r.branchId()})}">kasayı açın</a>.</p>
+			<div class="field-row">
+				<div class="field">
+					<label for="col-amount">Tutar (₺)</label>
+					<input class="input num" id="col-amount" name="amount" inputmode="decimal" required
+					       th:value="${s.depositRemaining().signum() > 0} ? ${s.depositRemaining()} : ${s.balance()}">
+				</div>
+				<div class="field">
+					<label for="col-note">Not</label>
+					<input class="input" id="col-note" name="note" maxlength="300" placeholder="Ör. kapora">
+				</div>
+			</div>
+			<button class="btn btn-primary btn-sm" type="submit">Tahsilatı kaydet</button>
+			<p class="tiny muted" style="margin:6px 0 0">POS kaydı yalnızca slip tutarının elle girilmesidir; POS cihazına bağlantı yoktur.</p>
+		</form>
+
+		<ul class="pay-history" th:if="${!#lists.isEmpty(pay.payments().rows())}">
+			<li th:each="p : ${pay.payments().rows()}" th:classappend="'st-' + ${p.status().name()}">
+				<span class="num" th:text="${@fmt.dateTime(p.createdAt())}">1 Eki 20:00</span>
+				<span th:text="${p.kind().label()} + ' · ' + ${p.method().label()}">Tahsilat · Nakit</span>
+				<strong th:text="(${p.kind().name() == 'CHARGE'} ? '' : '−') + ${@fmt.money(p.amount(), p.currency())}">500 ₺</strong>
+				<span class="tiny" th:if="${p.status().name() != 'SUCCEEDED'}" th:text="${p.status().label()}">Bekliyor</span>
+				<span class="tiny muted" th:if="${p.payerName() != null}" th:text="'Gönderen: ' + ${p.payerName()}">Gönderen</span>
+				<span class="tiny muted" th:if="${p.note() != null}" th:text="${p.note()}">Not</span>
+				<span class="tiny error-inline" th:if="${p.failureReason() != null}" th:text="${p.failureReason()}">Neden</span>
+
+				<!-- Havale doğrulama -->
+				<div class="row-actions" th:if="${pay.canCollect() and p.method().name() == 'BANK_TRANSFER' and p.status().name() == 'PENDING'}">
+					<form th:action="@{/isletme/odemeler/{id}/havale(id=${p.id()})}" method="post">
+						<input type="hidden" name="accepted" value="true">
+						<button class="btn btn-secondary btn-sm" type="submit">Hesaba geçti, doğrula</button>
+					</form>
+					<form th:action="@{/isletme/odemeler/{id}/havale(id=${p.id()})}" method="post" class="inline-form">
+						<input type="hidden" name="accepted" value="false">
+						<label class="sr-only" th:for="'rej-' + ${p.id()}">Reddetme gerekçesi</label>
+						<input class="input" th:id="'rej-' + ${p.id()}" name="reason" placeholder="Gerekçe" required maxlength="300">
+						<button class="btn btn-danger btn-sm" type="submit">Reddet</button>
+					</form>
+				</div>
+
+				<!-- İade -->
+				<details class="row-actions" th:if="${pay.canRefund() and p.refundable().signum() > 0}">
+					<summary th:text="'İade et (en fazla ' + ${@fmt.money(p.refundable(), p.currency())} + ')'">İade et</summary>
+					<form th:action="@{__${base}__/iade}" method="post" data-confirm="İade kaydedilsin mi?">
+						<input type="hidden" name="anahtar" th:value="${@fmt.newKey()}">
+						<input type="hidden" name="chargeId" th:value="${p.id()}">
+						<div class="field-row">
+							<div class="field">
+								<label th:for="'ref-' + ${p.id()}">Tutar (₺)</label>
+								<input class="input num" th:id="'ref-' + ${p.id()}" name="amount" inputmode="decimal" required th:value="${p.refundable()}">
+							</div>
+							<div class="field">
+								<label th:for="'refn-' + ${p.id()}">Not</label>
+								<input class="input" th:id="'refn-' + ${p.id()}" name="note" maxlength="300">
+							</div>
+						</div>
+						<button class="btn btn-danger btn-sm" type="submit">İadeyi kaydet</button>
+						<p class="tiny muted" th:if="${p.method().name() == 'ONLINE_SIM'}">Çevrim içi ödemenin iadesi sağlayıcıya (simülasyon) gönderilir.</p>
+						<p class="tiny muted" th:if="${p.method().name() == 'CASH'}">Nakit iade kasadan çıkar.</p>
+					</form>
+				</details>
+
+				<!-- Hatalı kayıt düzeltme -->
+				<details class="row-actions" th:if="${pay.canCollect() and p.reversible()}">
+					<summary>Hatalı kayıt: ters çevir</summary>
+					<form th:action="@{__${base}__/ters-kayit}" method="post" data-confirm="Bu tahsilat ters kayıtla iptal edilsin mi?">
+						<input type="hidden" name="anahtar" th:value="${@fmt.newKey()}">
+						<input type="hidden" name="chargeId" th:value="${p.id()}">
+						<label class="sr-only" th:for="'rev-' + ${p.id()}">Gerekçe</label>
+						<input class="input" th:id="'rev-' + ${p.id()}" name="reason" required maxlength="300" placeholder="Ör. tutar yanlış girildi">
+						<button class="btn btn-secondary btn-sm" type="submit" style="margin-top:6px">Ters kaydı ekle</button>
+					</form>
+				</details>
+			</li>
+		</ul>
+		<p class="small" style="margin:10px 0 0"><a th:href="@{__${base}__/ozet}" target="_blank" rel="noopener">Özeti yazdır</a></p>
+	</div>
+
+	<!-- ================= Fiyat: kalemler, ek hizmet, kupon, personel indirimi ================= -->
+	<div class="panel-section" th:with="base='/isletme/rezervasyonlar/' + ${r.code()}">
+		<h3>Fiyat</h3>
+		<table th:replace="~{fragments/money :: lines(${r}, ${r.open()} ? ${base} : null, ${pay.canDiscount()})}"></table>
+		<th:block th:if="${r.open()}">
+			<form th:if="${!#lists.isEmpty(pay.extras())}" th:action="@{__${base}__/ek-hizmet}" method="post" class="addon-row">
+				<label class="sr-only" for="st-extra">Ek hizmet</label>
+				<select class="select" id="st-extra" name="extraId">
+					<option th:each="e : ${pay.extras()}" th:value="${e.id()}" th:text="${e.name()} + ' (' + ${@fmt.moneyShort(e.unitPrice(), r.currency())} + ')'">Hakem</option>
+				</select>
+				<label class="sr-only" for="st-qty">Adet</label>
+				<select class="select qty" id="st-qty" name="quantity">
+					<option th:each="q : ${ {1,2,3,4,5,6,7,8,9,10,12,14} }" th:value="${q}" th:text="${q}">1</option>
+				</select>
+				<button class="btn btn-secondary btn-sm" type="submit">Ekle</button>
+			</form>
+			<form th:unless="${r.hasCoupon()}" th:action="@{__${base}__/kupon}" method="post" class="addon-row">
+				<label class="sr-only" for="st-coupon">Kupon kodu</label>
+				<input class="input" id="st-coupon" name="kupon" placeholder="Kupon kodu" maxlength="30">
+				<button class="btn btn-secondary btn-sm" type="submit">Uygula</button>
+			</form>
+			<details th:if="${pay.canDiscount()}" class="row-actions">
+				<summary>Personel indirimi</summary>
+				<form th:action="@{__${base}__/indirim}" method="post">
+					<div class="field-row">
+						<div class="field">
+							<label for="dc-pct">Yüzde</label>
+							<input class="input num" id="dc-pct" name="percent" inputmode="decimal" placeholder="10">
+						</div>
+						<div class="field">
+							<label for="dc-amt">veya tutar (₺)</label>
+							<input class="input num" id="dc-amt" name="amount" inputmode="decimal" placeholder="200">
+						</div>
+					</div>
+					<div class="field">
+						<label for="dc-reason">Gerekçe <span class="req" aria-hidden="true">*</span></label>
+						<input class="input" id="dc-reason" name="reason" required maxlength="300" placeholder="Ör. düzenli müşteri">
+					</div>
+					<button class="btn btn-secondary btn-sm" type="submit">İndirimi uygula</button>
+				</form>
+			</details>
+		</th:block>
+	</div>
 
 	<div class="panel-section" th:if="${r.status().name() == 'CONFIRMED'}">
 		<h3>Durum</h3>

@@ -36,7 +36,30 @@
    başka işletmenin takvimi görülemez.
 3. `mudur.kadikoy@yesilvadi.test` ile **Saha kapat** → bir saha ve aralık seçip kaydedin.
 
-## 5. Platform yöneticisi
+## 5. Ödeme ve kasa (Aşama 3)
+
+Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. Kuponlar: `HOSGELDIN` (%10),
+`ILKMAC` (200 ₺, tek kullanımlık).
+
+1. `musteri@sahahub.test` → Kadıköy'de bir saat tut → **Ek hizmet** ekle, `HOSGELDIN` kuponunu uygula
+   → fiyat kalemleri ve kapora güncellenir.
+2. **Kaporayı öde** → DEMO sağlayıcı sayfası → **Ödeme başarılı** → rezervasyon "Onaylandı · Kısmi ödendi".
+3. Başka bir saat için **Başarılı ama bildirim gecikmeli gelsin** seçin; sayfada "onay bekleniyor" yazar.
+   60 sn sonra sayfayı yenileyin → onaylanır. (Tutma süresi dolana kadar beklerseniz geç ödeme
+   otomatik iade edilir ve personel ekranında görünür.)
+4. **Başarılı ve bildirim iki kez gelsin** → ödeme hareketlerinde tek tahsilat görünür.
+5. `resepsiyon.kadikoy@yesilvadi.test` → takvimde **Kapora** etiketli bir kutuya (ör. Okan Tunç) tıklayın →
+   panelde **Tahsilat al** (Nakit) → etiket "Kısmi" olur. Tutar alanına `1.250,50` gibi Türkçe yazım da olur.
+6. Panelden **Hatalı kayıt: ters çevir** ile yanlış tahsilatı düzeltin (tahsilat silinmez, ters kaydı eklenir).
+7. Üst menüden **Kasa** → kasada olması gereken tutar; sayılan tutarı girip kasayı kapatın → fark mesajı.
+8. `mudur.kadikoy@yesilvadi.test` → panelden **İade et** ve **Personel indirimi** (gerekçe zorunlu);
+   **Fiyatlandırma** ekranında kural/ek hizmet/kapora değiştirin (mevcut rezervasyonlar etkilenmez).
+9. `sahip@yesilvadi.test` → Fiyatlandırma → **Kuponlar** bölümü yalnızca sahipte görünür.
+10. Takvim yan panelinde: **Kapora bekleniyor** ve **Havale doğrulanacak** (Deniz Arslan'ın bildirimi).
+    **İade başarısız** uyarısı yalnızca başarısız bir iade olduğunda çıkar (ör. adım 2'de
+    "Başarılı; bu ödemenin iadesi başarısız olsun" seçip yöneticiyle iade deneyin).
+
+## 6. Platform yöneticisi
 
 `admin@sahahub.test` → **Platform** → bir işletmeyi gerekçe yazarak askıya alın → müşteri listesinde o
 işletmenin sahaları kaybolur. Etkinleştirince geri gelir. Her iki işlem `audit_event` tablosuna yazılır:

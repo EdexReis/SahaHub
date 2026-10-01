@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title th:text="'Rezervasyon/ödeme özeti ' + ${r.code()}">Özet</title>
+	<link rel="stylesheet" th:href="@{/css/app.css}">
+	<script th:src="@{/js/app.js}" defer></script>
+</head>
+<body class="receipt-body">
+<main class="receipt" th:with="s=${pay.payments().summary()}">
+	<header class="receipt-head">
+		<div>
+			<p class="eyebrow">Rezervasyon / ödeme özeti</p>
+			<h1 th:text="${r.businessName()}">İşletme</h1>
+			<p class="small" th:text="${r.branchName()} + ' · ' + ${r.address()}">Şube · adres</p>
+		</div>
+		<div class="receipt-code">
+			<span class="tiny muted">Rezervasyon kodu</span>
+			<strong class="num" th:text="${r.code()}">ABC</strong>
+		</div>
+	</header>
+	<p class="receipt-warning">Bu belge fatura veya mali belge değildir. Yalnızca rezervasyon ve ödeme bilgisini özetler.</p>
+	<dl class="kv">
+		<dt>Müşteri</dt><dd th:text="${r.customerName()}">Ad</dd>
+		<dt>Saha</dt><dd th:text="${r.pitchName()}">Saha</dd>
+		<dt>Tarih</dt><dd th:text="${@fmt.longDate(r.start().toLocalDate())} + ', ' + ${@fmt.timeRange(r.start(), r.end())}">Tarih</dd>
+		<dt>Durum</dt><dd th:text="${r.status().label()} + ' · ' + ${s.state().label()}">Onaylandı</dd>
+	</dl>
+	<h2 class="section-title">Fiyat</h2>
+	<table th:replace="~{fragments/money :: lines(${r}, null, false)}"></table>
+	<h2 class="section-title">Ödemeler</h2>
+	<div th:replace="~{fragments/money :: summary(${s})}"></div>
+	<ul th:replace="~{fragments/money :: history(${pay.payments().rows()})}"></ul>
+	<p class="tiny muted" th:if="${#lists.isEmpty(pay.payments().rows())}">Henüz ödeme hareketi yok.</p>
+	<p class="no-print"><button class="btn btn-secondary btn-sm" type="button" data-print>Yazdır</button></p>
+</main>
+</body>
+</html>

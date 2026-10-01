@@ -34,8 +34,11 @@ Kurallar `Reservation` sınıfındadır; geçersiz geçiş, kod nereden çağrı
 (`ReservationLifecycleTest`). Personel panelindeki düğmeler aynı sınıfın `canCheckIn(now)` gibi
 sorgularından üretilir; geçersiz düğme gösterilmez.
 
-**Ödeme durumu rezervasyon durumundan ayrıdır.** Aşama 3'te ayrı bir ödeme modeli eklenecek
-(ör. "Onaylandı + Kapora bekleniyor").
+**Ödeme durumu rezervasyon durumundan ayrıdır** ve hareketlerden hesaplanır (ör. "Onaylandı + Kapora
+bekleniyor"). Ayrıntı: [ODEME.md](ODEME.md).
+
+Şubede kapora kuralı varsa müşterinin geçici tutması **kapora ödemesiyle** onaylanır (ödeme bildirimi
+HELD → CONFIRMED geçişini yapar); ödemesiz "onayla" düğmesi gösterilmez ve sunucuda da reddedilir.
 
 ## Süresi dolan tutmalar
 
@@ -56,11 +59,11 @@ sorgularından üretilir; geçersiz düğme gösterilmez.
 4. Kalem tutarı = saatlik ücret × dakika ÷ 60, **kuruşa HALF_UP** yuvarlanır. Toplam = kalemlerin toplamı.
 5. Hazırlık süresi ücretlendirilmez. Para birimi TRY; tüm hesaplar `BigDecimal`.
 6. Kalemler `reservation_price_line` tablosuna kopyalanır; tarife sonradan değişse de rezervasyon değişmez.
-7. **Taşıma** fiyatı değiştirmez (anlık görüntü korunur). Fark gerekiyorsa Aşama 3'te personel indirimi
-   / ek ücret kalemiyle eklenecek.
+7. **Taşıma** fiyatı değiştirmez (anlık görüntü korunur). Fark gerekiyorsa personel indirimi veya ek
+   hizmet kalemiyle düzeltilir.
 
-Kapora, kupon, personel indirimi ve ek hizmetler Aşama 3'te bu toplamın üzerine, şu sırayla eklenecek:
-saha ücreti → ek hizmetler → kupon → personel indirimi (gerekçeli) → kapora (sabit/yüzde).
+Saha ücretinin üzerine sırasıyla: ek hizmetler → kupon → personel indirimi (gerekçeli); kapora son
+toplamdan hesaplanır. Ayrıntı ve yuvarlama: [ODEME.md §2](ODEME.md).
 
 ## İptal sınırı
 

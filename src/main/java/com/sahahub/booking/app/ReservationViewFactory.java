@@ -39,8 +39,10 @@ class ReservationViewFactory {
 		Instant now = Instant.now(clock);
 		var lines = priceLines.findByReservationIdOrderByLineNo(r.getId())
 			.stream()
-			.map(l -> new ReservationView.Line(l.getLabel(), l.getStartsAt().atZone(zone), l.getEndsAt().atZone(zone),
-					l.getMinutes(), l.getHourlyRate(), l.getAmount()))
+			.filter(l -> !l.isVoided())
+			.map(l -> new ReservationView.Line(l.getId(), l.getKind(), l.getLabel(), at(l.getStartsAt(), zone),
+					at(l.getEndsAt(), zone), l.getMinutes(), l.getHourlyRate(), l.getQuantity(), l.getUnitAmount(),
+					l.getPercent(), l.getReason(), l.getAmount()))
 			.toList();
 		AppUser customer = r.getCustomerId() == null ? null : users.findById(r.getCustomerId()).orElse(null);
 		String name = customer != null ? customer.getFullName() : r.getGuestName();
@@ -60,7 +62,7 @@ class ReservationViewFactory {
 				at(r.getCheckedInAt(), zone), r.getCancelReason(), r.getCreatedAt().atZone(zone), businessDay,
 				new ReservationView.Actions(r.canCheckIn(now), r.canComplete(now), r.canMarkNoShow(now),
 						r.canReschedule(now), r.canBeCancelledByStaff(now)),
-				r.checkInOpensAt().atZone(zone));
+				r.checkInOpensAt().atZone(zone), r.depositPolicy().depositFor(r.getTotalAmount()), r.getBusinessId());
 	}
 
 	private static ZonedDateTime at(Instant instant, ZoneId zone) {
