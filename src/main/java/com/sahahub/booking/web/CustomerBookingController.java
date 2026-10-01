@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.sahahub.booking.app.CustomerBookingService;
+import com.sahahub.booking.app.WaitlistService;
 import com.sahahub.booking.domain.HoldExpiredException;
 import com.sahahub.identity.security.AppUserPrincipal;
 import com.sahahub.payment.app.PaymentPanelService;
@@ -25,10 +26,13 @@ public class CustomerBookingController {
 
 	private final CustomerBookingService booking;
 	private final PaymentPanelService payments;
+	private final WaitlistService waitlist;
 
-	public CustomerBookingController(CustomerBookingService booking, PaymentPanelService payments) {
+	public CustomerBookingController(CustomerBookingService booking, PaymentPanelService payments,
+			WaitlistService waitlist) {
 		this.booking = booking;
 		this.payments = payments;
+		this.waitlist = waitlist;
 	}
 
 	/**
@@ -75,6 +79,7 @@ public class CustomerBookingController {
 			@RequestParam(name = "sayfa", defaultValue = "0") int page, Model model) {
 		model.addAttribute("upcoming", booking.upcoming(me));
 		model.addAttribute("page", booking.history(me, PageRequest.of(Math.max(page, 0), PAGE_SIZE)));
+		model.addAttribute("waiting", waitlist.mine(me));
 		return "customer/my-reservations";
 	}
 

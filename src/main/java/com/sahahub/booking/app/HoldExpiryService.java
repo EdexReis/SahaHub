@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,13 +30,15 @@ public class HoldExpiryService {
 	private final ReservationRepository reservations;
 	private final OccupancyService occupancy;
 	private final ReservationPricingService pricing;
+	private final ApplicationEventPublisher events;
 	private final Clock clock;
 
 	public HoldExpiryService(ReservationRepository reservations, OccupancyService occupancy,
-			ReservationPricingService pricing, Clock clock) {
+			ReservationPricingService pricing, ApplicationEventPublisher events, Clock clock) {
 		this.reservations = reservations;
 		this.occupancy = occupancy;
 		this.pricing = pricing;
+		this.events = events;
 		this.clock = clock;
 	}
 
@@ -49,6 +52,8 @@ public class HoldExpiryService {
 		r.expire(now);
 		occupancy.release(PitchOccupancy.Source.RESERVATION, r.getId());
 		pricing.releaseCoupons(r.getId());
+		events.publishEvent(new BookingEvents.SlotReleased(r.getId(), r.getPitchId(), r.getStartsAt(),
+				r.occupiedRange().end()));
 	}
 
 	/** Bir grup süresi dolmuş tutmayı işler; işlenen kayıt sayısını döner. */

@@ -59,7 +59,27 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
     **İade başarısız** uyarısı yalnızca başarısız bir iade olduğunda çıkar (ör. adım 2'de
     "Başarılı; bu ödemenin iadesi başarısız olsun" seçip yöneticiyle iade deneyin).
 
-## 6. Platform yöneticisi
+## 6. Düzenli rezervasyon, bekleme listesi, bildirimler (Aşama 4)
+
+1. `resepsiyon.kadikoy@yesilvadi.test` → üst sekmelerden **Düzenli rezervasyon**.
+2. Saha **Saha 1 · Kapalı**, ilk tarih olarak 2 gün sonrası, saat **21:00**, 4 hafta, bir takım adı →
+   **Tarihleri önizle**. İlk tarih Deniz Arslan'ın rezervasyonu yüzünden **Dolu**; "Tümünü oluştur" kapalı.
+3. **Yalnızca seçili tarihleri oluştur** → takvim ilk maçı açar; panelde "Her hafta · 2. maç / 4" ve
+   **Bu ve sonraki 2 maçı iptal et**.
+4. Demo veride Emre Yıldız'ın 6 haftalık serisi de var (Saha 2 · Açık, her hafta 19:00).
+5. Çıkış → `musteri@sahahub.test` → **Rezervasyonlarım** → **Bekleme listem**: bugün 21:00 Saha 1 için
+   1. sıradasınız (demo veride Emre 2. sırada).
+6. Yeni sekmede resepsiyonla girip takvimde bugün **Saha 1 · 21:00** (Mert Aydın) rezervasyonunu gerekçeyle
+   iptal edin.
+7. Müşteri sekmesini yenileyin: menüde bildirim sayısı artar; **Bildirimler** → "Beklediğiniz saat boşaldı".
+   Rezervasyonlarım'da **Saat boşaldı · Onayla** → Kadıköy kapora istediği için 15 dakika içinde kaporayı (simülasyon) ödeyerek onaylayın.
+   (Onaylamazsanız süre dolunca teklif Emre'ye geçer.)
+8. Saha sayfasında dolu bir saate dokunarak sıraya girmeyi deneyin. Aynı saate ikinci kez → "zaten sıradasınız".
+9. **Bildirimler → Tercihler**: SMS'i açın (telefon zorunlu).
+10. E-postalar: <http://localhost:8025> (Mailpit). Hiçbir e-posta dışarı gitmez.
+11. `admin@sahahub.test` → **Platform → Demo mesaj kutusu**: gönderilmemiş (demo) SMS'ler.
+
+## 7. Platform yöneticisi
 
 `admin@sahahub.test` → **Platform** → bir işletmeyi gerekçe yazarak askıya alın → müşteri listesinde o
 işletmenin sahaları kaybolur. Etkinleştirince geri gelir. Her iki işlem `audit_event` tablosuna yazılır:

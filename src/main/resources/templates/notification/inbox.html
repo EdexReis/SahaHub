@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Bildirimler · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<div class="page-head">
+		<h1>Bildirimler</h1>
+		<div class="btn-row">
+			<form th:if="${unreadCount > 0}" th:action="@{/bildirimler/okundu}" method="post">
+				<button type="submit" class="btn btn-secondary btn-sm">Tümünü okundu say</button>
+			</form>
+			<a class="btn btn-secondary btn-sm" th:href="@{/profil}">Tercihler</a>
+		</div>
+	</div>
+
+	<div class="empty" th:if="${!page.hasContent()}">
+		<p>Henüz bildiriminiz yok. Rezervasyon onayı, iptal, hatırlatma ve bekleme listesi haberleri burada görünür.</p>
+	</div>
+
+	<ul class="note-list" th:if="${page.hasContent()}">
+		<li class="note-item" th:each="n : ${page.content}" th:classappend="${n.readAt == null} ? 'is-unread'">
+			<h2>
+				<span th:if="${n.readAt == null}" class="sr-only">Okunmamış: </span>
+				<a th:if="${n.link != null}" th:href="@{${n.link}}" th:text="${n.title}">Rezervasyonunuz onaylandı</a>
+				<span th:unless="${n.link != null}" th:text="${n.title}">Başlık</span>
+			</h2>
+			<p th:text="${n.body}">Saha 1 · Merkez · 3 Ekim Cuma 21:00–22:00</p>
+			<span class="small muted num" th:text="${@fmt.at(n.createdAt)}">1 Eki 2026 20:15</span>
+		</li>
+	</ul>
+
+	<nav class="pager" aria-label="Sayfalar" th:if="${page.totalPages > 1}">
+		<a class="btn btn-secondary btn-sm" th:if="${page.hasPrevious()}" th:href="@{/bildirimler(sayfa=${page.number - 1})}">← Daha yeni</a>
+		<span class="small muted" th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 2</span>
+		<a class="btn btn-secondary btn-sm" th:if="${page.hasNext()}" th:href="@{/bildirimler(sayfa=${page.number + 1})}">Daha eski →</a>
+	</nav>
+</main>
+</body>
+</html>

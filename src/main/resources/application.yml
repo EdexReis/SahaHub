@@ -57,6 +57,20 @@ sahahub:
     # Suresi dolan tutmalari serbest birakan gorevin calisma araligi:
     expiry-sweep-interval: PT30S
     expiry-job-enabled: true
+    # Düzenli (haftalık) rezervasyonda tek seferde oluşturulabilecek en fazla maç
+    series-max-occurrences: 26
+  waitlist:
+    # Boşalan saat sıradaki müşteri için bu kadar dakika tutulur; onaylanmazsa sıradakine geçer
+    offer-minutes: 15
+  notification:
+    jobs-enabled: true
+    dispatch-interval: PT10S
+    reminder-interval: PT10M
+    # SMS veya WHATSAPP; ikisi de DEMO kanaldır, gerçek gönderim yapılmaz
+    short-message-channel: SMS
+    mail-from: "SahaHub <bildirim@sahahub.local>"
+  # E-postalardaki bağlantılar için
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
   payment:
     simulation:
       # Simülasyon sağlayıcısının webhook imza anahtarı. Gerçek ödeme yoktur; yine de anahtar repoda tutulmaz.

@@ -2,23 +2,24 @@
 
 Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 + Thymeleaf + PostgreSQL.
 
-> **Durum (1 Ekim 2026):** Aşama 1–3 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
-> takvimi, fiyatlandırma (kapora, kupon, ek hizmet, indirim), ödeme hareketleri, iade ve kasa.
-> Düzenli rezervasyon, bekleme listesi, bildirim, takım, turnuva ve raporlar **henüz yok**.
+> **Durum (1 Ekim 2026):** Aşama 1–4 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
+> takvimi, fiyatlandırma (kapora, kupon, ek hizmet, indirim), ödeme hareketleri, iade, kasa, düzenli
+> (haftalık) rezervasyon, bekleme listesi ve bildirimler. Takım, ilan, turnuva ve raporlar **henüz yok**.
 > Ayrıntı: [PROGRESS.md](PROGRESS.md).
 >
 > **Gerçek entegrasyon yoktur:** çevrim içi ödeme bir **simülasyondur** (kart bilgisi alınmaz, para çekilmez),
-> "manuel POS" yalnızca slip tutarının elle girilmesidir, SMS/e-posta gönderilmez.
+> "manuel POS" yalnızca slip tutarının elle girilmesidir. E-postalar yalnızca yerel Mailpit'e gider;
+> SMS/WhatsApp **demo kanaldır** (mesaj gönderilmez, yalnızca kaydedilir).
 
 ## Neler çalışıyor?
 
 | Kim | Ne yapabilir |
 |---|---|
-| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, ek hizmet ve kupon ekleme, kaporayı/tamamını çevrim içi ödeme (simülasyon), havale bildirimi, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal (çevrim içi ödeme otomatik iade), yazdırılabilir özet |
-| Resepsiyon | Şube takvimi (ödeme etiketleriyle), boş saatten hızlı rezervasyon, taşıma, geldi / tamamlandı / gelmedi, gerekçeli iptal, nakit / manuel POS tahsilat, havale doğrulama, hatalı tahsilatı ters kayıtla düzeltme, kasa açma/kapama |
+| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, ek hizmet ve kupon ekleme, kaporayı/tamamını çevrim içi ödeme (simülasyon), havale bildirimi, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal (çevrim içi ödeme otomatik iade), yazdırılabilir özet, dolu saat için bekleme listesi (sıra numarası, boşalınca 15 dk'lık teklif), bildirim kutusu ve e-posta/SMS tercihleri |
+| Resepsiyon | Şube takvimi (ödeme etiketleriyle), boş saatten hızlı rezervasyon, önizlemeli düzenli (haftalık) rezervasyon ve "bu ve sonraki maçları iptal", taşıma, geldi / tamamlandı / gelmedi, gerekçeli iptal, nakit / manuel POS tahsilat, havale doğrulama, hatalı tahsilatı ters kayıtla düzeltme, kasa açma/kapama |
 | Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma, iade, personel indirimi, gider kaydı, fiyat kuralları, ek hizmetler, kapora kuralı |
 | İşletme sahibi | İşletmenin tüm şubelerinde yukarıdakilerin hepsi + kuponlar |
-| Platform yöneticisi | İşletmeleri listeleme, gerekçeyle askıya alma/etkinleştirme (denetim kaydına yazılır) |
+| Platform yöneticisi | İşletmeleri listeleme, gerekçeyle askıya alma/etkinleştirme (denetim kaydına yazılır), demo SMS/WhatsApp mesaj kutusu |
 
 ## Gereksinimler
 
@@ -122,7 +123,9 @@ boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGR
   Gerçek sağlayıcı `PaymentProvider` arayüzüyle eklenebilir (bkz. [docs/ODEME.md](docs/ODEME.md)).
 - **Manuel POS bir entegrasyon değildir**; personel slip tutarını elle girer.
 - Özet belgesi **fatura değildir**; e-fatura/muhasebe entegrasyonu yoktur.
-- **E-posta/SMS yok.** Mailpit konteyneri hazır ama uygulama henüz e-posta göndermiyor.
+- **E-posta yalnızca Mailpit'e** (http://localhost:8025) gider; gerçek bir SMTP sunucusu yapılandırılmadı.
+  Canlıda `MAIL_HOST`/`MAIL_SMTP_PORT` ve gönderici alan adı (SPF/DKIM) ayrı bir karar ve adımdır.
+- **SMS/WhatsApp demo kanaldır.** Gerçek sağlayıcı ücretlidir ve gerçek kişilere ulaşır; bilinçli olarak eklenmedi.
 - Saha, çalışma saati ve personel **yönetim ekranları yok**; bu veriler şimdilik demo veriyle gelir.
 - Parola sıfırlama yok.
 - Giriş hız sınırı bellekte tutulur (tek sunucu için yeterli).

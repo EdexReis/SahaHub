@@ -30,6 +30,10 @@ import com.sahahub.booking.domain.Reservation;
 import com.sahahub.booking.domain.ReservationPriceLine;
 import com.sahahub.booking.domain.ReservationPriceLineRepository;
 import com.sahahub.booking.domain.ReservationRepository;
+import com.sahahub.booking.domain.ReservationSeries;
+import com.sahahub.booking.domain.ReservationSeriesRepository;
+import com.sahahub.booking.domain.WaitlistEntry;
+import com.sahahub.booking.domain.WaitlistRepository;
 import com.sahahub.business.domain.Branch;
 import com.sahahub.business.domain.BranchOpeningHours;
 import com.sahahub.business.domain.BranchOpeningHoursRepository;
@@ -49,6 +53,7 @@ import com.sahahub.identity.domain.AppUserRepository;
 import com.sahahub.identity.domain.StaffMembership;
 import com.sahahub.identity.domain.StaffMembershipRepository;
 import com.sahahub.identity.domain.StaffRole;
+import com.sahahub.notification.app.NotificationWriter;
 import com.sahahub.pricing.domain.PriceCalculator;
 import com.sahahub.pricing.domain.PriceQuote;
 import com.sahahub.pricing.domain.PriceRule;
@@ -105,6 +110,9 @@ class DemoDataSeeder implements ApplicationRunner {
 	private final ExpenseRepository expenses;
 	private final SimulatedPaymentProvider simProvider;
 	private final JdbcTemplate jdbc;
+	private final ReservationSeriesRepository seriesRepo;
+	private final WaitlistRepository waitlist;
+	private final NotificationWriter notifications;
 
 	DemoDataSeeder(TransactionTemplate tx, PasswordEncoder encoder, Clock clock, AppUserRepository users,
 			StaffMembershipRepository memberships, BusinessRepository businesses, BranchRepository branches,
@@ -112,7 +120,8 @@ class DemoDataSeeder implements ApplicationRunner {
 			PitchBlockRepository blocks, PriceRuleRepository priceRules, ReservationRepository reservations,
 			ReservationPriceLineRepository priceLines, OccupancyService occupancy, ExtraServiceRepository extras,
 			CouponRepository coupons, PaymentRepository payments, CashSessionRepository cashSessions,
-			ExpenseRepository expenses, SimulatedPaymentProvider simProvider, JdbcTemplate jdbc) {
+			ExpenseRepository expenses, SimulatedPaymentProvider simProvider, JdbcTemplate jdbc,
+			ReservationSeriesRepository seriesRepo, WaitlistRepository waitlist, NotificationWriter notifications) {
 		this.tx = tx;
 		this.encoder = encoder;
 		this.clock = clock;
@@ -135,6 +144,9 @@ class DemoDataSeeder implements ApplicationRunner {
 		this.expenses = expenses;
 		this.simProvider = simProvider;
 		this.jdbc = jdbc;
+		this.seriesRepo = seriesRepo;
+		this.waitlist = waitlist;
+		this.notifications = notifications;
 	}
 
 	@Override
@@ -288,6 +300,41 @@ class DemoDataSeeder implements ApplicationRunner {
 		// Bakım kapatmaları
 		block(k3, today, 14, 17, PitchBlock.Reason.MAINTENANCE, "Çim fırçalama", manager1, now);
 		block(a2, today.plusDays(2), 10, 13, PitchBlock.Reason.EVENT, "Okul etkinliği", owner1, now);
+
+		// ------------------------------------------------ Aşama 4: düzenli rezervasyon, bekleme listesi, bildirimler
+		// Emre'nin takımı 6 hafta boyunca her hafta aynı gün 19:00'da Saha 2'de oynar.
+		LocalDate seriesStart = today.plusDays(3);
+		ReservationSeries series = seriesRepo.save(new ReservationSeries(yesil.getId(), kadikoy.getId(), k2.getId(),
+				captain.getId(), null, null, seriesStart, LocalTime.of(19, 0), 60, 6, Channel.PHONE,
+				"Emre'nin takımı (kurgusal)", reception1.getId(), now));
+		for (int i = 0; i < 6; i++) {
+			TimeRange play = play(seriesStart.plusWeeks(i), 19, 60);
+			Reservation r = Reservation.confirmedByStaff(yesil.getId(), kadikoy.getId(), k2.getId(), play,
+					k2.getBufferMinutes(), Channel.PHONE, captain.getId(), null, null, null, reception1.getId(), now);
+			r.attachToSeries(series.getId(), i + 1);
+			persist(r, k2);
+		}
+
+		// Bugün 21:00 Saha 1 dolu; Deniz ve Emre sırada (Deniz önce)
+		TimeRange wanted = play(today, 21, 60);
+		waitlist.save(new WaitlistEntry(yesil.getId(), kadikoy.getId(), k1.getId(), customer.getId(), wanted,
+				now.minus(Duration.ofMinutes(30))));
+		waitlist.save(new WaitlistEntry(yesil.getId(), kadikoy.getId(), k1.getId(), captain.getId(), wanted,
+				now.minus(Duration.ofMinutes(10))));
+
+		// Emre SMS bildirimi de istiyor (demo kanal: gönderilmez, yönetici demo kutusunda görünür)
+		captain.changeNotificationPreferences(true, true, captain.getPhone());
+		notifications.write(new NotificationWriter.Recipient(customer.getId(), customer.getEmail(), customer.getPhone(),
+				customer.isNotifyEmail(), customer.isNotifySms()), "RESERVATION_CONFIRMED", "Rezervasyonunuz onaylandı",
+				"Saha 1 · Kapalı · Kadıköy Şubesi · kod " + denizLater.getCode(), "/rezervasyon/" + denizLater.getCode(),
+				"demo:confirmed:" + denizLater.getId());
+		notifications.write(new NotificationWriter.Recipient(captain.getId(), captain.getEmail(), captain.getPhone(),
+				true, true), "SERIES_CREATED", "Düzenli rezervasyonunuz oluşturuldu",
+				"Saha 2 · Açık · Kadıköy Şubesi · her hafta 19:00 · 6 maç", null, "demo:series:" + series.getId());
+		notifications.write(new NotificationWriter.Recipient(null, null, "0555 000 99 99", false, true),
+				"RESERVATION_CONFIRMED", "Rezervasyonunuz onaylandı",
+				"Saha 1 · Kapalı · Kadıköy Şubesi · bugün 20:00 · kod " + evening.get(2).getCode(), null,
+				"demo:guest:" + evening.get(2).getId());
 	}
 
 	// ------------------------------------------------------------------ yardımcılar

@@ -110,6 +110,7 @@ public class PaymentWebhookService implements WebhookEndpoint {
 		}
 		if (r.getStatus() == ReservationStatus.HELD) {
 			r.confirm(now);
+			events.publishEvent(new com.sahahub.booking.app.BookingEvents.ReservationConfirmed(r.getId()));
 		}
 		else if (r.getStatus() == ReservationStatus.CANCELLED || r.getStatus() == ReservationStatus.EXPIRED) {
 			audit.record(null, r.getBusinessId(), "LATE_PAYMENT_RECEIVED", "Payment", payment.getId(),

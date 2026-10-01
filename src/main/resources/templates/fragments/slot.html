@@ -18,7 +18,16 @@
 			<span><span class="s-time num" th:text="${@fmt.time(s.localStart())}">21:00</span> <span class="s-end num" th:text="'–' + ${@fmt.time(s.localEnd())}">–22:00</span></span>
 			<span class="s-price" th:text="${@fmt.moneyShort(s.price(), s.currency())}">1.900 ₺</span>
 		</a>
-		<div th:unless="${s.available()}" class="slot is-off"
+		<form th:if="${s.state().name() == 'TAKEN' and me != null}" class="slot-form" th:action="@{/bekleme-listesi}" method="post">
+			<input type="hidden" name="pitchId" th:value="${ctx.pitch().id}">
+			<input type="hidden" name="baslangic" th:value="${s.start()}">
+			<button type="submit" class="slot is-off is-waitable"
+			        th:aria-label="${t1} + ' ile ' + ${t2} + ' arası dolu, boşalırsa haber almak için sıraya gir'">
+				<span><span class="s-time num" th:text="${@fmt.time(s.localStart())}">20:00</span> <span class="s-end num" th:text="'–' + ${@fmt.time(s.localEnd())}">–21:00</span></span>
+				<span class="s-price">Dolu · <u>Sıraya gir</u></span>
+			</button>
+		</form>
+		<div th:unless="${s.available() or (s.state().name() == 'TAKEN' and me != null)}" class="slot is-off"
 		     th:classappend="${s.state().name() == 'BLOCKED'} ? 'is-blocked'"
 		     th:aria-label="${t1} + ', ' + ${s.state().label()}">
 			<span><span class="s-time num" th:text="${@fmt.time(s.localStart())}">20:00</span> <span class="s-end num" th:text="'–' + ${@fmt.time(s.localEnd())}">–21:00</span></span>

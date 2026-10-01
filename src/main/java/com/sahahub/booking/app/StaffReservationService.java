@@ -75,17 +75,12 @@ public class StaffReservationService {
 		PitchContext ctx = pitchInBranch(cmd.pitchId(), branchId);
 		TimeRange play = validatePlay(ctx, cmd.start(), cmd.durationMinutes());
 
-		Long customerId = null;
-		if (cmd.customerEmail() != null && !cmd.customerEmail().isBlank()) {
-			customerId = users.findByEmail(cmd.customerEmail().strip())
-				.map(AppUser::getId)
-				.orElseThrow(() -> new BusinessRuleException(
-						"Bu e-postayla kayıtlı müşteri yok. E-postayı boş bırakıp ad ve telefon girin."));
-		}
+		Long customerId = resolveCustomer(cmd.customerEmail());
 		Reservation r = Reservation.confirmedByStaff(bc.business().getId(), branchId, ctx.pitch().getId(), play,
 				ctx.pitch().getBufferMinutes(), cmd.channel(), customerId, cmd.guestName(), cmd.guestPhone(),
 				cmd.note(), user.id(), Instant.now(clock));
 		Reservation saved = writer.persistNew(r, ctx);
+		events.publishEvent(new BookingEvents.ReservationConfirmed(saved.getId()));
 		audit.record(user.id(), bc.business().getId(), "RESERVATION_CREATED_BY_STAFF", "Reservation", saved.getId(),
 				"code=" + saved.getCode() + ", channel=" + cmd.channel());
 		return saved.getCode();
@@ -105,9 +100,12 @@ public class StaffReservationService {
 		TimeRange play = validatePlay(ctx, newStart, (int) r.playRange().minutes());
 		Instant now = Instant.now(clock);
 
+		var released = new BookingEvents.SlotReleased(r.getId(), r.getPitchId(), r.getStartsAt(),
+				r.occupiedRange().end());
 		occupancy.release(PitchOccupancy.Source.RESERVATION, r.getId());
 		r.reschedule(ctx.pitch().getId(), play, ctx.pitch().getBufferMinutes(), now);
 		occupancy.occupy(r.getPitchId(), r.occupiedRange(), PitchOccupancy.Source.RESERVATION, r.getId());
+		events.publishEvent(released); // eski saat boşaldı: bekleyen varsa teklif edilir
 		audit.record(user.id(), r.getBusinessId(), "RESERVATION_MOVED", "Reservation", r.getId(),
 				"code=" + code + ", from=" + before + ", to=" + r.getPitchId() + "@" + r.getStartsAt());
 	}
@@ -122,6 +120,8 @@ public class StaffReservationService {
 		occupancy.release(PitchOccupancy.Source.RESERVATION, r.getId());
 		pricing.releaseCoupons(r.getId());
 		events.publishEvent(new ReservationCancelled(r.getId(), false));
+		events.publishEvent(new BookingEvents.SlotReleased(r.getId(), r.getPitchId(), r.getStartsAt(),
+				r.occupiedRange().end()));
 		audit.record(user.id(), r.getBusinessId(), "RESERVATION_CANCELLED_BY_STAFF", "Reservation", r.getId(),
 				"code=" + code + ", reason=" + reason.strip());
 	}
@@ -155,6 +155,17 @@ public class StaffReservationService {
 	}
 
 	// ------------------------------------------------------------------ yardımcılar
+
+	/** E-posta girildiyse kayıtlı müşteriyi bulur; yoksa null (misafir). Seri oluşturma da kullanır. */
+	Long resolveCustomer(String email) {
+		if (email == null || email.isBlank()) {
+			return null;
+		}
+		return users.findByEmail(email.strip())
+			.map(AppUser::getId)
+			.orElseThrow(() -> new BusinessRuleException(
+					"Bu e-postayla kayıtlı müşteri yok. E-postayı boş bırakıp ad ve telefon girin."));
+	}
 
 	private Reservation lockForStaff(AppUserPrincipal user, String code, Permission permission) {
 		Reservation r = reservations.findByCodeForUpdate(code)

@@ -55,6 +55,11 @@ public class ViewFormat {
 		return d == null ? "" : d.format(DAY_MONTH);
 	}
 
+	/** Belirli bir şubeye bağlı olmayan anlar (bildirim zamanı gibi) Türkiye saatiyle gösterilir. */
+	public String at(java.time.Instant t) {
+		return t == null ? "" : t.atZone(java.time.ZoneId.of("Europe/Istanbul")).format(DATE_TIME);
+	}
+
 	public String dateTime(ZonedDateTime t) {
 		return t == null ? "" : t.format(DATE_TIME);
 	}

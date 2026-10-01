@@ -91,6 +91,8 @@
 		<dt th:if="${r.contactPhone() != null}">Telefon</dt>
 		<dd th:if="${r.contactPhone() != null}"><a th:href="'tel:' + ${#strings.replace(r.contactPhone(), ' ', '')}" th:text="${r.contactPhone()}">0555</a></dd>
 		<dt>Kanal</dt><dd th:text="${r.channel().label()}">Telefon</dd>
+		<dt th:if="${series != null}">Düzenli</dt>
+		<dd th:if="${series != null}" th:text="'Her hafta · ' + ${series.index()} + '. maç / ' + ${series.total()}">Her hafta · 3. maç / 8</dd>
 		<dt th:if="${r.bufferMinutes() > 0}">Hazırlık</dt><dd th:if="${r.bufferMinutes() > 0}" th:text="${r.bufferMinutes()} + ' dk'">15 dk</dd>
 		<dt th:if="${r.note() != null}">Not</dt><dd th:if="${r.note() != null}" th:text="${r.note()}">Not</dd>
 		<dt th:if="${r.held()}">Tutma bitişi</dt><dd th:if="${r.held()}" th:text="${@fmt.time(r.holdExpiresAt())}">21:10</dd>
@@ -286,6 +288,17 @@
 				</div>
 				<button class="btn btn-danger btn-sm" type="submit">Rezervasyonu iptal et</button>
 			</form>
+			<details class="row-actions" th:if="${series != null and series.openFromHere() > 1}">
+				<summary th:text="'Bu ve sonraki ' + (${series.openFromHere()} - 1) + ' maçı iptal et'">Bu ve sonraki maçları iptal et</summary>
+				<form th:action="@{/isletme/rezervasyonlar/{c}/seri-iptal(c=${r.code()})}" method="post"
+				      th:data-confirm="${series.openFromHere()} + ' maç iptal edilsin mi? Önceki maçlar etkilenmez.'">
+					<div class="field">
+						<label for="sx-reason">İptal nedeni <span class="req" aria-hidden="true">*</span></label>
+						<input class="input" id="sx-reason" name="reason" required maxlength="300" placeholder="Ör. Takım sezonu bitirdi">
+					</div>
+					<button class="btn btn-danger btn-sm" type="submit" th:text="${series.openFromHere()} + ' maçı iptal et'">8 maçı iptal et</button>
+				</form>
+			</details>
 		</div>
 	</th:block>
 </div>

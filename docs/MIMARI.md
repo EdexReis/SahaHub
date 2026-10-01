@@ -22,6 +22,11 @@
 | 16 | `PaymentProvider` adaptörü + simülasyon sağlayıcı (ayrı tablolar, imzalı webhook, gecikmeli teslim) | Gerçek sağlayıcı aynı arayüzle eklenir; senaryolar (gecikme, yinelenen, geç ödeme) gerçekçi denenir. |
 | 17 | Geç ödeme ve müşteri iptalinde otomatik iade `@TransactionalEventListener(AFTER_COMMIT)` ile | İade, olayı doğuran değişiklik kesinleşmeden başlamaz; kendi transaction'ında çalışır. |
 | 18 | Para girişi `MoneyInputFormatter` | Türkçe "1.400,50" ve "1400.50" yazımı kabul edilir. |
+| 19 | Düzenli rezervasyonda her maç ayrı `reservation` (`series_id`, `series_index`) | Tek maç taşınabilir, iptal edilebilir, ayrı ödenir; çakışma güvencesi aynı EXCLUDE kısıtından gelir. Seri oluşturma tek transaction: bir tarih dolarsa hiçbiri oluşmaz. |
+| 20 | Önizlemede uygun olmayan tarih varsa "tümü" reddedilir; atlama yalnızca açık seçimle | Personel bir haftanın sessizce düştüğünü fark etmeden müşteriye "8 maç" sözü vermez. |
+| 21 | Bekleme teklifi = sıradaki adına HELD rezervasyon | "Bir boşluk iki kişiye verilmez" için ikinci bir kilit mekanizması yazmak yerine mevcut kısıt kullanılır; teklif süresi dolunca mevcut süre dolumu görevi serbest bırakır ve sıradakine geçilir. |
+| 22 | Bildirimler transactional outbox (`notification_outbox`), BEFORE_COMMIT'te yazılır | Geri alınan işlem e-posta üretmez; SMTP yavaşlığı kullanıcı isteğini bekletmez. Gönderici `FOR UPDATE SKIP LOCKED` ile paralel çalışabilir. |
+| 23 | `dedup_key` UNIQUE + `ON CONFLICT DO NOTHING` | Hatırlatma görevi her çalıştığında aynı mesajı yeniden üretmez; olay iki kez işlense de tek bildirim. |
 
 ## 2. Paketler (modüller)
 
@@ -35,17 +40,34 @@ com.sahahub
 │                 ek hizmet/kupon/indirim kalemleri (ReservationPricingService)
 ├── payment       ödeme hareketleri, kasa, giderler, webhook; provider/ altında sağlayıcı adaptörü
 │                 ve simülasyon sağlayıcısı
+├── notification  uygulama içi bildirim, outbox, gönderici, kanallar (e-posta; SMS/WhatsApp demo),
+│                 hatırlatma görevi
 ├── platform      platform yöneticisi işlemleri
 └── dev           yalnızca dev profilinde demo veri
 ```
 
-Henüz olmayan modüller (sonraki aşamalar): `team`, `tournament`, `notification`, `reporting`.
+Henüz olmayan modüller (sonraki aşamalar): `team`, `tournament`, `reporting`.
 
 **Bağımlılık yönü**: `payment → booking → business/pricing → identity → shared`. Rezervasyon modülünün
 ödeme bilgisine ihtiyacı olan iki yer (takvim etiketi, kapora ödenmeden onay engeli) için
 `booking.app.PaymentStatusPort` arayüzü tanımlıdır; uygulamasını `payment.app.PaymentQueries` verir
 (Dependency Inversion). Rezervasyon iptali `ReservationCancelled` olayı olarak yayımlanır; ödeme modülü
 commit sonrası dinler. Web katmanı (controller'lar) birden fazla modülü birleştirebilir.
+
+`notification → booking` yönündedir: rezervasyon modülü bildirim modülünü tanımaz, yalnızca olay yayımlar
+(`BookingEvents.ReservationConfirmed`, `SlotReleased`, `SeriesCreated`, `WaitlistOffered`,
+`ReservationCancelled`). `notification.app.ReservationNotifications` bu olayları BEFORE_COMMIT dinleyip
+aynı transaction'da bildirim satırı yazar.
+
+```
+İş işlemi (ör. personel iptali)                       ayrı görev (10 sn'de bir)
+  ├─ reservation UPDATE, occupancy active=false        OutboxDispatcher.dispatchDue()
+  ├─ olay: ReservationCancelled, SlotReleased            ├─ select … for update skip locked
+  ├─ BEFORE_COMMIT: notification + outbox INSERT         ├─ kanal.send()  (SMTP → Mailpit / DEMO)
+  │                 (on conflict (dedup_key) do nothing) └─ SENT  ya da  deneme+1, sonraki deneme
+  └─ COMMIT ─► AFTER_COMMIT: WaitlistService.offerNext()        1/2/4/8 dk sonra, 5. denemede FAILED
+               (her saat için REQUIRES_NEW; HELD teklif)
+```
 
 Her modülde katmanlar:
 
@@ -125,6 +147,24 @@ erDiagram
     CASH_SESSION |o--o{ PAYMENT : "nakit"
     BRANCH ||--o{ EXPENSE : ""
     CASH_SESSION |o--o{ EXPENSE : "kasadan"
+    RESERVATION_SERIES ||--o{ RESERVATION : "series_id, series_index"
+    PITCH ||--o{ WAITLIST_ENTRY : ""
+    APP_USER ||--o{ WAITLIST_ENTRY : "müşteri"
+    WAITLIST_ENTRY |o--o| RESERVATION : "offer_reservation_id (HELD teklif)"
+    APP_USER ||--o{ NOTIFICATION : "uygulama içi"
+
+    WAITLIST_ENTRY {
+        varchar status "WAITING OFFERED ACCEPTED EXPIRED LEFT"
+        timestamptz starts_at "ux: müşteri+saha+saat (aktif)"
+        bigint offer_reservation_id "ux: saha+saat tek OFFERED"
+    }
+    NOTIFICATION_OUTBOX {
+        varchar channel "EMAIL SMS WHATSAPP"
+        varchar dedup_key "UNIQUE"
+        varchar status "PENDING SENT FAILED"
+        int attempts
+        timestamptz next_attempt_at
+    }
 
     PAYMENT {
         varchar kind "CHARGE REFUND REVERSAL"

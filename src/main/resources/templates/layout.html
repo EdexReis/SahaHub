@@ -22,6 +22,12 @@
 			<nav class="nav" aria-label="Ana menü">
 				<a th:href="@{/sahalar}" th:aria-current="${currentPath != null and (currentPath == '/' or #strings.startsWith(currentPath, '/sahalar'))} ? 'page'">Sahalar</a>
 				<a th:if="${me != null}" th:href="@{/rezervasyonlarim}" th:aria-current="${currentPath != null and #strings.startsWith(currentPath, '/rezervasyon')} ? 'page'"><span class="long">Rezervasyonlarım</span><span class="short">Rezervasyonlar</span></a>
+				<a th:if="${me != null}" th:href="@{/bildirimler}" th:aria-current="${currentPath != null and (#strings.startsWith(currentPath, '/bildirimler') or #strings.startsWith(currentPath, '/profil'))} ? 'page'"
+				   th:aria-label="${unreadCount != null and unreadCount > 0} ? 'Bildirimler, ' + ${unreadCount} + ' okunmamış' : 'Bildirimler'">
+					<span class="long">Bildirimler</span>
+					<svg class="short nav-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5a5 5 0 0 0-5 5v3.2L3.5 13.5h13L15 10.7V7.5a5 5 0 0 0-5-5Zm-2 13a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+					<span class="nav-count num" th:if="${unreadCount != null and unreadCount > 0}" th:text="${unreadCount > 99} ? '99+' : ${unreadCount}">2</span>
+				</a>
 				<a th:if="${me != null and me.staff()}" class="nav-staff" th:href="@{/isletme}" th:aria-current="${currentPath != null and #strings.startsWith(currentPath, '/isletme')} ? 'page'"><span class="long">İşletme paneli</span><span class="short">Panel</span></a>
 				<a th:if="${me != null and me.platformAdmin()}" class="hide-sm" th:href="@{/admin/isletmeler}">Platform</a>
 				<a th:if="${me == null}" th:href="@{/giris}">Giriş</a>

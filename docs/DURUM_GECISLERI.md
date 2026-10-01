@@ -49,6 +49,56 @@ HELD → CONFIRMED geçişini yapar); ödemesiz "onayla" düğmesi gösterilmez 
 - Müşteri süre dolduktan sonra onaylamaya çalışırsa rezervasyon o anda EXPIRED yapılır (görevi beklemeden).
 - Sınır: `hold_expires_at` anı dahil süre dolmuş sayılır.
 
+## Düzenli rezervasyon (seri)
+
+- Seri, haftalık tekrar eden maçların **kuralıdır** (`reservation_series`: ilk tarih, saat, süre, adet).
+  Her maç ayrı bir `reservation` satırıdır (`series_id`, `series_index`); kendi durumu, fiyatı ve ödemesi vardır.
+- Adet 2 ile `sahahub.booking.series-max-occurrences` (varsayılan 26) arasındadır.
+- Önizlemede her tarih: **Uygun**, **Dolu** (rezervasyon veya bakım kapatması), **Şube kapalı**, **Geçmiş**.
+- "Tümünü oluştur" yalnızca hepsi uygunsa çalışır. Değilse personel tarihleri tek tek işaretler
+  ("Yalnızca seçili tarihleri oluştur"); işaretlenmeyen tarih sessizce atlanmaz.
+- Oluşturma tek transaction'dır. Önizlemeden sonra bir tarih dolmuşsa hiçbir maç oluşmaz; personel güncel
+  önizlemeyi görür (`SeriesIT.concurrentSeriesNeverLeavesPartialSeries`).
+- "Bu ve sonraki maçları iptal et": seçilen maç ve sonrasındaki açık (HELD/CONFIRMED) maçlar iptal edilir;
+  önceki maçlar etkilenmez. Gerekçe zorunlu.
+
+## Bekleme listesi
+
+```mermaid
+stateDiagram-v2
+    [*] --> WAITING: müşteri dolu saat için sıraya girer
+    WAITING --> OFFERED: saat boşaldı, sıradaki ilk kişi (adına HELD rezervasyon)
+    WAITING --> LEFT: müşteri sıradan çıkar
+    WAITING --> EXPIRED: saat geçti, teklif açılamadı
+    OFFERED --> ACCEPTED: müşteri tutulan saati onaylar
+    OFFERED --> EXPIRED: teklif süresi doldu / tutma iptal edildi (sıradakine geçilir)
+    ACCEPTED --> [*]
+    LEFT --> [*]
+    EXPIRED --> [*]
+```
+
+- Yalnızca **dolu** saat için sıraya girilir; boş saat için doğrudan rezervasyon yapılır.
+- Bir müşteri aynı saat için bir kez, aynı anda en fazla 5 saat için sırada olabilir.
+- Sıra, sıraya giriş zamanına göredir. Teklif süresi `sahahub.waitlist.offer-minutes` (varsayılan 15 dk).
+- Teklif sırasında saat, teklif alan kişi adına HELD durumdadır; başkası (sıradaki dahil) alamaz.
+  Süre dolunca mevcut tutma süresi görevi saati serbest bırakır ve sıradakine yeni teklif açılır.
+- Aynı saat için en fazla bir açık teklif olur (`ux_waitlist_one_offer`); eşzamanlı teklif denemelerinden
+  yalnızca biri başarılı olur (`WaitlistIT.concurrentOfferAttemptsCreateExactlyOneOffer`).
+
+## Bildirimler
+
+| Olay | Bildirim | Tekrar anahtarı |
+|---|---|---|
+| Rezervasyon onaylandı (seri dışı) | "Rezervasyonunuz onaylandı" | `confirmed:{id}` |
+| Rezervasyon iptal edildi | "Rezervasyonunuz iptal edildi" (kim iptal etti) | `cancelled:{id}` |
+| Seri oluşturuldu | Tek bildirim (maç sayısı, ilk tarih) | `series:{id}` |
+| Bekleme teklifi | "Beklediğiniz saat boşaldı" + son onay saati | `offer:{kayıt}` |
+| Maça 24 saatten az | "Maç hatırlatması" | `reminder:{id}` |
+| Maça 48 saatten az, kapora ödenmemiş | "Kapora bekleniyor" | `deposit-reminder:{id}` |
+
+Uygulama içi bildirim her zaman yazılır. E-posta (varsayılan açık) ve SMS (varsayılan kapalı, telefon
+gerekli) müşterinin tercihidir. Misafir rezervasyonunda telefon varsa yalnızca demo SMS oluşur.
+
 ## Fiyat hesabı
 
 1. Süre dakika dakika ele alınır; her dakikaya, şubenin yerel saatinde o dakikanın başlangıcına uyan

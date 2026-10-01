@@ -5,7 +5,33 @@
 <main id="main" class="page page-narrow">
 	<div class="page-head"><h1>Rezervasyonlarım</h1></div>
 
-	<div class="empty" th:if="${#lists.isEmpty(upcoming) and !page.hasContent()}">
+	<section th:if="${!#lists.isEmpty(waiting)}" id="bekleme" aria-labelledby="wait-title" style="margin-bottom:28px">
+		<h2 id="wait-title" style="font-size:18px">Bekleme listem</h2>
+		<ul class="res-list">
+			<li class="res-item" th:each="w : ${waiting}">
+				<div class="res-date">
+					<span class="num" th:text="${w.start().dayOfMonth}">1</span>
+					<span class="tiny" th:text="${#temporals.format(w.start(), 'MMM EEE')}">Eki Çar</span>
+				</div>
+				<div style="min-width:0">
+					<h3 class="truncate" th:text="${w.pitchName()}">Saha 1</h3>
+					<div class="small muted truncate">
+						<span class="num" th:text="${@fmt.timeRange(w.start(), w.end())}">21:00–22:00</span> ·
+						<span th:text="${w.branchName()}">Şube</span>
+						<th:block th:if="${w.status().name() == 'WAITING'}"> · <span th:text="${w.position()} + '. sıradasınız'">2. sıradasınız</span></th:block>
+					</div>
+				</div>
+				<div class="res-action" th:if="${w.status().name() == 'OFFERED'}">
+					<a class="btn btn-primary btn-sm" th:href="@{/rezervasyon/{c}(c=${w.offerCode()})}">Saat boşaldı · Onayla</a>
+				</div>
+				<form class="res-action" th:if="${w.status().name() == 'WAITING'}" th:with="range=${@fmt.timeRange(w.start(), w.end())}" th:action="@{/bekleme-listesi/{id}/birak(id=${w.id()})}" method="post">
+					<button type="submit" class="btn btn-secondary btn-sm" th:aria-label="'Sıradan çık: ' + ${w.pitchName()} + ' ' + ${range}">Sıradan çık</button>
+				</form>
+			</li>
+		</ul>
+	</section>
+
+	<div class="empty" th:if="${#lists.isEmpty(upcoming) and !page.hasContent() and #lists.isEmpty(waiting)}">
 		<p>Henüz rezervasyonunuz yok.</p>
 		<a class="btn btn-primary" th:href="@{/sahalar}">Saha seç</a>
 	</div>

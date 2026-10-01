@@ -19,7 +19,7 @@ class BookingFlowE2eTest extends E2eTestBase {
 		page.navigate("/sahalar");
 		page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Saha 2 · Açık")).click();
 		chooseDay(page, 2);
-		Locator firstFree = page.locator("button.slot").first();
+		Locator firstFree = page.locator("button.slot:not(.is-waitable)").first();
 		assertThat(firstFree).isVisible();
 		String label = firstFree.getAttribute("aria-label");
 		firstFree.click();
@@ -52,7 +52,7 @@ class BookingFlowE2eTest extends E2eTestBase {
 		page.navigate("/sahalar");
 		page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Saha 1 · Kapalı")).click();
 		chooseDay(page, 3);
-		Locator slot = page.locator("button.slot").first();
+		Locator slot = page.locator("button.slot:not(.is-waitable)").first();
 		String time = slot.locator(".s-time").textContent();
 
 		// Aynı anda başka bir müşteri aynı saati alıyor
@@ -60,7 +60,7 @@ class BookingFlowE2eTest extends E2eTestBase {
 		Page otherPage = other.newPage();
 		login(otherPage, "kaptan@sahahub.test");
 		otherPage.navigate(page.url());
-		otherPage.locator("button.slot").filter(new Locator.FilterOptions().setHasText(time)).first().click();
+		otherPage.locator("button.slot:not(.is-waitable)").filter(new Locator.FilterOptions().setHasText(time)).first().click();
 		otherPage.waitForURL(Pattern.compile(".*/rezervasyon/[A-Z0-9]{8}$"));
 		other.close();
 

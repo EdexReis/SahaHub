@@ -39,6 +39,13 @@ public class AppUser {
 	@Column(nullable = false)
 	private boolean enabled = true;
 
+	/** Bildirim tercihleri. Uygulama içi bildirim her zaman oluşur. */
+	@Column(name = "notify_email", nullable = false)
+	private boolean notifyEmail = true;
+
+	@Column(name = "notify_sms", nullable = false)
+	private boolean notifySms;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -55,6 +62,20 @@ public class AppUser {
 
 	public static String normalizeEmail(String email) {
 		return email.strip().toLowerCase(java.util.Locale.ROOT);
+	}
+
+	public void changeNotificationPreferences(boolean email, boolean sms, String phone) {
+		this.notifyEmail = email;
+		this.notifySms = sms;
+		this.phone = phone == null || phone.isBlank() ? null : phone.strip();
+	}
+
+	public boolean isNotifyEmail() {
+		return notifyEmail;
+	}
+
+	public boolean isNotifySms() {
+		return notifySms;
 	}
 
 	public void grantPlatformAdmin() {
