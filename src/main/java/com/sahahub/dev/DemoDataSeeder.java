@@ -428,6 +428,13 @@ class DemoDataSeeder implements ApplicationRunner {
 			jdbc.update("insert into team_match_attendance (team_match_id, user_id, status, updated_at) values (?, ?, ?, ?)",
 					row[0], row[1], row[2], t);
 		}
+		// 24 saatten kısa süre sonra başlayan, iki gün önce eklenmiş maç: hatırlatma görevi (ilk çalışma ~25 sn)
+		// üyelere "Takım maçı yaklaşıyor" bildirimi üretir. Müşterinin yanıtı yok.
+		Instant soon = now.plus(Duration.ofHours(20)).truncatedTo(java.time.temporal.ChronoUnit.HOURS);
+		TeamMatch reminded = teamMatches.save(new TeamMatch(team.getId(), null, soon, "Kurgusal Spor Tesisi, Göztepe",
+				"Acıbadem Yıldızları", null, captain.getId(), now.minus(Duration.ofDays(2))));
+		jdbc.update("insert into team_match_attendance (team_match_id, user_id, status, updated_at) values (?, ?, 'GOING', ?)",
+				reminded.getId(), captain.getId(), t);
 	}
 
 	/**

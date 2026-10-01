@@ -22,6 +22,12 @@ public interface TeamMatchRepository extends JpaRepository<TeamMatch, Long> {
 			order by m.startsAt desc, m.id desc""")
 	List<TeamMatch> history(Long teamId, Instant now, Pageable page);
 
+	/** Hatırlatma adayları: [from, to) aralığında başlayan planlı maçlar. */
+	@Query("""
+			select m from TeamMatch m where m.status = 'SCHEDULED' and m.startsAt > :from and m.startsAt <= :to
+			order by m.startsAt, m.id""")
+	List<TeamMatch> scheduledStartingBetween(Instant from, Instant to);
+
 	@Query("select m from TeamMatch m where m.reservationId = :reservationId and m.status = 'SCHEDULED'")
 	List<TeamMatch> scheduledForReservation(Long reservationId);
 

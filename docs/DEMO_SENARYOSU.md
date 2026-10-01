@@ -86,7 +86,10 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
    fikstür (1. hafta oynandı, 2. hafta planlı).
 2. `kaptan@sahahub.test` → **Takımlarım → Kadıköy Kartalları**: davet bağlantısı, oyuncular, "Kaptan yap",
    "Çıkar". Bağlantıyı gizli pencerede açın → giriş yapmadan önizleme; `uzun.isim@sahahub.test` zaten üye.
-3. Takım sayfasında **Yaklaşan maçlar**: Emre'nin seri rezervasyonundan eklenmiş maç, "2 geliyor · 1 kararsız".
+3. Takım sayfasında **Yaklaşan maçlar**: en üstte yaklaşık 20 saat sonraki maç (hatırlatma görevi uygulama
+   açıldıktan ~25 sn sonra çalışır; `musteri@sahahub.test` ve `uzun.isim@sahahub.test` menüdeki bildirimlerde
+   "Takım maçı yaklaşıyor" görür, e-postası Mailpit'te: http://localhost:8025), ardından Emre'nin seri
+   rezervasyonundan eklenmiş maç, "2 geliyor · 1 kararsız".
    `musteri@sahahub.test` ile **Takımlarım → Yaklaşan maçlarım**'dan yanıt verin; kaptan kimin ne dediğini görür.
    **Maç geçmişi**'nde skorlu maç. Kaptan **Maç ekle** ile başka tesisteki bir maçı ekler (üyelere bildirim),
    **Takım bilgileri ve logo**'dan logo yükler.

@@ -49,13 +49,15 @@ import com.sahahub.shared.domain.NotFoundException;
  * bağlanabilir; rezervasyon iptal edilirse takım maçı da iptal olur (aynı transaction).</li>
  * <li>Yanıtı yalnızca takımın aktif üyeleri verir, maç başlayana kadar değiştirebilir. Kimin ne dediğini yalnızca
  * takım üyeleri görür.</li>
- * <li>Maç eklenince/iptal edilince diğer üyelere bildirim gider (tercihlerine göre e-posta/SMS).</li>
+ * <li>Maç eklenince/iptal edilince diğer üyelere bildirim gider (tercihlerine göre e-posta/SMS); maçtan 24 saat
+ * önce "gelmiyorum" demeyenlere hatırlatma gider ({@link #enqueueReminders()}).</li>
  * </ul>
  */
 @Service
 public class TeamMatchService {
 
 	public static final Duration MAX_AHEAD = Duration.ofDays(90);
+	public static final Duration REMINDER_WINDOW = Duration.ofHours(24);
 	private static final ZoneId TR = ZoneId.of("Europe/Istanbul");
 	private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("d MMMM EEEE HH:mm",
 			Locale.forLanguageTag("tr"));
@@ -215,6 +217,59 @@ public class TeamMatchService {
 			m.cancel();
 			teams.findById(m.getTeamId()).ifPresent(t -> notifyCancelled(t, m, null));
 		}
+	}
+
+	// ------------------------------------------------------------------ hatırlatma
+
+	/**
+	 * Önümüzdeki 24 saatte başlayan planlı takım maçları için üyelere hatırlatma. "Gelmiyorum" diyenlere gitmez;
+	 * mesajda güncel sayılar ve kişinin kendi yanıtı (ya da yanıt vermediği) yazar. Maç başlamasına 24 saatten az
+	 * kala eklendiyse hatırlatma gönderilmez: üyeler ekleme bildirimini zaten o pencerede almıştır.
+	 * <p>
+	 * Görev sık çalışır; dedup_key (maç + kişi) her üyeye bir hatırlatma düşmesini sağlar.
+	 *
+	 * @return hatırlatma denemesi sayısı (daha önce gönderilmiş olanlar veritabanında yok sayılır)
+	 */
+	@Transactional
+	public int enqueueReminders() {
+		Instant now = Instant.now(clock);
+		List<TeamMatch> due = matches.scheduledStartingBetween(now, now.plus(REMINDER_WINDOW))
+			.stream()
+			.filter(m -> !m.getCreatedAt().isAfter(m.getStartsAt().minus(REMINDER_WINDOW)))
+			.toList();
+		if (due.isEmpty()) {
+			return 0;
+		}
+		Map<Long, List<Answered>> answers = answers(due.stream().map(TeamMatch::getId).toList());
+		int count = 0;
+		for (TeamMatch m : due) {
+			Team team = teams.findById(m.getTeamId()).filter(Team::isActive).orElse(null);
+			if (team == null) {
+				continue;
+			}
+			List<Long> active = members.activeMembers(team.getId()).stream().map(TeamMember::getUserId).toList();
+			Map<Long, Answer> byUser = answers.getOrDefault(m.getId(), List.of())
+				.stream()
+				.filter(a -> active.contains(a.userId()))
+				.collect(Collectors.toMap(Answered::userId, Answered::answer));
+			long going = byUser.values().stream().filter(a -> a == Answer.GOING).count();
+			long maybe = byUser.values().stream().filter(a -> a == Answer.MAYBE).count();
+			String summary = team.getName() + ": " + m.getStartsAt().atZone(TR).format(WHEN) + " · " + m.getPlace()
+					+ (m.getOpponent() != null ? " · rakip " + m.getOpponent() : "") + ". Şu an " + going
+					+ " geliyor, " + maybe + " kararsız, " + (active.size() - byUser.size()) + " yanıt vermedi.";
+			List<Long> recipients = active.stream().filter(id -> byUser.get(id) != Answer.NOT_GOING).toList();
+			for (AppUser u : users.findAllById(recipients)) {
+				Answer mine = byUser.get(u.getId());
+				String personal = mine == null ? " Henüz yanıt vermediniz; gelip gelmeyeceğinizi bildirin."
+						: mine == Answer.MAYBE ? " Kararsız görünüyorsunuz; kesinleşince yanıtınızı güncelleyin."
+								: " Yanıtınız: Geliyorum.";
+				notifications.write(new NotificationWriter.Recipient(u.getId(), u.getEmail(), u.getPhone(),
+						u.isNotifyEmail(), u.isNotifySms()), "TEAM_MATCH_REMINDER", "Takım maçı yaklaşıyor",
+						summary + personal, "/takimlar/" + team.getId(), "team-match-reminder:" + m.getId() + ":" + u.getId());
+				count++;
+			}
+		}
+		return count;
 	}
 
 	// ------------------------------------------------------------------ görünümler
