@@ -108,6 +108,9 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
      rezervasyon yapılamaz.
 8. **Ligler → Çankaya Bahar Kupası** (eleme): eşleşme ağacı, ilk turu bay geçen iki üst tohum ve penaltıyla
    biten çeyrek final. Yarı finaller 4 gün sonraya planlı; skor ancak maç başladıktan sonra girilebilir.
+   Kupada **üçüncülük maçı** açık: yarı finaller oynanınca final ile birlikte "Üçüncülük maçı" sütunu açılır
+   (yarı finalde kaybedenler). Yeni kupada **Üçüncülük maçı** kutusunu işaretleyin ya da taslakta
+   **Üçüncülük maçı ekle** düğmesini kullanın (en az 4 takım).
    Hemen denemek için `sahip@kuzeyhali.test` ile **Ligler → Yeni lig veya turnuva → Eleme** açın, 3 takım
    ekleyin, **Eşleşmeleri oluştur**, maçı birkaç dakika sonrasına planlayın; maç saati gelince skoru girin.
    Berabere girerseniz penaltı galibi istenir; maç bitince final kendiliğinden açılır.

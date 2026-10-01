@@ -32,6 +32,28 @@ class BracketTest {
 	}
 
 	@Test
+	void thirdPlaceSlotIsBetweenSemiFinalLosers() {
+		List<Long> s = seeds(6); // 8'lik ağaç; yarı finaller 2. turda
+		Map<String, Long> w = new HashMap<>();
+		w.put(Bracket.key(1, 1), 104L); // 4-5 → 4
+		w.put(Bracket.key(1, 3), 106L); // 3-6 → 6
+		assertThat(Bracket.build(s, w, true).get(2)).as("yarı finaller oynanmadan").hasSize(2)
+			.allSatisfy(x -> assertThat(x.ready()).isFalse());
+		w.put(Bracket.key(2, 0), 104L); // 1-4 → 4, kaybeden 1
+		w.put(Bracket.key(2, 1), 102L); // 2-6 → 2, kaybeden 6
+		List<Bracket.Slot> last = Bracket.build(s, w, true).get(2);
+		assertThat(last).hasSize(2);
+		assertThat(last.get(0)).isEqualTo(new Bracket.Slot(3, 0, 104L, 102L, false));
+		assertThat(last.get(1)).isEqualTo(new Bracket.Slot(3, Bracket.THIRD_PLACE_SLOT, 101L, 106L, false));
+		assertThat(Bracket.matchName(3, 1, 3)).isEqualTo("Üçüncülük maçı");
+		assertThat(Bracket.matchName(3, 0, 3)).isEqualTo("Final");
+		assertThat(Bracket.matchName(2, 1, 3)).as("yarı finalin 1. yeri").isEqualTo("Yarı final");
+		// Üç takımda yarı finalde bay olur: üçüncülük yeri eklenmez; kapalıyken de eklenmez
+		assertThat(Bracket.build(seeds(3), Map.of(), true).getLast()).hasSize(1);
+		assertThat(Bracket.build(s, w, false).getLast()).hasSize(1);
+	}
+
+	@Test
 	void byesGoToTopSeedsAndNeverMeetEachOther() {
 		List<List<Bracket.Slot>> b = Bracket.build(seeds(6), Map.of()); // 8'lik ağaç, 2 bay
 		List<Bracket.Slot> r1 = b.getFirst();

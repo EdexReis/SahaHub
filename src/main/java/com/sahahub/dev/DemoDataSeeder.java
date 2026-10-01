@@ -474,11 +474,12 @@ class DemoDataSeeder implements ApplicationRunner {
 
 	/**
 	 * Eleme usulü kupa: Çankaya'da 6 takım. İlk tur 3 gün önce oynandı (biri penaltılarla), iki üst tohum bay
-	 * geçti; yarı finaller 4 gün sonra A Sahası'nda planlı. Final, yarı finaller oynanınca açılır.
+	 * geçti; yarı finaller 4 gün sonra A Sahası'nda planlı. Final ve üçüncülük maçı, yarı finaller oynanınca açılır.
 	 */
 	private void seedCup(Business business, Branch branch, Pitch pitch, AppUser owner, LocalDate today, Instant now) {
 		Tournament t = tournaments.save(new Tournament(business.getId(), branch.getId(), "Çankaya Bahar Kupası",
 				Tournament.Format.KNOCKOUT, false, 3, 1, 0, owner.getId(), now.minus(Duration.ofDays(10))));
+		t.changeThirdPlace(true); // yarı finaller oynanınca final ve üçüncülük maçı birlikte açılır
 		List<Long> ids = new java.util.ArrayList<>();
 		for (String n : List.of("Çankaya Kartalları", "Ankara Gençlik", "Kızılay SK", "Bahçeli Yıldızları",
 				"Tunalı FK", "Kurgusal Spor")) {

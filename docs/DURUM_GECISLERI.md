@@ -133,7 +133,12 @@ değişmez.
 - Beraberlikte **penaltı galibi** seçilir; veritabanında da "eleme maçı penaltısız berabere bitemez" kısıtı var.
 - **Düzeltme**: galibi değiştirmeyen skor düzeltmesi her zaman; galibi değiştiren düzeltme yalnızca o galibin
   sonraki tur maçı oynanmadıysa (o maçın takımı güncellenir). Oynandıysa reddedilir. Hepsi denetim kaydında.
-- Turnuva final oynanınca bitirilebilir; şampiyon ağacın son yerindeki galiptir.
+- **Üçüncülük maçı** (isteğe bağlı): turnuva oluşturulurken ya da taslakta açılır/kapatılır; eşleşmeler
+  oluşturulduktan sonra değişmez. En az 4 takım ister (3 takımda yarı finalde bay olur, kaybeden olmaz). İki yarı
+  final de oynanınca final ile birlikte açılır: yarı finalde kaybedenler. Son turda 1. yerdir (final 0. yer);
+  veritabanı ligde üçüncülük maçına izin vermez. Toplam maç: takım − 1 + 1.
+- Yarı finalin galibini değiştiren düzeltme, final **ya da** üçüncülük maçı oynandıysa reddedilir.
+- Turnuva final (ve varsa üçüncülük maçı) oynanınca bitirilebilir; şampiyon ağacın son yerindeki galiptir.
 - Tur adları: Final, Yarı final, Çeyrek final, Son 16, daha öncesi "N. tur".
 
 ## Takım maçı ve katılım

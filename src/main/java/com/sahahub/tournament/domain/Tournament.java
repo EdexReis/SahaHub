@@ -79,6 +79,10 @@ public class Tournament {
 	@Column(name = "double_round", nullable = false)
 	private boolean doubleRound;
 
+	/** Yalnızca eleme: yarı finalde kaybedenler üçüncülük için oynar. Taslakta değiştirilebilir. */
+	@Column(name = "third_place", nullable = false)
+	private boolean thirdPlace;
+
 	@Column(name = "points_win", nullable = false)
 	private int pointsWin;
 
@@ -146,6 +150,19 @@ public class Tournament {
 		require(Status.ACTIVE);
 		this.status = Status.FINISHED;
 		this.finishedAt = now;
+	}
+
+	/** Üçüncülük maçını açar/kapatır; yalnızca eleme turnuvasında ve eşleşmeler oluşturulmadan önce. */
+	public void changeThirdPlace(boolean on) {
+		require(Status.DRAFT);
+		if (on && !isKnockout()) {
+			throw new IllegalStateException("Üçüncülük maçı yalnızca eleme turnuvasında olur");
+		}
+		this.thirdPlace = on;
+	}
+
+	public boolean isThirdPlace() {
+		return thirdPlace;
 	}
 
 	public boolean isKnockout() {

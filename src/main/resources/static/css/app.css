@@ -795,6 +795,9 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 /* ------------------------------------------------------------ eleme ağacı */
 .champion { display: flex; flex-direction: column; gap: 2px; border-left: 4px solid var(--green); background: var(--green-soft); padding: 10px 14px; border-radius: var(--r); margin: 0 0 14px; }
 .champion strong { font: 700 22px/1.2 var(--font-num); }
+.champion.is-third { border-left-color: var(--line); background: var(--surface); }
+.champion.is-third strong { font-size: 17px; }
+.third-toggle { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; }
 .bracket { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; position: relative; }
 .b-round { flex: 0 0 200px; display: flex; flex-direction: column; }
 .b-round h3 { font-size: 13px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 8px; }

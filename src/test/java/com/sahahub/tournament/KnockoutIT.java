@@ -230,6 +230,102 @@ class KnockoutIT {
 	}
 
 	@Test
+	void thirdPlace_semiLosersPlay_correctionBlockedOnceItIsPlayed_finishNeedsBoth() {
+		Venue v = data.venue();
+		Long cup = service.create(v.manager(), v.branch().getId(), "Kupa", Tournament.Format.KNOCKOUT, false, 3, 1, 0,
+				true);
+		for (int i = 1; i <= 4; i++) {
+			service.addEntry(v.manager(), cup, "T" + i);
+		}
+		service.start(v.manager(), cup); // 1-4, 2-3
+		TournamentMatch a = match(cup, 1, 0);
+		TournamentMatch b = match(cup, 1, 1);
+		play(v, a, 2, 0, null); // T1
+		assertThat(all(cup)).as("tek yarı final oynandı: final de üçüncülük de açılmaz").hasSize(2);
+		play(v, b, 0, 1, null); // T3
+		TournamentMatch fin = match(cup, 2, 0);
+		TournamentMatch third = match(cup, 2, 1);
+		assertThat(List.of(fin.getHomeEntryId(), fin.getAwayEntryId())).containsExactly(entry(cup, "T1"), entry(cup, "T3"));
+		assertThat(List.of(third.getHomeEntryId(), third.getAwayEntryId())).containsExactly(entry(cup, "T4"), entry(cup, "T2"));
+
+		// Hiçbiri oynanmadan düzeltme: T4 finale, T1 üçüncülüğe
+		play(v, a, 0, 2, null);
+		assertThat(matches.findById(fin.getId()).orElseThrow().getHomeEntryId()).isEqualTo(entry(cup, "T4"));
+		assertThat(matches.findById(third.getId()).orElseThrow().getHomeEntryId()).isEqualTo(entry(cup, "T1"));
+
+		play(v, third, 2, 2, entry(cup, "T2")); // penaltılarla T2 üçüncü
+		// Final oynanmadı ama üçüncülük oynandı: yarı finalin galibini değiştiren düzeltme reddedilir
+		assertThatThrownBy(() -> service.recordResult(v.manager(), b.getId(), 1, 0, null))
+			.isInstanceOf(BusinessRuleException.class).hasMessageContaining("oynandı");
+		TournamentMatch t3 = matches.findById(third.getId()).orElseThrow();
+		assertThat(queries.matches(List.of(v.pitch().getId()), t3.play())).as("personel takvimindeki etiket")
+			.anySatisfy(x -> assertThat(x.subtitle()).endsWith("Üçüncülük maçı"));
+
+		TournamentQueries.Detail d = queries.forStaff(v.manager(), cup);
+		assertThat(d.third()).isEqualTo("T2");
+		assertThat(d.canFinish()).as("final oynanmadı").isFalse();
+		assertThat(d.rounds()).extracting(TournamentQueries.RoundView::name)
+			.containsExactly("Yarı final", "Üçüncülük maçı", "Final");
+		assertThat(d.bracket()).extracting(TournamentQueries.BracketRound::name)
+			.containsExactly("Yarı final", "Final", "Üçüncülük maçı");
+		assertThatThrownBy(() -> service.finish(v.manager(), cup)).isInstanceOf(BusinessRuleException.class);
+
+		play(v, fin, 3, 1, null);
+		d = queries.forStaff(v.manager(), cup);
+		assertThat(d.champion()).isEqualTo("T4");
+		assertThat(d.matchCount()).isEqualTo(4);
+		assertThat(d.canFinish()).isTrue();
+		assertThat(queries.forBranch(v.manager(), v.branch().getId())).singleElement()
+			.satisfies(r -> assertThat(r.total()).as("takım − 1 + üçüncülük").isEqualTo(4));
+		service.finish(v.manager(), cup);
+	}
+
+	@Test
+	void thirdPlaceNeedsFourTeams_andOnlyChangesInDraftCup() {
+		Venue v = data.venue();
+		Long cup = cup(v, 3);
+		service.changeThirdPlace(v.manager(), cup, true);
+		assertThat(queries.forStaff(v.manager(), cup).canStart()).isFalse();
+		assertThatThrownBy(() -> service.start(v.manager(), cup)).isInstanceOf(BusinessRuleException.class)
+			.hasMessageContaining("en az 4");
+		service.changeThirdPlace(v.manager(), cup, false);
+		service.start(v.manager(), cup);
+		assertThatThrownBy(() -> service.changeThirdPlace(v.manager(), cup, true))
+			.isInstanceOf(BusinessRuleException.class).hasMessageContaining("oluşturulduktan sonra");
+
+		Long league = service.create(v.manager(), v.branch().getId(), "Lig", Tournament.Format.LEAGUE, false, 3, 1, 0,
+				true);
+		assertThat(jdbc.queryForObject("select third_place from tournament where id = ?", Boolean.class, league))
+			.as("ligde yok sayılır").isFalse();
+		assertThatThrownBy(() -> service.changeThirdPlace(v.manager(), league, true))
+			.isInstanceOf(BusinessRuleException.class);
+		// Veritabanı da ligde üçüncülük maçına izin vermez
+		assertThatThrownBy(() -> jdbc.update("update tournament set third_place = true where id = ?", league))
+			.isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void thirdPlacePages() throws Exception {
+		Venue v = data.venue();
+		Long b = v.branch().getId();
+		mvc.perform(post("/isletme/subeler/{b}/ligler", b).param("ad", "Yaz Kupası").param("bicim", "KNOCKOUT")
+			.param("ucunculuk", "true").with(user(v.manager())).with(csrf()))
+			.andExpect(status().is3xxRedirection());
+		Long cup = jdbc.queryForObject("select id from tournament where branch_id = ? and name = 'Yaz Kupası'",
+				Long.class, b);
+		mvc.perform(get("/isletme/ligler/{id}", cup).with(user(v.manager())))
+			.andExpect(content().string(containsString("Üçüncülük maçını kaldır")))
+			.andExpect(content().string(containsString("En az 4 takım gerekli")));
+		mvc.perform(post("/isletme/ligler/{id}/ucunculuk", cup).param("acik", "false").with(user(v.manager()))
+			.with(csrf()))
+			.andExpect(flash().attribute("flashSuccess", "Üçüncülük maçı kaldırıldı."));
+		mvc.perform(get("/isletme/ligler/{id}", cup).with(user(v.manager())))
+			.andExpect(content().string(containsString("Üçüncülük maçı ekle")));
+		mvc.perform(get("/isletme/subeler/{b}/ligler", b).with(user(v.manager())))
+			.andExpect(content().string(containsString("name=\"ucunculuk\"")));
+	}
+
+	@Test
 	void knockoutMatchUsesTheSameSlotConflictCheck() {
 		Venue v = data.venue();
 		Long cup = cup(v, 3);
