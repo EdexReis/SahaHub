@@ -82,7 +82,7 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
 ## 7. Takımlar, ilanlar ve lig (Aşama 5)
 
 1. Herkes: üst menü **İlanlar** → "Rakip arıyoruz" (Kadıköy Kartalları, Emre'nin seri maçına bağlı) ve
-   "Oyuncu arıyoruz" (Moda Şimşekleri, 2 oyuncu). **Ligler** sekmesi → **Kadıköy Kış Ligi 2026**: puan durumu ve
+   "Oyuncu arıyoruz" (Moda Şimşekleri, 2 oyuncu); ikisinde de takımın (kurgusal) arması. **Ligler** sekmesi → **Kadıköy Kış Ligi 2026**: puan durumu ve
    fikstür (1. hafta oynandı, 2. hafta planlı).
 2. `kaptan@sahahub.test` → **Takımlarım → Kadıköy Kartalları**: davet bağlantısı, oyuncular, "Kaptan yap",
    "Çıkar". Bağlantıyı gizli pencerede açın → giriş yapmadan önizleme; `uzun.isim@sahahub.test` zaten üye.

@@ -33,9 +33,18 @@ public class ListingQueries {
 
 	public static final int PAGE = 50;
 
+	/** Takım adı ve logosu: logo yoksa ya da takım dağıldıysa {@code logoVersion} null (bağlantıda ?v= sürümü). */
+	public record TeamRef(Long id, String name, String logoVersion) {
+
+		public boolean hasLogo() {
+			return logoVersion != null;
+		}
+
+	}
+
 	public record Card(Long id, Listing.Kind kind, String teamName, String city, String district, Instant playAt,
 			String place, Listing.Level level, Integer playersNeeded, long accepted, Instant expiresAt, String note,
-			Listing.Status status, boolean expired) {
+			Listing.Status status, boolean expired, TeamRef team) {
 
 		public boolean open() {
 			return status == Listing.Status.OPEN && !expired;
@@ -47,8 +56,9 @@ public class ListingQueries {
 
 	}
 
+	/** @param team rakip başvurusunda başvuran takım; oyuncu başvurusunda null */
 	public record ApplicationRow(Long id, String applicantName, String teamName, String message,
-			ListingApplication.Status status, Instant createdAt, String phone) {
+			ListingApplication.Status status, Instant createdAt, String phone, TeamRef team) {
 	}
 
 	public record TeamOption(Long id, String name) {
@@ -59,7 +69,7 @@ public class ListingQueries {
 	}
 
 	public record MyApplication(Long id, Long listingId, String teamName, Listing.Kind kind, Instant playAt,
-			ListingApplication.Status status, Instant createdAt) {
+			ListingApplication.Status status, Instant createdAt, TeamRef team) {
 	}
 
 	public record ReservationOption(Long id, String label) {
@@ -104,7 +114,7 @@ public class ListingQueries {
 		boolean author = user != null && l.getAuthorId().equals(user.id());
 		List<ListingApplication> all = applications.findByListingIdOrderByCreatedAtAscIdAsc(id);
 		Map<Long, AppUser> people = usersOf(all.stream().map(ListingApplication::getApplicantId).toList());
-		Map<Long, String> teamNames = teamNames(all.stream().map(ListingApplication::getApplicantTeamId).toList());
+		Map<Long, TeamRef> teamNames = teamRefs(all.stream().map(ListingApplication::getApplicantTeamId).toList());
 		List<ApplicationRow> rows = author ? all.stream().map(a -> row(a, people, teamNames)).toList() : List.of();
 		ApplicationRow mine = null;
 		if (user != null && !author) {
@@ -141,11 +151,12 @@ public class ListingQueries {
 		Map<Long, Listing> ls = listings.findAllById(list.stream().map(ListingApplication::getListingId).toList())
 			.stream()
 			.collect(Collectors.toMap(Listing::getId, Function.identity()));
-		Map<Long, String> names = teamNames(ls.values().stream().map(Listing::getTeamId).toList());
+		Map<Long, TeamRef> refs = teamRefs(ls.values().stream().map(Listing::getTeamId).toList());
 		return list.stream().map(a -> {
 			Listing l = ls.get(a.getListingId());
-			return new MyApplication(a.getId(), l.getId(), names.get(l.getTeamId()), l.getKind(), l.getPlayAt(),
-					a.getStatus(), a.getCreatedAt());
+			TeamRef team = refs.get(l.getTeamId());
+			return new MyApplication(a.getId(), l.getId(), team.name(), l.getKind(), l.getPlayAt(), a.getStatus(),
+					a.getCreatedAt(), team);
 		}).toList();
 	}
 
@@ -169,7 +180,7 @@ public class ListingQueries {
 	// ------------------------------------------------------------------ yardımcılar
 
 	private List<Card> cards(List<Listing> list, Instant now) {
-		Map<Long, String> names = teamNames(list.stream().map(Listing::getTeamId).toList());
+		Map<Long, TeamRef> refs = teamRefs(list.stream().map(Listing::getTeamId).toList());
 		return list.stream().map(l -> {
 			String place = null;
 			if (l.getReservationId() != null) {
@@ -178,27 +189,30 @@ public class ListingQueries {
 					return ctx.pitch().getName() + " · " + ctx.branch().getName();
 				}).orElse(null);
 			}
-			return new Card(l.getId(), l.getKind(), names.get(l.getTeamId()), l.getCity(), l.getDistrict(),
-					l.getPlayAt(), place, l.getLevel(), l.getPlayersNeeded(), applications.acceptedCount(l.getId()),
-					l.getExpiresAt(), l.getNote(), l.getStatus(), !now.isBefore(l.getExpiresAt()));
+			TeamRef team = refs.get(l.getTeamId());
+			return new Card(l.getId(), l.getKind(), team.name(), l.getCity(), l.getDistrict(), l.getPlayAt(), place,
+					l.getLevel(), l.getPlayersNeeded(), applications.acceptedCount(l.getId()), l.getExpiresAt(),
+					l.getNote(), l.getStatus(), !now.isBefore(l.getExpiresAt()), team);
 		}).toList();
 	}
 
-	private ApplicationRow row(ListingApplication a, Map<Long, AppUser> people, Map<Long, String> teamNames) {
+	private ApplicationRow row(ListingApplication a, Map<Long, AppUser> people, Map<Long, TeamRef> teams) {
 		AppUser u = people.get(a.getApplicantId());
-		return new ApplicationRow(a.getId(), u.getFullName(),
-				a.getApplicantTeamId() == null ? null : teamNames.get(a.getApplicantTeamId()), a.getMessage(),
+		TeamRef team = a.getApplicantTeamId() == null ? null : teams.get(a.getApplicantTeamId());
+		return new ApplicationRow(a.getId(), u.getFullName(), team == null ? null : team.name(), a.getMessage(),
 				a.getStatus(), a.getCreatedAt(),
-				a.getStatus() == ListingApplication.Status.ACCEPTED ? u.getPhone() : null);
+				a.getStatus() == ListingApplication.Status.ACCEPTED ? u.getPhone() : null, team);
 	}
 
 	private Map<Long, AppUser> usersOf(Collection<Long> ids) {
 		return users.findAllById(ids).stream().collect(Collectors.toMap(AppUser::getId, Function.identity()));
 	}
 
-	private Map<Long, String> teamNames(Collection<Long> ids) {
+	private Map<Long, TeamRef> teamRefs(Collection<Long> ids) {
 		List<Long> clean = ids.stream().filter(java.util.Objects::nonNull).distinct().toList();
-		return teams.findAllById(clean).stream().collect(Collectors.toMap(Team::getId, Team::getName));
+		return teams.findAllById(clean)
+			.stream()
+			.collect(Collectors.toMap(Team::getId, t -> new TeamRef(t.getId(), t.getName(), t.logoVersion())));
 	}
 
 }

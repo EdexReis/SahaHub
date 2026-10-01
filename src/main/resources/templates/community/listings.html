@@ -29,7 +29,7 @@
 		<li class="pitch-row" th:each="c : ${cards}">
 			<div style="min-width:0">
 				<p class="eyebrow" style="margin:0" th:text="${c.kind().label()}">Oyuncu arıyoruz</p>
-				<h2><a th:href="@{/ilanlar/{id}(id=${c.id()})}" th:text="${c.teamName()}">Kadıköy Kartalları</a></h2>
+				<h2 class="team-line"><img th:if="${c.team().hasLogo()}" class="team-logo-sm" th:src="@{/takim-logo/{id}(id=${c.team().id()}, v=${c.team().logoVersion()})}" alt="" width="24" height="24"><a class="truncate" th:href="@{/ilanlar/{id}(id=${c.id()})}" th:text="${c.teamName()}">Kadıköy Kartalları</a></h2>
 				<div class="pitch-meta">
 					<span th:if="${c.playAt() != null}" class="num" th:text="${@fmt.at(c.playAt())}">4 Eki 2026 21:00</span>
 					<span th:if="${c.place() != null}" class="truncate" th:text="${c.place()}">Saha 1 · Kadıköy Şubesi</span>

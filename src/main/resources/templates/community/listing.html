@@ -5,9 +5,12 @@
 <main id="main" class="page page-narrow" th:with="c=${d.card()}">
 	<p class="small" style="margin-bottom:8px"><a th:href="@{/ilanlar}">← İlanlar</a></p>
 	<div class="page-head">
-		<div style="min-width:0">
-			<p class="eyebrow" th:text="${c.kind().label()}">Oyuncu arıyoruz</p>
-			<h1 th:text="${c.teamName()}">Kadıköy Kartalları</h1>
+		<div class="team-head" style="min-width:0">
+			<img th:if="${c.team().hasLogo()}" class="team-logo" th:src="@{/takim-logo/{id}(id=${c.team().id()}, v=${c.team().logoVersion()})}" alt="" width="64" height="64">
+			<div style="min-width:0">
+				<p class="eyebrow" th:text="${c.kind().label()}">Oyuncu arıyoruz</p>
+				<h1 th:text="${c.teamName()}">Kadıköy Kartalları</h1>
+			</div>
 		</div>
 		<span class="status" th:classappend="${c.open()} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${c.statusLabel()}">Açık</span>
 	</div>
@@ -81,7 +84,7 @@
 		<ul class="res-list" th:unless="${#lists.isEmpty(d.applications())}">
 			<li class="app-item" th:each="a : ${d.applications()}">
 				<div style="min-width:0">
-					<h3 class="truncate" th:text="${a.applicantName()} + (${a.teamName() != null} ? ' · ' + ${a.teamName()} : '')">Deniz Arslan</h3>
+					<h3 class="team-line"><img th:if="${a.team() != null and a.team().hasLogo()}" class="team-logo-sm" th:src="@{/takim-logo/{id}(id=${a.team().id()}, v=${a.team().logoVersion()})}" alt="" width="24" height="24"><span class="truncate" th:text="${a.applicantName()} + (${a.teamName() != null} ? ' · ' + ${a.teamName()} : '')">Deniz Arslan</span></h3>
 					<p class="small" style="margin:0" th:if="${a.message() != null}" th:text="${a.message()}">Mesaj</p>
 					<p class="small" style="margin:0" th:if="${a.phone() != null}">
 						<a th:href="'tel:' + ${#strings.replace(a.phone(), ' ', '')}" th:text="${a.phone()}">0555</a>

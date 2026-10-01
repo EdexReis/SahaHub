@@ -36,15 +36,26 @@ public class TeamService {
 	private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 	private static final SecureRandom RANDOM = new SecureRandom();
 
+	/** @param logoVersion logo yoksa null; bağlantıda ?v= olarak kullanılır ({@link Team#logoVersion()}) */
 	public record TeamCard(Long id, String name, String city, long memberCount, TeamMember.Role myRole,
-			boolean hasLogo) {
+			String logoVersion) {
+
+		public boolean hasLogo() {
+			return logoVersion != null;
+		}
+
 	}
 
 	public record MemberRow(Long userId, String name, TeamMember.Role role, Instant joinedAt) {
 	}
 
 	public record TeamDetail(Long id, String name, String city, String inviteCode, boolean captain, Long myUserId,
-			List<MemberRow> members, String description, boolean hasLogo) {
+			List<MemberRow> members, String description, String logoVersion) {
+
+		public boolean hasLogo() {
+			return logoVersion != null;
+		}
+
 	}
 
 	public static final long MAX_LOGO_BYTES = 2L * 1024 * 1024;
@@ -182,10 +193,23 @@ public class TeamService {
 	@Transactional
 	public void uploadLogo(AppUserPrincipal user, Long teamId, org.springframework.web.multipart.MultipartFile file) {
 		Team t = lockedCaptainTeam(user, teamId);
-		byte[] jpeg = com.sahahub.shared.image.ImageNormalizer.normalize(
-				com.sahahub.shared.image.ImageNormalizer.bytesOf(file, MAX_LOGO_BYTES, "Logo en fazla 2 MB olabilir."),
-				64, 64, 400);
+		byte[] jpeg = normalizeLogo(
+				com.sahahub.shared.image.ImageNormalizer.bytesOf(file, MAX_LOGO_BYTES, "Logo en fazla 2 MB olabilir."));
 		t.changeLogo(store.replace(jpeg, t.getLogoPath()));
+	}
+
+	/**
+	 * Yetki kontrolü olmadan, yüklemeyle aynı doğrulama ve yeniden kodlamadan geçirerek logo ekler. Yalnızca dev
+	 * profilindeki demo veri üreticisi kullanır (kullanıcı isteğinden çağrılmaz).
+	 */
+	@Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+	public void attachLogoForDemo(Team team, byte[] image) {
+		team.changeLogo(store.replace(normalizeLogo(image), null));
+	}
+
+	/** En az 64×64, 400 px genişliğe küçültülür. */
+	private static byte[] normalizeLogo(byte[] bytes) {
+		return com.sahahub.shared.image.ImageNormalizer.normalize(bytes, 64, 64, 400);
 	}
 
 	@Transactional
@@ -218,7 +242,7 @@ public class TeamService {
 		return teams.activeTeamsOf(user.id()).stream().map(t -> {
 			TeamMember me = members.activeMembership(t.getId(), user.id()).orElseThrow();
 			return new TeamCard(t.getId(), t.getName(), t.getCity(), members.activeCount(t.getId()), me.getRole(),
-					t.getLogoPath() != null);
+					t.logoVersion());
 		}).toList();
 	}
 
@@ -241,7 +265,7 @@ public class TeamService {
 					.map(m -> new MemberRow(m.getUserId(), people.get(m.getUserId()).getFullName(), m.getRole(),
 							m.getJoinedAt()))
 					.toList(),
-				t.getDescription(), t.getLogoPath() != null);
+				t.getDescription(), t.logoVersion());
 	}
 
 	// ------------------------------------------------------------------ yardımcılar
