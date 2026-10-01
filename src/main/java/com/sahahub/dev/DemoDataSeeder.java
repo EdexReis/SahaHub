@@ -34,6 +34,7 @@ import com.sahahub.booking.domain.ReservationSeries;
 import com.sahahub.booking.domain.ReservationSeriesRepository;
 import com.sahahub.booking.domain.WaitlistEntry;
 import com.sahahub.booking.domain.WaitlistRepository;
+import com.sahahub.business.app.PitchPhotoService;
 import com.sahahub.business.domain.Branch;
 import com.sahahub.business.domain.BranchOpeningHours;
 import com.sahahub.business.domain.BranchOpeningHoursRepository;
@@ -135,6 +136,7 @@ class DemoDataSeeder implements ApplicationRunner {
 	private final TournamentRepository tournaments;
 	private final TournamentEntryRepository entries;
 	private final TournamentMatchRepository matches;
+	private final PitchPhotoService photos;
 
 	DemoDataSeeder(TransactionTemplate tx, PasswordEncoder encoder, Clock clock, AppUserRepository users,
 			StaffMembershipRepository memberships, BusinessRepository businesses, BranchRepository branches,
@@ -146,7 +148,8 @@ class DemoDataSeeder implements ApplicationRunner {
 			ReservationSeriesRepository seriesRepo, WaitlistRepository waitlist, NotificationWriter notifications,
 			TeamRepository teams, TeamMemberRepository teamMembers, ListingRepository listings,
 			ListingApplicationRepository applications, TournamentRepository tournaments,
-			TournamentEntryRepository entries, TournamentMatchRepository matches) {
+			TournamentEntryRepository entries, TournamentMatchRepository matches, PitchPhotoService photos) {
+		this.photos = photos;
 		this.tx = tx;
 		this.encoder = encoder;
 		this.clock = clock;
@@ -366,6 +369,11 @@ class DemoDataSeeder implements ApplicationRunner {
 		Reservation firstOfSeries = reservations.findBySeriesIdOrderBySeriesIndex(series.getId()).getFirst();
 		seedCommunity(captain, customer, longName, firstOfSeries, today, now);
 		seedLeague(yesil, kadikoy, k3, manager1, today, now);
+		// Kurgusal saha çizimleri (gerçek fotoğraf değil); yükleme ile aynı doğrulamadan geçer
+		photos.attachForDemo(k1, illustration(new java.awt.Color(0x1F7A47), true));
+		photos.attachForDemo(k2, illustration(new java.awt.Color(0x2E8B57), false));
+		photos.attachForDemo(a1, illustration(new java.awt.Color(0x3A7D44), false));
+		photos.attachForDemo(c1, illustration(new java.awt.Color(0x24724A), false));
 
 		notifications.write(new NotificationWriter.Recipient(null, null, "0555 000 99 99", false, true),
 				"RESERVATION_CONFIRMED", "Rezervasyonunuz onaylandı",
@@ -426,6 +434,45 @@ class DemoDataSeeder implements ApplicationRunner {
 			}
 		}
 		t.start(now.minus(Duration.ofDays(10)));
+	}
+
+	/** Kuşbakışı saha çizimi (PNG). Demo veride fotoğraf yerine kullanılır; kurgusaldır. */
+	private static byte[] illustration(java.awt.Color grass, boolean roof) {
+		int w = 1200;
+		int h = 750;
+		java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB);
+		java.awt.Graphics2D g = img.createGraphics();
+		g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+		for (int i = 0; i < 12; i++) { // biçilmiş çim şeritleri
+			g.setColor(i % 2 == 0 ? grass : grass.brighter());
+			g.fillRect(i * w / 12, 0, w / 12 + 1, h);
+		}
+		g.setColor(java.awt.Color.WHITE);
+		g.setStroke(new java.awt.BasicStroke(6f));
+		int m = 60;
+		g.drawRect(m, m, w - 2 * m, h - 2 * m);
+		g.drawLine(w / 2, m, w / 2, h - m);
+		g.drawOval(w / 2 - 90, h / 2 - 90, 180, 180);
+		g.drawRect(m, h / 2 - 150, 160, 300);
+		g.drawRect(w - m - 160, h / 2 - 150, 160, 300);
+		g.setStroke(new java.awt.BasicStroke(10f));
+		g.drawLine(m - 4, h / 2 - 60, m - 4, h / 2 + 60);
+		g.drawLine(w - m + 4, h / 2 - 60, w - m + 4, h / 2 + 60);
+		if (roof) { // kapalı saha: üstte çatı makası gölgesi
+			g.setColor(new java.awt.Color(0, 0, 0, 40));
+			for (int x = 0; x < w; x += 150) {
+				g.fillRect(x, 0, 18, h);
+			}
+		}
+		g.dispose();
+		try {
+			java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+			javax.imageio.ImageIO.write(img, "png", out);
+			return out.toByteArray();
+		}
+		catch (java.io.IOException ex) {
+			throw new java.io.UncheckedIOException(ex);
+		}
 	}
 
 	// ------------------------------------------------------------------ yardımcılar

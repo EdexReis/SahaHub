@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title th:text="${pitch != null} ? ${pitch.name} + ' · Saha · SahaHub' : 'Saha ekle · SahaHub'">Saha · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide">
+	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'ayarlar')}"></nav>
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/isletme/subeler/{b}/ayarlar(b=${branchId})}">← Şube ve sahalar</a></p>
+	<div class="page-head">
+		<h1 th:text="${pitch != null} ? ${pitch.name} : 'Saha ekle'">Saha 1</h1>
+		<span th:if="${pitch != null}" class="status" th:classappend="${pitch.active} ? 'status-CONFIRMED' : 'status-COMPLETED'"
+		      th:text="${pitch.active} ? 'Rezervasyona açık' : 'Rezervasyona kapalı'">Açık</span>
+	</div>
+
+	<div class="series-grid">
+		<form class="panel" th:object="${form}" method="post"
+		      th:action="${pitch != null} ? @{/isletme/sahalar/{id}(id=${pitch.id})} : @{/isletme/subeler/{b}/sahalar(b=${branchId})}">
+			<div class="alert alert-error" role="alert" th:if="${formError}" th:text="${formError}">Hata</div>
+			<div class="field"><label for="pf-name">Saha adı</label><input class="input" id="pf-name" th:field="*{name}" required maxlength="80"></div>
+			<div class="field-row">
+				<div class="field"><label for="pf-surface">Zemin</label>
+					<select class="select" id="pf-surface" th:field="*{surface}">
+						<option th:each="x : ${surfaces}" th:value="${x}" th:text="${x.label()}">Suni çim</option>
+					</select></div>
+				<div class="field"><label for="pf-cap">Kapasite (toplam oyuncu)</label><input class="input num" id="pf-cap" type="number" min="2" max="40" th:field="*{capacityPlayers}"></div>
+			</div>
+			<div class="field-row">
+				<div class="field"><label for="pf-len">Uzunluk (m)</label><input class="input num" id="pf-len" type="number" min="10" max="150" th:field="*{lengthM}"></div>
+				<div class="field"><label for="pf-wid">Genişlik (m)</label><input class="input num" id="pf-wid" type="number" min="5" max="100" th:field="*{widthM}"></div>
+			</div>
+			<fieldset class="field">
+				<legend class="label">Olanaklar</legend>
+				<label class="check"><input type="checkbox" th:field="*{indoor}"> <span>Kapalı saha (çatılı)</span></label>
+				<label class="check"><input type="checkbox" th:field="*{lighting}"> <span>Aydınlatma</span></label>
+				<label class="check"><input type="checkbox" th:field="*{parking}"> <span>Otopark</span></label>
+				<label class="check"><input type="checkbox" th:field="*{shower}"> <span>Duş</span></label>
+				<label class="check"><input type="checkbox" th:field="*{lockerRoom}"> <span>Soyunma odası</span></label>
+			</fieldset>
+			<div class="field-row three">
+				<div class="field"><label for="pf-slot">Maç süresi (dk)</label><input class="input num" id="pf-slot" type="number" min="30" max="240" step="15" th:field="*{slotMinutes}"></div>
+				<div class="field"><label for="pf-step">Başlangıç aralığı (dk)</label><input class="input num" id="pf-step" type="number" min="15" max="240" step="15" th:field="*{slotStepMinutes}"></div>
+				<div class="field"><label for="pf-buf">Hazırlık (dk)</label><input class="input num" id="pf-buf" type="number" min="0" max="120" step="5" th:field="*{bufferMinutes}"></div>
+			</div>
+			<p class="tiny muted">Örnek: 60 dk maç, 60 dk aralık → 18:00, 19:00, 20:00. 75 dk aralık ve 15 dk hazırlık → 18:00, 19:15, 20:30.
+				Değişiklik mevcut rezervasyonları etkilemez.</p>
+			<div class="field" th:if="${pitch == null}"><label for="pf-price">Saatlik ücret (₺)</label>
+				<input class="input num" id="pf-price" name="basePrice" inputmode="decimal" required th:value="${form.basePrice}" placeholder="1.200"></div>
+			<div class="field"><label for="pf-desc">Açıklama</label><textarea class="textarea" id="pf-desc" rows="3" maxlength="2000" th:field="*{description}"></textarea></div>
+			<button class="btn btn-primary" type="submit" th:text="${pitch != null} ? 'Kaydet' : 'Sahayı ekle'">Kaydet</button>
+		</form>
+
+		<div th:if="${pitch != null}">
+			<section class="panel" aria-labelledby="ph-title">
+				<h2 id="ph-title" class="section-title">Fotoğraf</h2>
+				<img th:if="${pitch.photoPath != null}" class="pitch-photo" th:src="@{/saha-fotograf/{id}(id=${pitch.id})}" th:alt="${pitch.name} + ' fotoğrafı'" width="800" height="500">
+				<p class="small muted" th:unless="${pitch.photoPath != null}">Henüz fotoğraf yok. Müşteri saha listesinde fotoğraflı sahaları daha kolay seçer.</p>
+				<form th:action="@{/isletme/sahalar/{id}/fotograf(id=${pitch.id})}" method="post" enctype="multipart/form-data">
+					<div class="field">
+						<label for="ph-file">JPEG veya PNG, en fazla 3 MB</label>
+						<input class="input" id="ph-file" type="file" name="dosya" accept="image/jpeg,image/png" required data-max-bytes="3145728">
+					</div>
+					<button class="btn btn-secondary btn-sm" type="submit">Yükle</button>
+				</form>
+				<p class="tiny muted" style="margin:8px 0 0">Fotoğraf yeniden boyutlandırılır; konum gibi gömülü bilgiler silinir.</p>
+				<form th:if="${pitch.photoPath != null}" th:action="@{/isletme/sahalar/{id}/fotograf/sil(id=${pitch.id})}" method="post" data-confirm="Fotoğraf kaldırılsın mı?">
+					<button class="btn btn-text btn-sm" type="submit">Fotoğrafı kaldır</button>
+				</form>
+			</section>
+
+			<section class="panel" style="margin-top:16px" aria-labelledby="st-title">
+				<h2 id="st-title" class="section-title">Rezervasyona açık mı?</h2>
+				<p class="small">Kapalı saha müşterilere görünmez ve personel de yeni rezervasyon açamaz. Geçmiş kayıtlar korunur.
+					İleri tarihli rezervasyonu veya lig maçı olan saha kapatılamaz.</p>
+				<form th:action="@{/isletme/sahalar/{id}/durum(id=${pitch.id})}" method="post"
+				      th:data-confirm="${pitch.active} ? 'Saha rezervasyona kapatılsın mı?' : 'Saha rezervasyona açılsın mı?'">
+					<input type="hidden" name="aktif" th:value="${!pitch.active}">
+					<button class="btn btn-sm" th:classappend="${pitch.active} ? 'btn-danger' : 'btn-primary'" type="submit"
+					        th:text="${pitch.active} ? 'Rezervasyona kapat' : 'Rezervasyona aç'">Rezervasyona kapat</button>
+				</form>
+			</section>
+		</div>
+	</div>
+</main>
+</body>
+</html>

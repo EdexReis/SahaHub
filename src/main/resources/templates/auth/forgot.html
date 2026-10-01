@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Parolamı unuttum · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<div class="auth">
+		<h1>Parolamı unuttum</h1>
+		<div class="panel">
+			<p class="small">Hesabınızın e-postasını yazın; parolanızı yenilemeniz için bir bağlantı gönderelim.</p>
+			<form th:action="@{/parolami-unuttum}" method="post">
+				<div class="field">
+					<label for="email">E-posta</label>
+					<input class="input" id="email" name="email" type="email" autocomplete="username" required maxlength="254">
+				</div>
+				<button class="btn btn-primary btn-block" type="submit">Bağlantı gönder</button>
+			</form>
+		</div>
+		<p class="small" style="margin-top:16px"><a th:href="@{/giris}">← Girişe dön</a></p>
+		<p class="tiny muted">Yerel geliştirme ortamında e-postalar Mailpit'e düşer (http://localhost:8025).</p>
+	</div>
+</main>
+</body>
+</html>

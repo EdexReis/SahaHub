@@ -60,4 +60,12 @@ public class BranchSpecialDay {
 		return closed ? DayHours.CLOSED : DayHours.open(openTime, closeTime);
 	}
 
+	public Long getId() {
+		return id;
+	}
+
+	public Long getBranchId() {
+		return branchId;
+	}
+
 }

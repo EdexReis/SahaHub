@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title th:text="${h.customerName()} + ' · Müşteri geçmişi · SahaHub'">Müşteri geçmişi · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'takvim')}"></nav>
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/isletme/rezervasyonlar/{c}(c=${h.fromCode()})}">← Rezervasyon</a></p>
+	<div class="page-head">
+		<div style="min-width:0">
+			<p class="eyebrow" th:text="${h.registered()} ? 'Kayıtlı müşteri · bu şube' : 'Misafir (telefonla eşleşti) · bu şube'">Kayıtlı müşteri</p>
+			<h1 class="truncate" th:text="${h.customerName()}">Deniz Arslan</h1>
+		</div>
+	</div>
+	<section class="kpis" aria-label="Özet">
+		<div class="kpi"><span class="kpi-label">Rezervasyon</span><span class="kpi-value num" th:text="${h.total()}">12</span>
+			<span class="kpi-note" th:if="${h.total() == 50}">Son 50 kayıt</span></div>
+		<div class="kpi"><span class="kpi-label">Tamamlanan</span><span class="kpi-value num" th:text="${h.completed()}">9</span></div>
+		<div class="kpi"><span class="kpi-label">Gelmedi</span><span class="kpi-value num" th:text="${h.noShows()}">1</span></div>
+		<div class="kpi"><span class="kpi-label">İptal</span><span class="kpi-value num" th:text="${h.cancelled()}">2</span></div>
+	</section>
+	<p class="small muted" th:if="${!h.registered() and h.phone() == null}">Misafirin telefonu kayıtlı değil; yalnızca bu rezervasyon gösteriliyor.</p>
+	<ul class="res-list">
+		<li class="res-item" th:each="r : ${h.rows()}">
+			<div class="res-date"><span class="num" th:text="${r.start().dayOfMonth}">1</span>
+				<span class="tiny" th:text="${#temporals.format(r.start(), 'MMM yyyy')}">Eki 2026</span></div>
+			<div style="min-width:0">
+				<h3 class="truncate"><a th:href="@{/isletme/rezervasyonlar/{c}(c=${r.code()})}" th:text="${r.pitchName()}">Saha 1</a></h3>
+				<div class="small muted"><span class="num" th:text="${@fmt.time(r.start())}">21:00</span> · <span th:text="${@fmt.money(r.total(), r.currency())}">1.400 ₺</span></div>
+			</div>
+			<span class="status" th:classappend="'status-' + ${r.status().name()}" th:text="${r.status().label()}">Tamamlandı</span>
+		</li>
+	</ul>
+</main>
+</body>
+</html>

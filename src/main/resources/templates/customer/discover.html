@@ -19,7 +19,8 @@
 	</nav>
 
 	<ul class="pitch-list" th:if="${!#lists.isEmpty(pitches)}">
-		<li class="pitch-row" th:each="p : ${pitches}">
+		<li class="pitch-row" th:each="p : ${pitches}" th:classappend="${p.hasPhoto()} ? 'with-photo'">
+			<img th:if="${p.hasPhoto()}" class="pitch-thumb" th:src="@{/saha-fotograf/{id}(id=${p.id()})}" alt="" width="160" height="100" loading="lazy">
 			<div style="min-width:0">
 				<h2><a th:href="@{/sahalar/{id}(id=${p.id()})}" th:text="${p.name()}">Saha 1</a></h2>
 				<div class="pitch-meta">

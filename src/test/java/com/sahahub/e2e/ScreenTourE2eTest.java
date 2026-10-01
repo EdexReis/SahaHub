@@ -112,6 +112,49 @@ class ScreenTourE2eTest extends E2eTestBase {
 	}
 
 	@Test
+	void reportAndAdminScreens() {
+		for (Size size : SIZES) {
+			BrowserContext ctx = newContext(size.width(), size.height());
+			Page p = ctx.newPage();
+			login(p, "mudur.kadikoy@yesilvadi.test");
+			p.navigate("/isletme");
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Raporlar").setExact(true)).click();
+			assertThat(p.locator("h1")).hasText("Raporlar");
+			assertThat(p.locator(".kpi").first()).containsText("Rezervasyon bedeli");
+			check(p, size, "40-reports");
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Şube ve sahalar")).click();
+			assertThat(p.locator("#hr-title")).isVisible();
+			check(p, size, "41-branch-settings");
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Düzenle")).first().click();
+			assertThat(p.locator("#ph-title")).isVisible();
+			check(p, size, "42-pitch-form");
+			ctx.close();
+
+			BrowserContext c2 = newContext(size.width(), size.height());
+			Page q = c2.newPage();
+			login(q, "sahip@yesilvadi.test");
+			q.navigate("/isletme");
+			q.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Personel").setExact(true)).click();
+			assertThat(q.locator("h1")).hasText("Personel ve yetkiler");
+			check(q, size, "43-staff");
+			q.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Denetim kaydı")).click();
+			assertThat(q.locator("h1")).hasText("Denetim kaydı");
+			check(q, size, "44-audit");
+			c2.close();
+
+			BrowserContext c3 = newContext(size.width(), size.height());
+			Page r = c3.newPage();
+			r.navigate("/giris");
+			r.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Parolamı unuttum")).click();
+			r.getByLabel("E-posta").fill("musteri@sahahub.test");
+			r.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Bağlantı gönder")).click();
+			assertThat(r.locator(".alert-success")).containsText("Bu e-posta kayıtlıysa");
+			check(r, size, "45-forgot-password");
+			c3.close();
+		}
+	}
+
+	@Test
 	void emptyStatesAndForms() {
 		for (Size size : SIZES) {
 			BrowserContext ctx = newContext(size.width(), size.height());

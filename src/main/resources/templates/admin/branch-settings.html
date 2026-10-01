@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title th:text="${s.branchName()} + ' · Şube ve sahalar · SahaHub'">Şube ve sahalar · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide">
+	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'ayarlar')}"></nav>
+	<div class="page-head">
+		<div><p class="eyebrow" th:text="${s.branchName()}">Şube</p><h1>Şube ve sahalar</h1></div>
+	</div>
+
+	<!-- ================= Sahalar ================= -->
+	<section class="report-section" aria-labelledby="pt-title">
+		<div class="section-head">
+			<h2 id="pt-title" class="section-title">Sahalar</h2>
+			<a class="btn btn-primary btn-sm" th:href="@{/isletme/subeler/{b}/sahalar/yeni(b=${branchId})}">Saha ekle</a>
+		</div>
+		<div class="table-wrap">
+			<table class="table">
+				<thead><tr><th scope="col">Saha</th><th scope="col">Zemin</th><th scope="col" class="num">Kapasite</th>
+					<th scope="col" class="num">Maç / hazırlık</th><th scope="col" class="num">Saatlik</th><th scope="col">Durum</th><th scope="col"><span class="sr-only">İşlem</span></th></tr></thead>
+				<tbody>
+				<tr th:each="p : ${s.pitches()}">
+					<th scope="row" style="font-weight:600;background:none;color:var(--ink)">
+						<span th:text="${p.name()}">Saha 1</span>
+						<span class="tag" th:unless="${p.hasPhoto()}">Fotoğraf yok</span>
+					</th>
+					<td th:text="${p.surface().label()}">Suni çim</td>
+					<td class="num" th:text="${p.capacityPlayers() / 2} + '+' + ${p.capacityPlayers() / 2}">7+7</td>
+					<td class="num" th:text="${p.slotMinutes()} + ' / ' + ${p.bufferMinutes()} + ' dk'">60 / 0 dk</td>
+					<td class="num" th:text="${@fmt.money(p.basePrice(), p.currency())}">1.400 ₺</td>
+					<td><span class="status" th:classappend="${p.active()} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${p.active()} ? 'Rezervasyona açık' : 'Kapalı'">Açık</span></td>
+					<td><a class="btn btn-secondary btn-sm" th:href="@{/isletme/sahalar/{id}/duzenle(id=${p.id()})}">Düzenle</a></td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+		<p class="tiny muted">Saatlik ücret ve fiyat kuralları <a th:href="@{/isletme/subeler/{b}/fiyatlar(b=${branchId})}">Fiyatlandırma</a> ekranındadır.
+			Geçici bakım veya etkinlik için takvimden "Saha kapat" kullanın.</p>
+	</section>
+
+	<div class="report-grid">
+		<!-- ================= Haftalık çalışma saatleri ================= -->
+		<form class="panel" id="saatler" th:action="@{/isletme/subeler/{b}/ayarlar/saatler(b=${branchId})}" method="post" aria-labelledby="hr-title">
+			<h2 id="hr-title" class="section-title">Haftalık çalışma saatleri</h2>
+			<p class="small muted">Kapanış açılıştan önceyse gece yarısını aşar (ör. 09:00–01:00). Değişiklik mevcut rezervasyonları silmez; saat dışında kalan olursa uyarılırsınız.</p>
+			<table class="hours-table">
+				<thead><tr><th scope="col">Gün</th><th scope="col">Kapalı</th><th scope="col">Açılış</th><th scope="col">Kapanış</th></tr></thead>
+				<tbody>
+				<tr th:each="d : ${s.week()}" th:with="key=${d.day().name()}, dayName=${@fmt.dayShort(d.day())}">
+					<th scope="row" th:text="${dayName}">Pzt</th>
+					<td><label class="sr-only" th:for="'cl-' + ${key}" th:text="${dayName} + ' kapalı'">kapalı</label>
+						<input type="checkbox" th:id="'cl-' + ${key}" th:name="'kapali_' + ${key}" value="1" th:checked="${d.closed()}"></td>
+					<td><label class="sr-only" th:for="'op-' + ${key}" th:text="${dayName} + ' açılış'">açılış</label>
+						<input class="input num" type="time" step="900" th:id="'op-' + ${key}" th:name="'acilis_' + ${key}" th:value="${d.open()}"></td>
+					<td><label class="sr-only" th:for="'cs-' + ${key}" th:text="${dayName} + ' kapanış'">kapanış</label>
+						<input class="input num" type="time" step="900" th:id="'cs-' + ${key}" th:name="'kapanis_' + ${key}" th:value="${d.close()}"></td>
+				</tr>
+				</tbody>
+			</table>
+			<button class="btn btn-primary" type="submit" style="margin-top:12px">Saatleri kaydet</button>
+		</form>
+
+		<div>
+			<!-- ================= Özel günler ================= -->
+			<section class="panel" id="ozel-gunler" aria-labelledby="sd-title">
+				<h2 id="sd-title" class="section-title">Tatil ve özel günler</h2>
+				<div class="empty" th:if="${#lists.isEmpty(s.specialDays())}"><p>Yaklaşan özel gün yok.</p></div>
+				<ul class="res-list" th:unless="${#lists.isEmpty(s.specialDays())}">
+					<li class="app-item" th:each="d : ${s.specialDays()}">
+						<div style="min-width:0">
+							<strong th:text="${@fmt.longDate(d.day())}">1 Ocak 2027</strong>
+							<span class="small muted" th:text="${d.closed()} ? ' · Kapalı' : ' · ' + ${d.open()} + '–' + ${d.close()}"> · Kapalı</span>
+							<div class="small muted" th:if="${d.note() != null}" th:text="${d.note()}">Yılbaşı</div>
+						</div>
+						<form th:action="@{/isletme/subeler/{b}/ayarlar/ozel-gunler/{id}/sil(b=${branchId}, id=${d.id()})}" method="post">
+							<button class="btn btn-text btn-sm" type="submit">Kaldır</button>
+						</form>
+					</li>
+				</ul>
+				<form th:action="@{/isletme/subeler/{b}/ayarlar/ozel-gunler(b=${branchId})}" method="post" style="margin-top:12px">
+					<div class="field-row">
+						<div class="field"><label for="sd-day">Tarih</label><input class="input num" id="sd-day" type="date" name="tarih" required></div>
+						<div class="field"><label for="sd-note">Not</label><input class="input" id="sd-note" name="not" maxlength="200" placeholder="Ör. Bayram"></div>
+					</div>
+					<label class="check"><input type="checkbox" name="kapali" value="1" checked> <span>Bütün gün kapalı</span></label>
+					<div class="field-row">
+						<div class="field"><label for="sd-open">Açılış (kapalı değilse)</label><input class="input num" id="sd-open" type="time" step="900" name="acilis"></div>
+						<div class="field"><label for="sd-close">Kapanış</label><input class="input num" id="sd-close" type="time" step="900" name="kapanis"></div>
+					</div>
+					<button class="btn btn-secondary btn-sm" type="submit">Özel gün ekle</button>
+				</form>
+			</section>
+
+			<!-- ================= Kurallar ================= -->
+			<form class="panel" id="kurallar" style="margin-top:16px" th:action="@{/isletme/subeler/{b}/ayarlar/kurallar(b=${branchId})}" method="post" aria-labelledby="pl-title">
+				<h2 id="pl-title" class="section-title">Rezervasyon kuralları</h2>
+				<div class="field-row three">
+					<div class="field"><label for="pl-hold">Geçici tutma (dk)</label><input class="input num" id="pl-hold" type="number" min="5" max="30" name="tutma" th:value="${s.holdMinutes()}"></div>
+					<div class="field"><label for="pl-cut">İptal sınırı (saat)</label><input class="input num" id="pl-cut" type="number" min="0" max="72" name="iptal" th:value="${s.cancelCutoffHours()}"></div>
+					<div class="field"><label for="pl-hor">Kaç gün ilerisi</label><input class="input num" id="pl-hor" type="number" min="1" max="90" name="ufuk" th:value="${s.horizonDays()}"></div>
+				</div>
+				<p class="tiny muted">Müşteri onaylı rezervasyonu maçtan "iptal sınırı" kadar öncesine kadar iptal edebilir. Kapora kuralı Fiyatlandırma ekranındadır.</p>
+				<button class="btn btn-primary btn-sm" type="submit">Kuralları kaydet</button>
+			</form>
+		</div>
+	</div>
+</main>
+</body>
+</html>

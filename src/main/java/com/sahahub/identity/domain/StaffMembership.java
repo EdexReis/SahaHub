@@ -72,6 +72,20 @@ public class StaffMembership {
 		return role == StaffRole.OWNER || this.branchId.equals(branchId);
 	}
 
+	/** Görevi sona erdirir. Satır silinmez: denetim ve geçmiş için kalır. */
+	public void deactivate() {
+		this.active = false;
+	}
+
+	/** Aynı kişi aynı kapsamda yeniden görevlendirilir (tekil indeks yeni satıra izin vermez). */
+	public void reactivate(StaffRole role) {
+		if ((role == StaffRole.OWNER) != (branchId == null)) {
+			throw new IllegalArgumentException("Rol ile kapsam uyuşmuyor");
+		}
+		this.role = role;
+		this.active = true;
+	}
+
 	public Long getId() {
 		return id;
 	}

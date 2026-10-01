@@ -48,10 +48,12 @@ public class StaffController {
 	private final PitchBlockService blocks;
 	private final PaymentPanelService payments;
 	private final SeriesService series;
+	private final com.sahahub.booking.app.CustomerHistoryService history;
 
 	public StaffController(StaffBranchService branches, StaffCalendarService calendar,
 			StaffReservationService reservations, PitchBlockService blocks, PaymentPanelService payments,
-			SeriesService series) {
+			SeriesService series, com.sahahub.booking.app.CustomerHistoryService history) {
+		this.history = history;
 		this.branches = branches;
 		this.calendar = calendar;
 		this.reservations = reservations;
@@ -161,6 +163,16 @@ public class StaffController {
 		}
 		return "redirect:/isletme/subeler/" + r.branchId() + "/takvim?tarih=" + r.businessDay() + "&secili="
 				+ code;
+	}
+
+	@GetMapping("/isletme/rezervasyonlar/{code}/musteri-gecmisi")
+	public String customerHistory(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable String code,
+			Model model) {
+		ReservationView r = reservations.view(me, code);
+		model.addAttribute("h", history.forReservation(me, code));
+		model.addAttribute("branchId", r.branchId());
+		model.addAttribute("branches", branches.branchesFor(me));
+		return "staff/customer-history";
 	}
 
 	@PostMapping("/isletme/rezervasyonlar/{code}/iptal")

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title>Şube karşılaştırması · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide">
+	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'raporlar')}"></nav>
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/isletme/subeler/{id}/raporlar(id=${branchId}, bas=${period.from()}, bit=${period.to()})}">← Şube raporu</a></p>
+	<div class="page-head"><div><p class="eyebrow" th:text="${@fmt.span(period.from(), period.to())}">1–31 Eki</p><h1>Şube karşılaştırması</h1></div></div>
+	<form class="report-filter" method="get" th:action="@{/isletme/isletmeler/{b}/sube-karsilastirma(b=${businessId})}">
+		<input type="hidden" name="sube" th:value="${branchId}">
+		<div class="field"><label for="cf-from">Başlangıç</label><input class="input num" id="cf-from" type="date" name="bas" th:value="${period.from()}"></div>
+		<div class="field"><label for="cf-to">Bitiş</label><input class="input num" id="cf-to" type="date" name="bit" th:value="${period.to()}"></div>
+		<button class="btn btn-primary" type="submit">Göster</button>
+	</form>
+	<div class="table-wrap">
+		<table class="table report-table">
+			<thead><tr><th scope="col">Şube</th><th scope="col" class="num">Maç</th><th scope="col" class="num">Rezervasyon bedeli</th>
+				<th scope="col" class="num">Net tahsilat</th><th scope="col" class="num">Gider</th><th scope="col" class="num">Doluluk</th><th scope="col" class="num">İptal oranı</th></tr></thead>
+			<tbody>
+			<tr th:each="c : ${rows}">
+				<th scope="row"><a th:href="@{/isletme/subeler/{id}/raporlar(id=${c.branchId()}, bas=${period.from()}, bit=${period.to()})}" th:text="${c.branchName()}">Kadıköy</a></th>
+				<td class="num" th:text="${c.reservations()}">40</td>
+				<td class="num" th:text="${@fmt.money(c.booked(), 'TRY')}">0</td>
+				<td class="num" th:text="${@fmt.money(c.netCollected(), 'TRY')}">0</td>
+				<td class="num" th:text="${@fmt.money(c.expenses(), 'TRY')}">0</td>
+				<td class="num" th:text="${@fmt.rate(c.occupancy())}">%50</td>
+				<td class="num" th:text="${@fmt.rate(c.cancelRate())}">%5</td>
+			</tr>
+			</tbody>
+		</table>
+	</div>
+	<p class="tiny muted">Tanımlar şube raporuyla aynıdır. Para birimi TRY varsayılır.</p>
+</main>
+</body>
+</html>

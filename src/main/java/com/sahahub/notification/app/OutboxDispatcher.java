@@ -57,8 +57,9 @@ public class OutboxDispatcher {
 				m.markSent(ch.provider(), now);
 			}
 			catch (Exception e) {
+				// İstisna mesajı alıcı adresini içerebilir: loga yalnızca türü yazılır (ayrıntı outbox satırında)
 				log.warn("Mesaj gönderilemedi id={} kanal={} deneme={}: {}", m.getId(), m.getChannel(),
-						m.getAttempts() + 1, e.toString());
+						m.getAttempts() + 1, e.getClass().getSimpleName());
 				m.markFailedAttempt(e.getClass().getSimpleName() + ": " + e.getMessage(), now);
 			}
 		}

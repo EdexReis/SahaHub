@@ -91,6 +91,7 @@
 		<dt th:if="${r.contactPhone() != null}">Telefon</dt>
 		<dd th:if="${r.contactPhone() != null}"><a th:href="'tel:' + ${#strings.replace(r.contactPhone(), ' ', '')}" th:text="${r.contactPhone()}">0555</a></dd>
 		<dt>Kanal</dt><dd th:text="${r.channel().label()}">Telefon</dd>
+		<dt>Geçmiş</dt><dd><a th:href="@{/isletme/rezervasyonlar/{c}/musteri-gecmisi(c=${r.code()})}">Müşteri geçmişi</a></dd>
 		<dt th:if="${series != null}">Düzenli</dt>
 		<dd th:if="${series != null}" th:text="'Her hafta · ' + ${series.index()} + '. maç / ' + ${series.total()}">Her hafta · 3. maç / 8</dd>
 		<dt th:if="${r.bufferMinutes() > 0}">Hazırlık</dt><dd th:if="${r.bufferMinutes() > 0}" th:text="${r.bufferMinutes()} + ' dk'">15 dk</dd>

@@ -22,17 +22,19 @@ public class SecurityConfig {
 	public static final String LOGIN_PATH = "/giris";
 
 	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http, LoginAttemptService attempts) throws Exception {
+	SecurityFilterChain securityFilterChain(HttpSecurity http, LoginAttemptService attempts,
+			org.springframework.security.core.session.SessionRegistry sessionRegistry) throws Exception {
 		http
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/", "/sahalar", "/sahalar/**", "/api/sahalar/**", "/kayit", LOGIN_PATH, "/error",
+						"/parolami-unuttum", "/parola-sifirla/*",
 						"/webhooks/**",
 						"/css/**", "/js/**", "/vendor/**", "/fonts/**", "/img/**", "/favicon.svg",
 						"/actuator/health")
 				.permitAll()
 				// Herkese açık okuma: ilan listesi/ayrıntısı, ligler, davet önizlemesi (katılmak için giriş gerekir)
 				.requestMatchers(org.springframework.http.HttpMethod.GET, "/ilanlar", "/ilanlar/{id:[0-9]+}", "/ligler",
-						"/ligler/{id:[0-9]+}", "/davet/*")
+						"/ligler/{id:[0-9]+}", "/davet/*", "/saha-fotograf/*")
 				.permitAll()
 				.requestMatchers("/admin/**").hasRole("PLATFORM_ADMIN")
 				.requestMatchers("/isletme/**").hasRole("STAFF")
@@ -53,15 +55,32 @@ public class SecurityConfig {
 				.deleteCookies("JSESSIONID"))
 			.sessionManagement(session -> session
 				// Girişte oturum kimliği yenilenir (session fixation koruması)
-				.sessionFixation(fixation -> fixation.changeSessionId()))
+				.sessionFixation(fixation -> fixation.changeSessionId())
+				// Oturumlar kayıt altında tutulur; parola sıfırlanınca kullanıcının tüm oturumları sonlandırılır
+				.maximumSessions(-1)
+				.sessionRegistry(sessionRegistry)
+				.expiredUrl(LOGIN_PATH + "?oturum"))
 			.headers(headers -> headers
 				.contentSecurityPolicy(csp -> csp.policyDirectives(
 						"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
 								+ "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
 								+ "frame-ancestors 'none'; form-action 'self'; base-uri 'self'"))
-				.referrerPolicy(ref -> ref.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)))
+				.referrerPolicy(ref -> ref.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+				// Uygulama kamera, mikrofon, konum vb. kullanmaz; gömülü içerik de kullanamasın
+				.permissionsPolicyHeader(pp -> pp.policy("camera=(), microphone=(), geolocation=(), payment=(), usb=()")))
 			.addFilterBefore(new LoginRateLimitFilter(attempts), UsernamePasswordAuthenticationFilter.class);
 		return http.build();
+	}
+
+	@Bean
+	org.springframework.security.core.session.SessionRegistry sessionRegistry() {
+		return new org.springframework.security.core.session.SessionRegistryImpl();
+	}
+
+	/** Oturum sona erdiğinde SessionRegistry'den düşülmesi için. */
+	@Bean
+	org.springframework.security.web.session.HttpSessionEventPublisher httpSessionEventPublisher() {
+		return new org.springframework.security.web.session.HttpSessionEventPublisher();
 	}
 
 	/**

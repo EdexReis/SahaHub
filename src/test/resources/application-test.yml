@@ -5,6 +5,7 @@ sahahub:
   demo-data: false
   notification:
     jobs-enabled: false
+  upload-dir: ${java.io.tmpdir}/sahahub-test-uploads
   payment:
     simulation:
       webhook-secret: test-sim-anahtari

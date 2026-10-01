@@ -25,3 +25,6 @@ bin/
 
 ### Playwright ciktilari ###
 test-results/
+
+# Yüklenen saha fotoğrafları (sahahub.upload-dir)
+/data/

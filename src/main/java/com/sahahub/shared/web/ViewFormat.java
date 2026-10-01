@@ -118,6 +118,29 @@ public class ViewFormat {
 		return p == null ? "" : "%" + p.stripTrailingZeros().toPlainString().replace('.', ',');
 	}
 
+	/** Rapor yüzdesi: "%62,5"; payda sıfırsa "—". */
+	public String rate(BigDecimal p) {
+		return p == null ? "—" : "%" + p.toPlainString().replace('.', ',');
+	}
+
+	/** Dakikayı saat olarak: 90 → "1,5 sa". */
+	public String hours(long minutes) {
+		BigDecimal h = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 1, java.math.RoundingMode.HALF_UP);
+		return h.stripTrailingZeros().toPlainString().replace('.', ',') + " sa";
+	}
+
+	/** "1–7 Eki" ya da "28 Eyl – 4 Eki": rapor dönemi etiketi. */
+	public String span(LocalDate from, LocalDate to) {
+		DateTimeFormatter dm = DateTimeFormatter.ofPattern("d MMM", TR);
+		if (from.equals(to)) {
+			return from.format(DateTimeFormatter.ofPattern("d MMM EEE", TR));
+		}
+		if (from.getMonth() == to.getMonth() && from.getYear() == to.getYear()) {
+			return from.getDayOfMonth() + "–" + to.format(dm);
+		}
+		return from.format(dm) + " – " + to.format(dm);
+	}
+
 	/** Takvim gün başlığı ve tarih seçici için ISO tarih: 2026-10-01 */
 	public String iso(LocalDate d) {
 		return d.toString();

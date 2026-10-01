@@ -27,6 +27,19 @@ public class StaffBranchService {
 	/** Personelin erişebildiği şube. Menüde yalnızca yetkili bağlantılar gösterilsin diye izin bayrakları da var. */
 	public record BranchRef(Long id, String name, Long businessId, String businessName, StaffRole role) {
 
+		public boolean settingsAccess() {
+			return RolePermissions.allows(role, Permission.PITCH_MANAGE);
+		}
+
+		/** İşletme geneli ekranlar (personel, denetim): yalnızca sahip. */
+		public boolean ownerAccess() {
+			return role == StaffRole.OWNER;
+		}
+
+		public boolean reportAccess() {
+			return RolePermissions.allows(role, Permission.REPORT_VIEW);
+		}
+
 		public boolean tournamentAccess() {
 			return RolePermissions.allows(role, Permission.TOURNAMENT_MANAGE);
 		}

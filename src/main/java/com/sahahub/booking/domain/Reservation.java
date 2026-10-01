@@ -103,6 +103,10 @@ public class Reservation {
 	@Column(name = "cancelled_at")
 	private Instant cancelledAt;
 
+	/** Onay anı (müşteri onayı, ödeme bildirimi veya personel kaydı). Raporda iptal oranı için. */
+	@Column(name = "confirmed_at")
+	private Instant confirmedAt;
+
 	@Column(name = "cancel_reason")
 	private String cancelReason;
 
@@ -177,6 +181,7 @@ public class Reservation {
 		r.guestPhone = guestPhone == null || guestPhone.isBlank() ? null : guestPhone.strip();
 		r.note = note == null || note.isBlank() ? null : note.strip();
 		r.status = ReservationStatus.CONFIRMED;
+		r.confirmedAt = now;
 		return r;
 	}
 
@@ -234,6 +239,7 @@ public class Reservation {
 		}
 		moveTo(ReservationStatus.CONFIRMED, now);
 		this.holdExpiresAt = null;
+		this.confirmedAt = now;
 	}
 
 	/** Tutma süresi dolmuşsa EXPIRED yapar. Süresi dolmamış tutmaya dokunmaz. */
@@ -444,6 +450,10 @@ public class Reservation {
 
 	public Instant getCheckedInAt() {
 		return checkedInAt;
+	}
+
+	public Instant getConfirmedAt() {
+		return confirmedAt;
 	}
 
 	public Instant getCancelledAt() {
