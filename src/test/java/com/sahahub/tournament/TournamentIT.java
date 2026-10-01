@@ -185,6 +185,8 @@ class TournamentIT {
 		assertThat(jdbc.queryForObject("select count(*) from audit_event where action = 'MATCH_RESULT_CORRECTED'"
 				+ " and entity_id = ?", Integer.class, first.getId())).isEqualTo(1);
 
+		assertThatThrownBy(() -> service.schedule(v.manager(), first.getId(), v.pitch().getId(), DAY.plusWeeks(5).atTime(20, 0), 60))
+			.isInstanceOf(BusinessRuleException.class).hasMessageContaining("Oynanmış maçın saati");
 		service.finish(v.manager(), id);
 		assertThatThrownBy(() -> service.recordResult(v.manager(), first.getId(), 5, 0))
 			.isInstanceOf(BusinessRuleException.class);

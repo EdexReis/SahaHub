@@ -37,6 +37,7 @@
 | 31 | Saha fotoğrafı dosya sisteminde, içerikten tür tespiti ve yeniden kodlama | Veritabanı şişmez; istemcinin bildirdiği türe güvenilmez; EXIF/konum silinir; dosya yalnızca erişim kontrollü uçtan sunulur. |
 | 32 | Parola sıfırlama e-postası outbox'tan değil, commit sonrası doğrudan gönderilir | Outbox gövdesi bağlantıyı (token) düz metin saklardı. Gönderim başarısızsa kullanıcı yeniden ister; bu akışta "en az bir kez" teslim gerekmiyor. |
 | 33 | `SessionRegistry` ile parola değişince oturumların sonlandırılması | Çalınmış bir oturum parola değişikliğinden sonra açık kalmaz. Tek sunucu varsayımı (kayıt bellekte). |
+| 34 | Eleme ağacı saf bir sınıfta (`Bracket`) hesaplanır; maç satırı yalnızca iki taraf belli olunca açılır | "Bekleniyor" taraflı boş satırlar ve onları sonradan doldurma mantığı gerekmez; ağaç her zaman oynanmış maçlardan yeniden hesaplanır. Düzeltmede yalnızca oynanmamış sonraki maçın takımı güncellenir. |
 
 ## 2. Paketler (modüller)
 
@@ -53,7 +54,7 @@ com.sahahub
 ├── notification  uygulama içi bildirim, outbox, gönderici, kanallar (e-posta; SMS/WhatsApp demo),
 │                 hatırlatma görevi
 ├── community     takımlar, davet, oyuncu/rakip ilanları ve başvurular
-├── tournament    lig, fikstür (round-robin), maç planlama, skor, puan durumu
+├── tournament    lig (round-robin) ve eleme (kupa, Bracket), maç planlama, skor, puan durumu
 ├── reporting     rapor metrikleri (saf hesaplayıcı), şube raporu, şube karşılaştırması, CSV
 ├── platform      platform yöneticisi işlemleri
 └── dev           yalnızca dev profilinde demo veri

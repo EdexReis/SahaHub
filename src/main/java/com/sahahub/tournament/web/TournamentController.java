@@ -64,9 +64,13 @@ public class TournamentController {
 			@RequestParam("ad") String name, @RequestParam(name = "ciftDevre", defaultValue = "false") boolean doubleRound,
 			@RequestParam(name = "galibiyet", defaultValue = "3") int win,
 			@RequestParam(name = "beraberlik", defaultValue = "1") int draw,
-			@RequestParam(name = "maglubiyet", defaultValue = "0") int loss, RedirectAttributes redirect) {
-		Long id = service.create(me, branchId, name, doubleRound, win, draw, loss);
-		redirect.addFlashAttribute("flashSuccess", "Lig oluşturuldu. Takımları ekleyip fikstürü oluşturun.");
+			@RequestParam(name = "maglubiyet", defaultValue = "0") int loss,
+			@RequestParam(name = "bicim", defaultValue = "LEAGUE") com.sahahub.tournament.domain.Tournament.Format format,
+			RedirectAttributes redirect) {
+		Long id = service.create(me, branchId, name, format, doubleRound, win, draw, loss);
+		redirect.addFlashAttribute("flashSuccess", format == com.sahahub.tournament.domain.Tournament.Format.KNOCKOUT
+				? "Turnuva oluşturuldu. Takımları güç sırasıyla ekleyip eşleşmeleri oluşturun."
+				: "Lig oluşturuldu. Takımları ekleyip fikstürü oluşturun.");
 		return "redirect:/isletme/ligler/" + id;
 	}
 
@@ -144,9 +148,10 @@ public class TournamentController {
 	@PostMapping("/isletme/maclar/{matchId}/skor")
 	public String result(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long matchId,
 			@RequestParam Long lig, @RequestParam(name = "ev", required = false) Integer home,
-			@RequestParam(name = "dep", required = false) Integer away, RedirectAttributes redirect) {
-		service.recordResult(me, matchId, home, away);
-		redirect.addFlashAttribute("flashSuccess", "Skor kaydedildi; puan durumu güncellendi.");
+			@RequestParam(name = "dep", required = false) Integer away,
+			@RequestParam(name = "penalti", required = false) Long penaltyWinner, RedirectAttributes redirect) {
+		service.recordResult(me, matchId, home, away, penaltyWinner);
+		redirect.addFlashAttribute("flashSuccess", "Skor kaydedildi.");
 		return "redirect:/isletme/ligler/" + lig + "#mac-" + matchId;
 	}
 

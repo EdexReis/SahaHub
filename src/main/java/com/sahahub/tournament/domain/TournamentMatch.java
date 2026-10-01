@@ -56,11 +56,21 @@ public class TournamentMatch {
 	@Column(nullable = false, updatable = false)
 	private int round;
 
-	@Column(name = "home_entry_id", nullable = false, updatable = false)
+	@Column(name = "home_entry_id", nullable = false)
 	private Long homeEntryId;
 
-	@Column(name = "away_entry_id", nullable = false, updatable = false)
+	@Column(name = "away_entry_id", nullable = false)
 	private Long awayEntryId;
+
+	/** Eleme ağacındaki yer (tur içinde 0'dan); lig maçında null. */
+	@Column(name = "bracket_slot", updatable = false)
+	private Integer bracketSlot;
+
+	@Column(name = "winner_entry_id")
+	private Long winnerEntryId;
+
+	@Column(name = "decided_by_penalties", nullable = false)
+	private boolean decidedByPenalties;
 
 	@Column(name = "pitch_id")
 	private Long pitchId;
@@ -98,6 +108,32 @@ public class TournamentMatch {
 		this.status = Status.UNSCHEDULED;
 	}
 
+	/** Eleme maçı: ağaçtaki yeriyle oluşturulur. */
+	public static TournamentMatch knockout(Long tournamentId, int round, int slot, Long homeEntryId, Long awayEntryId) {
+		TournamentMatch m = new TournamentMatch(tournamentId, round, homeEntryId, awayEntryId);
+		m.bracketSlot = slot;
+		return m;
+	}
+
+	public boolean isKnockout() {
+		return bracketSlot != null;
+	}
+
+	/**
+	 * Önceki turun sonucu düzeltildiğinde bu maçın takımları değişebilir. Oynanmış maçta değişemez (servis
+	 * böyle bir düzeltmeyi baştan reddeder).
+	 */
+	public void replaceParticipants(Long home, Long away) {
+		if (status == Status.PLAYED) {
+			throw new IllegalStateException("Oynanmış maçın takımları değişemez: " + id);
+		}
+		if (home.equals(away)) {
+			throw new IllegalArgumentException("Bir takım kendisiyle eşleşemez");
+		}
+		this.homeEntryId = home;
+		this.awayEntryId = away;
+	}
+
 	/** Planlar veya yeniden planlar. Oynanmış maçın saati değişmez. */
 	public void schedule(Long pitchId, TimeRange play) {
 		if (status == Status.PLAYED) {
@@ -130,8 +166,43 @@ public class TournamentMatch {
 		if (home < 0 || away < 0 || home > 99 || away > 99) {
 			throw new IllegalArgumentException("Skor 0-99 arasında olmalı");
 		}
+		if (isKnockout() && home == away) {
+			throw new IllegalArgumentException("Eleme maçında beraberlikte penaltı galibi gerekli");
+		}
 		this.homeScore = home;
 		this.awayScore = away;
+		this.status = Status.PLAYED;
+		if (isKnockout()) {
+			this.winnerEntryId = home > away ? homeEntryId : awayEntryId;
+			this.decidedByPenalties = false;
+		}
+	}
+
+	/** Eleme maçı berabere bitti, penaltılarla galip belirlendi. */
+	public void recordPenaltyResult(int score, Long penaltyWinner, Instant now) {
+		if (!isKnockout()) {
+			throw new IllegalStateException("Penaltı yalnızca eleme maçında");
+		}
+		if (!penaltyWinner.equals(homeEntryId) && !penaltyWinner.equals(awayEntryId)) {
+			throw new IllegalArgumentException("Penaltı galibi bu maçın takımlarından biri olmalı");
+		}
+		recordDrawScore(score, now);
+		this.winnerEntryId = penaltyWinner;
+		this.decidedByPenalties = true;
+	}
+
+	private void recordDrawScore(int score, Instant now) {
+		if (status == Status.UNSCHEDULED) {
+			throw new IllegalStateException("Planlanmamış maçın skoru girilemez: " + id);
+		}
+		if (now.isBefore(startsAt)) {
+			throw new IllegalStateException("Maç başlamadan skor girilemez: " + id);
+		}
+		if (score < 0 || score > 99) {
+			throw new IllegalArgumentException("Skor 0-99 arasında olmalı");
+		}
+		this.homeScore = score;
+		this.awayScore = score;
 		this.status = Status.PLAYED;
 	}
 
@@ -189,6 +260,18 @@ public class TournamentMatch {
 
 	public Integer getAwayScore() {
 		return awayScore;
+	}
+
+	public Integer getBracketSlot() {
+		return bracketSlot;
+	}
+
+	public Long getWinnerEntryId() {
+		return winnerEntryId;
+	}
+
+	public boolean isDecidedByPenalties() {
+		return decidedByPenalties;
 	}
 
 }

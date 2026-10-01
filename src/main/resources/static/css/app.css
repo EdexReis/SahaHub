@@ -791,3 +791,20 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 	.pitch-row.with-photo { grid-template-columns: minmax(0, 1fr) auto; }
 	.pitch-row.with-photo .pitch-thumb { grid-column: 1 / -1; width: 100%; height: 140px; }
 }
+
+/* ------------------------------------------------------------ eleme ağacı */
+.champion { display: flex; flex-direction: column; gap: 2px; border-left: 4px solid var(--green); background: var(--green-soft); padding: 10px 14px; border-radius: var(--r); margin: 0 0 14px; }
+.champion strong { font: 700 22px/1.2 var(--font-num); }
+.bracket { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; position: relative; }
+.b-round { flex: 0 0 200px; display: flex; flex-direction: column; }
+.b-round h3 { font-size: 13px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 8px; }
+.b-cells { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: space-around; flex: 1; gap: 8px; }
+.b-cell { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+.b-cell.is-bye { border-style: dashed; background: transparent; }
+.b-team { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--ink-2); min-width: 0; }
+.b-team .num { font-weight: 700; color: var(--ink); }
+.b-team.is-winner { color: var(--ink); font-weight: 700; box-shadow: inset 3px 0 0 var(--green); padding-left: 6px; margin-left: -8px; }
+.league-grid.is-cup { grid-template-columns: minmax(0, 1fr); }
+.pen-pick { display: flex; flex-direction: column; gap: 2px; margin-left: 8px; }
+.pen-pick .select { min-height: 36px; padding: 4px 8px; font-size: 14px; }
+@media (max-width: 560px) { .score-form { flex-wrap: wrap; justify-content: center; } .pen-pick { margin: 6px 0 0; width: 100%; } }

@@ -24,6 +24,7 @@ import com.sahahub.identity.domain.Permission;
 import com.sahahub.identity.security.AppUserPrincipal;
 import com.sahahub.shared.domain.NotFoundException;
 import com.sahahub.shared.domain.TimeRange;
+import com.sahahub.tournament.domain.Bracket;
 import com.sahahub.tournament.domain.Standings;
 import com.sahahub.tournament.domain.Tournament;
 import com.sahahub.tournament.domain.TournamentEntry;
@@ -37,7 +38,7 @@ import com.sahahub.tournament.domain.TournamentRepository;
 public class TournamentQueries implements MatchCalendarPort {
 
 	public record ListRow(Long id, String name, Tournament.Status status, String branchName, String businessName,
-			String city, int entries, long played, long total) {
+			String city, int entries, long played, long total, Tournament.Format format) {
 	}
 
 	public record EntryRow(Long id, String name) {
@@ -48,7 +49,8 @@ public class TournamentQueries implements MatchCalendarPort {
 
 	public record MatchView(Long id, int round, String home, String away, TournamentMatch.Status status,
 			Long pitchId, String pitchName, ZonedDateTime start, ZonedDateTime end, Integer homeScore,
-			Integer awayScore, boolean canRecord, int minutes) {
+			Integer awayScore, boolean canRecord, int minutes, Long homeEntryId, Long awayEntryId, boolean knockout,
+			String winner, boolean penalties) {
 
 		public boolean played() {
 			return status == TournamentMatch.Status.PLAYED;
@@ -60,13 +62,26 @@ public class TournamentQueries implements MatchCalendarPort {
 
 	}
 
-	public record RoundView(int round, List<MatchView> matches) {
+	public record RoundView(int round, String name, List<MatchView> matches) {
+	}
+
+	/** Eleme ağacında bir yer: taraflar (belli değilse null), bay, varsa maç ve sonucu. */
+	public record BracketCell(String home, String away, boolean bye, Long matchId, Integer homeScore,
+			Integer awayScore, String winner, boolean penalties) {
+	}
+
+	public record BracketRound(int round, String name, List<BracketCell> cells) {
 	}
 
 	public record Detail(Long id, String name, Tournament.Status status, boolean doubleRound, int pointsWin,
 			int pointsDraw, int pointsLoss, Long branchId, String branchName, String businessName, String city,
 			List<EntryRow> entries, List<RoundView> rounds, List<Standings.Row> standings, long unscheduled,
-			long unplayed, List<PitchOption> pitches) {
+			long unplayed, List<PitchOption> pitches, Tournament.Format format, List<BracketRound> bracket,
+			String champion) {
+
+		public boolean knockout() {
+			return format == Tournament.Format.KNOCKOUT;
+		}
 
 		public boolean draft() {
 			return status == Tournament.Status.DRAFT;
@@ -81,7 +96,7 @@ public class TournamentQueries implements MatchCalendarPort {
 		}
 
 		public boolean canFinish() {
-			return active() && unplayed == 0;
+			return active() && unplayed == 0 && (!knockout() || champion != null);
 		}
 
 		public int matchCount() {
@@ -158,27 +173,39 @@ public class TournamentQueries implements MatchCalendarPort {
 				.toList())
 			.stream()
 			.collect(Collectors.toMap(TournamentEntry::getId, TournamentEntry::getName));
-		Map<Long, String> leagueNames = tournaments
+		Map<Long, Tournament> leagues = tournaments
 			.findAllById(list.stream().map(TournamentMatch::getTournamentId).distinct().toList())
 			.stream()
+			.collect(Collectors.toMap(Tournament::getId, java.util.function.Function.identity()));
+		Map<Long, String> leagueNames = leagues.values().stream()
 			.collect(Collectors.toMap(Tournament::getId, Tournament::getName));
 		return list.stream()
 			.map(m -> new MatchSlot(m.getPitchId(), m.play(),
 					names.get(m.getHomeEntryId()) + " – " + names.get(m.getAwayEntryId())
 							+ (m.isPlayed() ? " (" + m.getHomeScore() + "-" + m.getAwayScore() + ")" : ""),
-					leagueNames.get(m.getTournamentId()) + " · " + m.getRound() + ". hafta",
+					leagueNames.get(m.getTournamentId()) + " · " + roundLabel(leagues.get(m.getTournamentId()), m),
 					"/ligler/" + m.getTournamentId()))
 			.toList();
 	}
 
 	// ------------------------------------------------------------------ yardımcılar
 
+	private String roundLabel(Tournament t, TournamentMatch m) {
+		if (t.isKnockout()) {
+			int n = (int) entries.countByTournamentId(t.getId());
+			return Bracket.roundName(m.getRound(), n >= 2 ? Bracket.rounds(n) : 1);
+		}
+		return m.getRound() + ". hafta";
+	}
+
 	private ListRow row(Tournament t) {
 		BranchContext bc = catalog.branchContext(t.getBranchId());
 		List<TournamentMatch> ms = matches.findByTournamentIdOrderByRoundAscIdAsc(t.getId());
+		int n = (int) entries.countByTournamentId(t.getId());
+		// Elemede maçlar sonuçlar geldikçe açılır; toplam, oynanacak maç sayısıdır (takım − 1)
+		long total = t.isKnockout() && t.getStatus() != Tournament.Status.DRAFT ? Math.max(0, n - 1) : ms.size();
 		return new ListRow(t.getId(), t.getName(), t.getStatus(), bc.branch().getName(), bc.business().getName(),
-				bc.branch().getCity(), (int) entries.countByTournamentId(t.getId()),
-				ms.stream().filter(TournamentMatch::isPlayed).count(), ms.size());
+				bc.branch().getCity(), n, ms.stream().filter(TournamentMatch::isPlayed).count(), total, t.getFormat());
 	}
 
 	private Detail detail(Tournament t) {
@@ -193,6 +220,7 @@ public class TournamentQueries implements MatchCalendarPort {
 
 		Map<Integer, List<MatchView>> byRound = new TreeMap<>();
 		List<Standings.Result> results = new ArrayList<>();
+		int totalRounds = es.size() >= 2 ? Bracket.rounds(es.size()) : 1;
 		for (TournamentMatch m : ms) {
 			int minutes = m.play() == null ? 60 : (int) Duration.between(m.getStartsAt(), m.getEndsAt()).toMinutes();
 			byRound.computeIfAbsent(m.getRound(), k -> new ArrayList<>())
@@ -201,20 +229,55 @@ public class TournamentQueries implements MatchCalendarPort {
 						m.getPitchId() == null ? null : pitchNames.getOrDefault(m.getPitchId(), "Saha"),
 						m.getStartsAt() == null ? null : m.getStartsAt().atZone(zone),
 						m.getEndsAt() == null ? null : m.getEndsAt().atZone(zone), m.getHomeScore(), m.getAwayScore(),
-						t.isActive() && m.canRecordResultAt(now), minutes));
-			if (m.isPlayed()) {
+						t.isActive() && m.canRecordResultAt(now), minutes, m.getHomeEntryId(), m.getAwayEntryId(),
+						m.isKnockout(), m.getWinnerEntryId() == null ? null : names.get(m.getWinnerEntryId()),
+						m.isDecidedByPenalties()));
+			if (!t.isKnockout() && m.isPlayed()) {
 				results.add(new Standings.Result(m.getHomeEntryId(), m.getAwayEntryId(), m.getHomeScore(),
 						m.getAwayScore()));
 			}
 		}
-		List<RoundView> rounds = byRound.entrySet().stream().map(e -> new RoundView(e.getKey(), e.getValue())).toList();
+		List<RoundView> rounds = byRound.entrySet()
+			.stream()
+			.map(e -> new RoundView(e.getKey(),
+					t.isKnockout() ? Bracket.roundName(e.getKey(), totalRounds) : e.getKey() + ". hafta", e.getValue()))
+			.toList();
+		List<BracketRound> bracket = new ArrayList<>();
+		String champion = null;
+		if (t.isKnockout() && es.size() >= 2 && !t.isDraft()) {
+			Map<String, TournamentMatch> bySlot = new java.util.HashMap<>();
+			Map<String, Long> winners = new java.util.HashMap<>();
+			for (TournamentMatch m : ms) {
+				String key = Bracket.key(m.getRound(), m.getBracketSlot());
+				bySlot.put(key, m);
+				if (m.isPlayed()) {
+					winners.put(key, m.getWinnerEntryId());
+				}
+			}
+			for (List<Bracket.Slot> round : Bracket.build(es.stream().map(TournamentEntry::getId).toList(), winners)) {
+				List<BracketCell> cells = new ArrayList<>();
+				for (Bracket.Slot sl : round) {
+					TournamentMatch m = bySlot.get(Bracket.key(sl.round(), sl.slot()));
+					cells.add(new BracketCell(sl.home() == null ? null : names.get(sl.home()),
+							sl.away() == null ? null : names.get(sl.away()), sl.bye(), m == null ? null : m.getId(),
+							m == null ? null : m.getHomeScore(), m == null ? null : m.getAwayScore(),
+							m == null || m.getWinnerEntryId() == null ? null : names.get(m.getWinnerEntryId()),
+							m != null && m.isDecidedByPenalties()));
+				}
+				bracket.add(new BracketRound(round.getFirst().round(),
+						Bracket.roundName(round.getFirst().round(), totalRounds), cells));
+			}
+			Long winner = winners.get(Bracket.key(totalRounds, 0));
+			champion = winner == null ? null : names.get(winner);
+		}
 		return new Detail(t.getId(), t.getName(), t.getStatus(), t.isDoubleRound(), t.getPointsWin(),
 				t.getPointsDraw(), t.getPointsLoss(), t.getBranchId(), bc.branch().getName(), bc.business().getName(),
 				bc.branch().getCity(), es.stream().map(e -> new EntryRow(e.getId(), e.getName())).toList(), rounds,
 				Standings.compute(names, results, t.points()),
 				ms.stream().filter(m -> m.getStatus() == TournamentMatch.Status.UNSCHEDULED).count(),
 				ms.stream().filter(m -> !m.isPlayed()).count(),
-				pitches.stream().map(p -> new PitchOption(p.getId(), p.getName())).toList());
+				pitches.stream().map(p -> new PitchOption(p.getId(), p.getName())).toList(), t.getFormat(), bracket,
+				champion);
 	}
 
 }

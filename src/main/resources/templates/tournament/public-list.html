@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
-<head><title>Ligler · SahaHub</title></head>
+<head><title>Ligler ve turnuvalar · SahaHub</title></head>
 <body>
 <main id="main" class="page">
 	<nav th:replace="~{fragments/communitynav :: tabs('ligler')}"></nav>
 	<div class="page-head">
-		<div><p class="eyebrow">Şubelerin düzenlediği</p><h1>Ligler</h1></div>
+		<div><p class="eyebrow">Şubelerin düzenlediği</p><h1>Ligler ve turnuvalar</h1></div>
 	</div>
 	<ul class="pitch-list" th:unless="${#lists.isEmpty(rows)}">
 		<li class="pitch-row" th:each="r : ${rows}">
@@ -14,6 +14,7 @@
 				<div class="pitch-meta">
 					<span class="truncate" th:text="${r.businessName()} + ' · ' + ${r.branchName()}">İşletme · Şube</span>
 					<span th:text="${r.city()}">İstanbul</span>
+					<span class="tag" th:text="${r.format().label()}">Lig</span>
 				</div>
 			</div>
 			<div class="price-from">

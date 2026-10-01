@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
-<head><title>Ligler · SahaHub</title></head>
+<head><title>Ligler ve turnuvalar · SahaHub</title></head>
 <body>
 <main id="main" class="page page-wide">
 	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'ligler')}"></nav>
-	<div class="page-head"><h1>Ligler</h1></div>
+	<div class="page-head"><h1>Ligler ve turnuvalar</h1></div>
 
 	<div class="cash-grid">
 		<section aria-labelledby="ll-title">
-			<h2 id="ll-title" class="section-title">Şubenin ligleri</h2>
+			<h2 id="ll-title" class="section-title">Şubenin ligleri ve turnuvaları</h2>
 			<div class="empty" th:if="${#lists.isEmpty(rows)}"><p>Henüz lig yok.</p></div>
 			<ul class="res-list" th:unless="${#lists.isEmpty(rows)}">
 				<li class="app-item" th:each="r : ${rows}">
 					<div style="min-width:0">
 						<h3 class="truncate"><a th:href="@{/isletme/ligler/{id}(id=${r.id()})}" th:text="${r.name()}">Kış Ligi</a></h3>
-						<span class="small muted" th:text="${r.entries()} + ' takım · ' + ${r.played()} + '/' + ${r.total()} + ' maç oynandı'">6 takım</span>
+						<span class="small muted" th:text="${r.format().label()} + ' · ' + ${r.entries()} + ' takım · ' + ${r.played()} + '/' + ${r.total()} + ' maç oynandı'">6 takım</span>
 					</div>
 					<span class="status" th:classappend="${r.status().name() == 'ACTIVE'} ? 'status-CONFIRMED' : (${r.status().name() == 'DRAFT'} ? 'status-HELD' : 'status-COMPLETED')"
 					      th:text="${r.status().label()}">Sürüyor</span>
@@ -23,21 +23,26 @@
 		</section>
 
 		<form class="panel" th:action="@{/isletme/subeler/{b}/ligler(b=${branchId})}" method="post" aria-labelledby="nl-title">
-			<h2 id="nl-title" class="section-title">Yeni lig</h2>
+			<h2 id="nl-title" class="section-title">Yeni lig veya turnuva</h2>
+			<fieldset class="field">
+				<legend class="label">Biçim</legend>
+				<label class="choice"><input type="radio" name="bicim" value="LEAGUE" checked> Lig (herkes herkesle, puan durumu)</label>
+				<label class="choice"><input type="radio" name="bicim" value="KNOCKOUT"> Eleme (kupa: kaybeden elenir)</label>
+			</fieldset>
 			<div class="field">
-				<label for="nl-name">Lig adı</label>
+				<label for="nl-name">Ad</label>
 				<input class="input" id="nl-name" name="ad" required maxlength="80" placeholder="Ör. Kış Ligi 2026">
 			</div>
-			<label class="check"><input type="checkbox" name="ciftDevre" value="true"> <span>Çift devre (her takım rakibiyle iki kez oynar)</span></label>
+			<label class="check"><input type="checkbox" name="ciftDevre" value="true"> <span>Çift devre (yalnızca lig: her takım rakibiyle iki kez oynar)</span></label>
 			<fieldset class="field">
-				<legend class="label">Puanlama</legend>
+				<legend class="label">Puanlama <span class="small muted">(yalnızca lig)</span></legend>
 				<div class="field-row three">
 					<div><label class="small" for="nl-w">Galibiyet</label><input class="input num" id="nl-w" name="galibiyet" type="number" min="0" max="10" value="3"></div>
 					<div><label class="small" for="nl-d">Beraberlik</label><input class="input num" id="nl-d" name="beraberlik" type="number" min="0" max="10" value="1"></div>
 					<div><label class="small" for="nl-l">Mağlubiyet</label><input class="input num" id="nl-l" name="maglubiyet" type="number" min="0" max="10" value="0"></div>
 				</div>
 			</fieldset>
-			<button class="btn btn-primary" type="submit">Ligi oluştur</button>
+			<button class="btn btn-primary" type="submit">Oluştur</button>
 		</form>
 	</div>
 </main>

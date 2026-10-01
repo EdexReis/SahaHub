@@ -11,6 +11,10 @@ public interface TournamentMatchRepository extends JpaRepository<TournamentMatch
 
 	List<TournamentMatch> findByTournamentIdOrderByRoundAscIdAsc(Long tournamentId);
 
+	/** Maçı yüklemeden turnuvasını verir (kilit sırası: önce turnuva, sonra maç). */
+	@Query("select m.tournamentId from TournamentMatch m where m.id = :id")
+	java.util.Optional<Long> tournamentIdOf(Long id);
+
 	@Query("select count(m) from TournamentMatch m where m.tournamentId = :tournamentId and m.status <> 'PLAYED'")
 	long unplayedCount(Long tournamentId);
 

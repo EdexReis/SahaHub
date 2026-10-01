@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
-<head><title th:text="${d.name()} + ' · Lig · SahaHub'">Lig · SahaHub</title></head>
+<head><title th:text="${d.name()} + (${d.knockout()} ? ' · Turnuva' : ' · Lig') + ' · SahaHub'">Lig · SahaHub</title></head>
 <body>
 <main id="main" class="page page-wide">
 	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'ligler')}"></nav>
 	<div class="page-head">
 		<div style="min-width:0">
-			<p class="eyebrow" th:text="${d.branchName()} + (${d.doubleRound()} ? ' · çift devre' : ' · tek devre')">Şube · tek devre</p>
+			<p class="eyebrow" th:text="${d.branchName()} + ' · ' + (${d.knockout()} ? 'eleme (kupa)' : (${d.doubleRound()} ? 'lig, çift devre' : 'lig, tek devre'))">Şube · tek devre</p>
 			<h1 th:text="${d.name()}">Kış Ligi</h1>
 		</div>
 		<div class="btn-row">
 			<span class="status" th:classappend="${d.active()} ? 'status-CONFIRMED' : (${d.draft()} ? 'status-HELD' : 'status-COMPLETED')" th:text="${d.status().label()}">Sürüyor</span>
 			<a class="btn btn-secondary btn-sm" th:unless="${d.draft()}" th:href="@{/ligler/{id}(id=${d.id()})}" target="_blank" rel="noopener">Herkese açık sayfa</a>
 			<form th:if="${d.canFinish()}" th:action="@{/isletme/ligler/{id}/bitir(id=${d.id()})}" method="post"
-			      data-confirm="Lig tamamlandı olarak işaretlensin mi? Sonrasında skor değiştirilemez.">
-				<button class="btn btn-primary btn-sm" type="submit">Ligi bitir</button>
+			      data-confirm="Tamamlandı olarak işaretlensin mi? Sonrasında skor değiştirilemez.">
+				<button class="btn btn-primary btn-sm" type="submit">Bitir</button>
 			</form>
 		</div>
 	</div>
@@ -39,29 +39,38 @@
 			</form>
 		</section>
 		<section class="panel" aria-labelledby="st-title">
-			<h2 id="st-title" class="section-title">Fikstür</h2>
-			<p class="small">Takımlar tamamlanınca fikstürü oluşturun: her takım her rakibiyle
+			<h2 id="st-title" class="section-title" th:text="${d.knockout()} ? 'Eşleşmeler' : 'Fikstür'">Fikstür</h2>
+			<p class="small" th:unless="${d.knockout()}">Takımlar tamamlanınca fikstürü oluşturun: her takım her rakibiyle
 				<span th:text="${d.doubleRound()} ? 'iki kez (iç saha / dış saha)' : 'bir kez'">bir kez</span> oynar.
 				Fikstürden sonra takım eklenip çıkarılamaz.</p>
+			<p class="small" th:if="${d.knockout()}">Takımları <strong>güç sırasıyla</strong> ekleyin (ilk eklenen 1. sıra).
+				Güçlü takımlar ilk turlarda karşılaşmaz; takım sayısı 2, 4, 8, 16… değilse en üst sıradakiler ilk turu
+				maç yapmadan geçer (bay). Sonraki tur maçları sonuçlar girildikçe açılır.</p>
 			<form th:action="@{/isletme/ligler/{id}/baslat(id=${d.id()})}" method="post"
 			      data-confirm="Fikstür oluşturulsun mu? Sonrasında takım listesi değişmez.">
-				<button class="btn btn-primary" type="submit" th:disabled="${!d.canStart()}">Fikstürü oluştur</button>
+				<button class="btn btn-primary" type="submit" th:disabled="${!d.canStart()}" th:text="${d.knockout()} ? 'Eşleşmeleri oluştur' : 'Fikstürü oluştur'">Fikstürü oluştur</button>
 			</form>
-			<p class="tiny muted" style="margin:8px 0 0" th:unless="${d.canStart()}">En az 3 takım gerekli (en fazla 20).</p>
+			<p class="tiny muted" style="margin:8px 0 0" th:unless="${d.canStart()}" th:text="'En az 3 takım gerekli (en fazla ' + (${d.knockout()} ? 32 : 20) + ').'">En az 3 takım gerekli.</p>
 		</section>
 	</div>
 
 	<!-- ================= Süren / biten lig ================= -->
 	<th:block th:unless="${d.draft()}">
-		<div class="league-grid">
+		<div class="league-grid" th:classappend="${d.knockout()} ? 'is-cup'">
 			<section aria-labelledby="tb-title">
-				<h2 id="tb-title" class="section-title">Puan durumu</h2>
-				<div th:replace="~{tournament/parts :: standings(${d})}"></div>
+				<th:block th:unless="${d.knockout()}">
+					<h2 id="tb-title" class="section-title">Puan durumu</h2>
+					<div th:replace="~{tournament/parts :: standings(${d})}"></div>
+				</th:block>
+				<th:block th:if="${d.knockout()}">
+					<h2 id="tb-title" class="section-title">Eşleşme ağacı</h2>
+					<div th:replace="~{tournament/parts :: bracket(${d})}"></div>
+				</th:block>
 
 				<form class="panel" style="margin-top:20px" th:if="${d.active() and d.unscheduled() > 0}"
 				      th:action="@{/isletme/ligler/{id}/haftalik-planla(id=${d.id()})}" method="post" aria-labelledby="wp-title">
 					<h2 id="wp-title" class="section-title" th:text="'Haftalık planla (' + ${d.unscheduled()} + ' maç planlanmadı)'">Haftalık planla</h2>
-					<p class="small">Her hafta ilk tarihten itibaren 7 gün arayla aynı gün oynanır; haftanın maçları seçilen sahada art arda dizilir.
+					<p class="small">Her tur ilk tarihten itibaren 7 gün arayla aynı gün oynanır; turun maçları seçilen sahada art arda dizilir.
 						Bir maçın saati doluysa <strong>hiçbir maç planlanmaz</strong> ve hangi maç olduğu söylenir.</p>
 					<div class="field">
 						<label for="wp-pitch">Saha</label>
@@ -83,9 +92,9 @@
 			</section>
 
 			<section aria-labelledby="fx-title">
-				<h2 id="fx-title" class="section-title" th:text="'Fikstür (' + ${d.matchCount()} + ' maç, ' + ${d.unplayed()} + ' oynanmadı)'">Fikstür</h2>
+				<h2 id="fx-title" class="section-title" th:text="(${d.knockout()} ? 'Maçlar (' : 'Fikstür (') + ${d.matchCount()} + ' maç, ' + ${d.unplayed()} + ' oynanmadı)'">Fikstür</h2>
 				<section class="round" th:each="rd : ${d.rounds()}" th:aria-labelledby="'round-' + ${rd.round()}">
-					<h3 th:id="'round-' + ${rd.round()}" th:text="${rd.round()} + '. hafta'">1. hafta</h3>
+					<h3 th:id="'round-' + ${rd.round()}" th:text="${rd.name()}">1. hafta</h3>
 					<ul class="match-list">
 						<li class="match" th:each="m : ${rd.matches()}" th:id="'mac-' + ${m.id()}">
 							<span class="m-home" th:text="${m.home()}">Kartallar</span>
@@ -94,6 +103,7 @@
 							<span class="m-away" th:text="${m.away()}">Şimşekler</span>
 							<span class="m-when small muted" th:if="${m.scheduled()}" th:text="${@fmt.dateTime(m.start())} + ' · ' + ${m.pitchName()}">8 Eki 20:00 · Saha 1</span>
 							<span class="m-when small" th:unless="${m.scheduled()}">Planlanmadı</span>
+							<span class="m-when small" th:if="${m.penalties()}" th:text="'Penaltılarla ' + ${m.winner()} + ' kazandı'">Penaltılarla</span>
 
 							<div class="m-actions" th:if="${d.active()}">
 								<!-- Skor -->
@@ -105,6 +115,14 @@
 									<label class="sr-only" th:for="'a-' + ${m.id()}" th:text="${m.away()} + ' golleri'">Deplasman golleri</label>
 									<input class="input num" th:id="'a-' + ${m.id()}" name="dep" type="number" min="0" max="99" required th:value="${m.awayScore()}">
 									<button class="btn btn-secondary btn-sm" type="submit" th:text="${m.played()} ? 'Düzelt' : 'Skoru kaydet'">Skoru kaydet</button>
+									<span class="pen-pick" th:if="${m.knockout()}">
+										<label class="small" th:for="'pen-' + ${m.id()}">Berabereyse penaltıları kazanan</label>
+										<select class="select" th:id="'pen-' + ${m.id()}" name="penalti">
+											<option value="">—</option>
+											<option th:value="${m.homeEntryId()}" th:text="${m.home()}" th:selected="${m.penalties() and m.winner() == m.home()}">Ev</option>
+											<option th:value="${m.awayEntryId()}" th:text="${m.away()}" th:selected="${m.penalties() and m.winner() == m.away()}">Dep</option>
+										</select>
+									</span>
 								</form>
 								<!-- Planlama -->
 								<details th:unless="${m.played()}">

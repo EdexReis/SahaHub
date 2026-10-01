@@ -120,6 +120,20 @@ değişmez.
 - **Puan durumu** saklanmaz; oynanmış maçlardan hesaplanır. Sıralama: puan → averaj → atılan gol → ad.
   İkili averaj uygulanmaz.
 
+## Eleme usulü turnuva (kupa)
+
+- Takımların eklenme sırası **tohum sırasıdır** (ilk eklenen 1. sıra). Ağaç boyu takım sayısından büyük-eşit en
+  küçük 2'nin kuvvetidir; standart tohumlamayla (8'lik: 1-8, 4-5, 2-7, 3-6) 1. ve 2. tohum ancak finalde karşılaşır.
+- Eksik yerler **bay**dır ve en üst tohumlara düşer: bay geçen takım maç yapmadan ikinci tura çıkar. İki bay
+  karşılaşmaz. Toplam maç sayısı takım − 1'dir.
+- Maç satırı yalnızca iki tarafı belli olunca oluşur: ilk tur "Eşleşmeleri oluştur"da, sonraki turlar sonuçlar
+  girildikçe aynı transaction'da açılır (turnuva satırı kilitli; `(turnuva, tur, yer)` tekil indeksi).
+- Beraberlikte **penaltı galibi** seçilir; veritabanında da "eleme maçı penaltısız berabere bitemez" kısıtı var.
+- **Düzeltme**: galibi değiştirmeyen skor düzeltmesi her zaman; galibi değiştiren düzeltme yalnızca o galibin
+  sonraki tur maçı oynanmadıysa (o maçın takımı güncellenir). Oynandıysa reddedilir. Hepsi denetim kaydında.
+- Turnuva final oynanınca bitirilebilir; şampiyon ağacın son yerindeki galiptir.
+- Tur adları: Final, Yarı final, Çeyrek final, Son 16, daha öncesi "N. tur".
+
 ## Takım ve ilan
 
 - Takım: kuran kaptandır. Kaptan, başka üye varken ayrılamaz (önce kaptanlığı devreder); tek üye kaptan ayrılırsa

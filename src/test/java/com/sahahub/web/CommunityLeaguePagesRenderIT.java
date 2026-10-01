@@ -146,7 +146,7 @@ class CommunityLeaguePagesRenderIT {
 		Venue v = data.venue();
 		Long b = v.branch().getId();
 		mvc.perform(get("/isletme/subeler/{b}/ligler", b).with(user(v.manager()))).andExpect(status().isOk())
-			.andExpect(content().string(containsString("Ligi oluştur")));
+			.andExpect(content().string(containsString("Yeni lig veya turnuva")));
 		mvc.perform(get("/isletme/subeler/{b}/ligler", b).with(user(v.reception()))).andExpect(status().isForbidden());
 
 		Long id = tournaments.create(v.manager(), b, "Render Ligi", false, 3, 1, 0);
