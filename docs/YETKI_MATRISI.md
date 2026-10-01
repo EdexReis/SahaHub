@@ -11,7 +11,7 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | Şube yöneticisi (`BRANCH_MANAGER`) | Yalnızca atandığı şube | `staff_membership` (branch_id dolu) |
 | Resepsiyon/kasa (`RECEPTION`) | Yalnızca atandığı şube | `staff_membership` (branch_id dolu) |
 | Müşteri | Kendi rezervasyonları | Her kayıtlı kullanıcı |
-| Takım kaptanı | Yönettiği takımlar (Aşama 5) | Rol değil; takım-üye ilişkisi |
+| Takım kaptanı | Yönettiği takım: davet, üye çıkarma, kaptanlık devri, ilan verme, başvuru kabulü | Rol değil; `team_member.role = CAPTAIN` |
 
 ## İzinler
 
@@ -33,6 +33,7 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | `DISCOUNT_APPLY` personel indirimi (gerekçeli) | ✓ | ✓ | ✗ | çalışıyor |
 | `CASH_MANAGE` kasa açma/kapama | ✓ | ✓ | ✓ | çalışıyor |
 | `EXPENSE_MANAGE` gider kaydı | ✓ | ✓ | ✗ | çalışıyor |
+| `TOURNAMENT_MANAGE` lig açma, takım ekleme, fikstür, maç planlama, skor | ✓ | ✓ | ✗ | çalışıyor |
 | `COUPON_MANAGE` işletme geneli kupon | ✓ | ✗ | ✗ | çalışıyor (yalnızca sahip; işletme düzeyi kontrol) |
 
 ## Müşteri ve platform kuralları
@@ -49,6 +50,18 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | Bekleme listesi | Yalnızca kayıtlı müşteri, yalnızca dolu saat; aynı saate bir kez, aynı anda en fazla 5 saat; yalnızca kendi kaydından çıkabilir |
 | Bildirimler, tercihler | Yalnızca kendi bildirimleri (`user_id`) ve kendi tercihleri |
 | Platform: demo mesaj kutusu | Yalnızca platform yöneticisi (`/admin/**`); kayıtlar demo SMS/WhatsApp, gerçek gönderim yok |
+
+Takım ve ilan kuralları (müşteri tarafı, `CommunityIT`):
+
+| İşlem | Kural |
+|---|---|
+| Takım sayfası | Yalnızca aktif üyeler; üye olmayan "bulunamadı" alır. Davet kodu yalnızca kaptana görünür |
+| Takıma katılma | Yalnızca davet koduyla; en fazla 25 üye (takım satırı kilitlenir), kişi başı en fazla 10 takım |
+| İlan verme | Yalnızca takımın kaptanı; kişi başı en fazla 5 açık ilan; bağlanan rezervasyon kendi, onaylı ve ileri tarihli olmalı |
+| Başvuru | Kendi ilanına ve üyesi olduğu takımın oyuncu ilanına başvurulamaz; rakip ilanına yalnızca kaptanı olduğu takımla |
+| Başvuru kabul/ret, ilanı kapatma | Yalnızca ilan sahibi |
+| Telefon numarası | Yalnızca kabul edilen başvuruda karşılıklı görünür |
+| Lig sayfası (`/ligler`) | Herkese açık; taslak lig ve askıdaki işletmenin ligi "bulunamadı" |
 
 Personel tarafında düzenli rezervasyon yeni izin gerektirmez: oluşturma `RESERVATION_CREATE`, "bu ve sonraki
 maçları iptal" `RESERVATION_CANCEL` ister (her ikisi de rol matrisinde zaten tanımlı).

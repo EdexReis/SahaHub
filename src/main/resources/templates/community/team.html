@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title th:text="${t.name()} + ' · Takım · SahaHub'">Takım · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/takimlar}">← Takımlarım</a></p>
+	<div class="page-head">
+		<div style="min-width:0">
+			<p class="eyebrow" th:text="${t.city()}">İstanbul</p>
+			<h1 th:text="${t.name()}">Kadıköy Kartalları</h1>
+		</div>
+		<div class="btn-row" th:if="${t.captain()}">
+			<a class="btn btn-primary btn-sm" th:href="@{/ilanlar/yeni}">İlan ver</a>
+		</div>
+	</div>
+
+	<section class="panel" th:if="${t.captain()}" aria-labelledby="inv-title">
+		<h2 id="inv-title" class="section-title">Davet bağlantısı</h2>
+		<p class="small">Bu bağlantıyı açan ve giriş yapan herkes takıma katılabilir. Yalnızca oyuncularınızla paylaşın.</p>
+		<label class="sr-only" for="inv-link">Davet bağlantısı</label>
+		<input class="input num" id="inv-link" readonly th:value="${inviteUrl}">
+		<form th:action="@{/takimlar/{id}/davet-yenile(id=${t.id()})}" method="post" style="margin-top:8px"
+		      data-confirm="Yeni bağlantı oluşturulsun mu? Eski bağlantı çalışmaz.">
+			<button class="btn btn-text btn-sm" type="submit">Bağlantıyı yenile</button>
+		</form>
+	</section>
+
+	<section style="margin-top:24px" aria-labelledby="mem-title">
+		<h2 id="mem-title" style="font-size:18px" th:text="'Oyuncular (' + ${#lists.size(t.members())} + ')'">Oyuncular</h2>
+		<ul class="res-list">
+			<li class="app-item" th:each="m : ${t.members()}">
+				<div style="min-width:0">
+					<h3 class="truncate" th:text="${m.name()}">Deniz Arslan</h3>
+					<span class="small muted" th:text="${m.role().label()}">Oyuncu</span>
+				</div>
+				<div class="app-actions" th:if="${t.captain() and m.userId() != t.myUserId()}">
+					<form th:action="@{/takimlar/{id}/uyeler/{u}/kaptan(id=${t.id()}, u=${m.userId()})}" method="post"
+					      th:data-confirm="${m.name()} + ' kaptan olsun mu? Siz oyuncu olursunuz.'">
+						<button class="btn btn-secondary btn-sm" type="submit">Kaptan yap</button>
+					</form>
+					<form th:action="@{/takimlar/{id}/uyeler/{u}/cikar(id=${t.id()}, u=${m.userId()})}" method="post"
+					      th:data-confirm="${m.name()} + ' takımdan çıkarılsın mı?'">
+						<button class="btn btn-danger btn-sm" type="submit">Çıkar</button>
+					</form>
+				</div>
+			</li>
+		</ul>
+	</section>
+
+	<div class="btn-row" style="margin-top:24px">
+		<form th:action="@{/takimlar/{id}/ayril(id=${t.id()})}" method="post"
+		      th:data-confirm="${t.captain() and #lists.size(t.members()) == 1} ? 'Tek oyuncu sizsiniz; takım dağıtılsın mı?' : 'Takımdan ayrılmak istiyor musunuz?'">
+			<button class="btn btn-secondary btn-sm" type="submit">Takımdan ayrıl</button>
+		</form>
+		<form th:if="${t.captain()}" th:action="@{/takimlar/{id}/dagit(id=${t.id()})}" method="post"
+		      data-confirm="Takım dağıtılsın mı? Tüm oyuncular çıkar, açık ilanlar kapanır. Geri alınamaz.">
+			<button class="btn btn-danger btn-sm" type="submit">Takımı dağıt</button>
+		</form>
+	</div>
+	<p class="tiny muted" th:if="${t.captain() and #lists.size(t.members()) > 1}">Kaptan ayrılmadan önce kaptanlığı başka bir oyuncuya devretmelidir.</p>
+</main>
+</body>
+</html>

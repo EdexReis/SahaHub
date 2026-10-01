@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Ligler · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<nav th:replace="~{fragments/communitynav :: tabs('ligler')}"></nav>
+	<div class="page-head">
+		<div><p class="eyebrow">Şubelerin düzenlediği</p><h1>Ligler</h1></div>
+	</div>
+	<ul class="pitch-list" th:unless="${#lists.isEmpty(rows)}">
+		<li class="pitch-row" th:each="r : ${rows}">
+			<div style="min-width:0">
+				<h2><a th:href="@{/ligler/{id}(id=${r.id()})}" th:text="${r.name()}">Kış Ligi</a></h2>
+				<div class="pitch-meta">
+					<span class="truncate" th:text="${r.businessName()} + ' · ' + ${r.branchName()}">İşletme · Şube</span>
+					<span th:text="${r.city()}">İstanbul</span>
+				</div>
+			</div>
+			<div class="price-from">
+				<span class="status" th:classappend="${r.status().name() == 'ACTIVE'} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${r.status().label()}">Sürüyor</span>
+				<span class="tiny" style="display:block;margin-top:4px" th:text="${r.entries()} + ' takım · ' + ${r.played()} + '/' + ${r.total()} + ' maç'">6 takım · 3/15 maç</span>
+			</div>
+		</li>
+	</ul>
+	<div class="empty" th:if="${#lists.isEmpty(rows)}"><p>Şu an yayında lig yok.</p></div>
+</main>
+</body>
+</html>

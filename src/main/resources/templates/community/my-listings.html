@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>İlanlarım ve başvurularım · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<nav th:replace="~{fragments/communitynav :: tabs('ilanlarim')}"></nav>
+	<div class="page-head">
+		<h1>İlanlarım</h1>
+		<div class="btn-row"><a class="btn btn-primary btn-sm" th:href="@{/ilanlar/yeni}">İlan ver</a></div>
+	</div>
+	<div class="empty" th:if="${#lists.isEmpty(cards)}"><p>Henüz ilan vermediniz.</p></div>
+	<ul class="res-list" th:unless="${#lists.isEmpty(cards)}">
+		<li class="app-item" th:each="c : ${cards}">
+			<div style="min-width:0">
+				<h3 class="truncate"><a th:href="@{/ilanlar/{id}(id=${c.id()})}" th:text="${c.teamName()} + ' · ' + ${c.kind().label()}">Takım · Oyuncu arıyoruz</a></h3>
+				<span class="small muted num" th:text="${c.playAt() != null} ? ${@fmt.at(c.playAt())} : 'Zaman belirtilmedi'">4 Eki</span>
+			</div>
+			<span class="status" th:classappend="${c.open()} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${c.statusLabel()}">Açık</span>
+		</li>
+	</ul>
+
+	<h2 style="font-size:18px;margin-top:28px">Başvurularım</h2>
+	<div class="empty" th:if="${#lists.isEmpty(applications)}"><p>Henüz bir ilana başvurmadınız. <a th:href="@{/ilanlar}">İlanlara bakın</a>.</p></div>
+	<ul class="res-list" th:unless="${#lists.isEmpty(applications)}">
+		<li class="app-item" th:each="a : ${applications}">
+			<div style="min-width:0">
+				<h3 class="truncate"><a th:href="@{/ilanlar/{id}(id=${a.listingId()})}" th:text="${a.teamName()} + ' · ' + ${a.kind().label()}">Takım</a></h3>
+				<span class="small muted num" th:text="${a.playAt() != null} ? ${@fmt.at(a.playAt())} : ${@fmt.at(a.createdAt())}">4 Eki</span>
+			</div>
+			<span class="status" th:classappend="${a.status().name() == 'ACCEPTED'} ? 'status-CONFIRMED' : (${a.status().name() == 'PENDING'} ? 'status-HELD' : 'status-COMPLETED')"
+			      th:text="${a.status().label()}">Yanıt bekliyor</span>
+		</li>
+	</ul>
+</main>
+</body>
+</html>

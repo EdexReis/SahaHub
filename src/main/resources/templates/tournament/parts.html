@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Puan durumu tablosu. Gerekli değişken: d (TournamentQueries.Detail) -->
+<div th:fragment="standings(d)" class="table-wrap">
+	<table class="table standings">
+		<caption class="sr-only">Puan durumu</caption>
+		<thead>
+		<tr>
+			<th scope="col" class="num">#</th>
+			<th scope="col">Takım</th>
+			<th scope="col" class="num"><abbr title="Oynanan">O</abbr></th>
+			<th scope="col" class="num"><abbr title="Galibiyet">G</abbr></th>
+			<th scope="col" class="num"><abbr title="Beraberlik">B</abbr></th>
+			<th scope="col" class="num"><abbr title="Mağlubiyet">M</abbr></th>
+			<th scope="col" class="num hide-xs"><abbr title="Atılan gol">A</abbr></th>
+			<th scope="col" class="num hide-xs"><abbr title="Yenilen gol">Y</abbr></th>
+			<th scope="col" class="num"><abbr title="Averaj">Av</abbr></th>
+			<th scope="col" class="num">Puan</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr th:each="r : ${d.standings()}">
+			<td class="num" th:text="${r.position()}">1</td>
+			<th scope="row" class="team-cell" th:text="${r.name()}">Kartallar</th>
+			<td class="num" th:text="${r.played()}">3</td>
+			<td class="num" th:text="${r.won()}">2</td>
+			<td class="num" th:text="${r.drawn()}">1</td>
+			<td class="num" th:text="${r.lost()}">0</td>
+			<td class="num hide-xs" th:text="${r.goalsFor()}">9</td>
+			<td class="num hide-xs" th:text="${r.goalsAgainst()}">4</td>
+			<td class="num" th:text="${r.goalDifference() > 0} ? '+' + ${r.goalDifference()} : ${r.goalDifference()}">+5</td>
+			<td class="num pts" th:text="${r.points()}">7</td>
+		</tr>
+		</tbody>
+	</table>
+	<p class="tiny muted" style="margin:6px 0 0"
+	   th:text="'Galibiyet ' + ${d.pointsWin()} + ', beraberlik ' + ${d.pointsDraw()} + ', mağlubiyet ' + ${d.pointsLoss()} + ' puan. Eşitlikte averaj, sonra atılan gol.'">Puanlama</p>
+</div>
+
+<!-- Salt okunur fikstür (herkese açık sayfa). -->
+<div th:fragment="fixture(d)">
+	<section class="round" th:each="rd : ${d.rounds()}" th:aria-labelledby="'round-' + ${rd.round()}">
+		<h3 th:id="'round-' + ${rd.round()}" th:text="${rd.round()} + '. hafta'">1. hafta</h3>
+		<ul class="match-list">
+			<li class="match" th:each="m : ${rd.matches()}">
+				<span class="m-home" th:text="${m.home()}">Kartallar</span>
+				<span class="m-score num" th:if="${m.played()}" th:text="${m.homeScore()} + ' – ' + ${m.awayScore()}">2 – 1</span>
+				<span class="m-score m-vs" th:unless="${m.played()}">–</span>
+				<span class="m-away" th:text="${m.away()}">Şimşekler</span>
+				<span class="m-when small muted" th:if="${m.scheduled()}"
+				      th:text="${@fmt.dateTime(m.start())} + ' · ' + ${m.pitchName()}">8 Eki 2026 20:00 · Saha 1</span>
+				<span class="m-when small muted" th:unless="${m.scheduled()}">Tarih belli değil</span>
+			</li>
+		</ul>
+	</section>
+</div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Takım daveti · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<div class="panel">
+		<p class="eyebrow">Takım daveti</p>
+		<h1 th:text="${p.name()}">Kadıköy Kartalları</h1>
+		<p class="muted" th:text="${p.city()} + ' · ' + ${p.memberCount()} + ' oyuncu'">İstanbul · 8 oyuncu</p>
+		<p th:if="${p.alreadyMember()}">Zaten bu takımdasınız.</p>
+		<p th:if="${p.full() and !p.alreadyMember()}">Takım dolu; yeni oyuncu alınamıyor.</p>
+		<form th:if="${me != null and !p.alreadyMember() and !p.full()}" th:action="@{/davet/{c}(c=${p.code()})}" method="post">
+			<button class="btn btn-primary" type="submit">Takıma katıl</button>
+		</form>
+		<p th:if="${me == null}">Katılmak için <a th:href="@{/giris}">giriş yapın</a> veya <a th:href="@{/kayit}">kayıt olun</a>, sonra bu bağlantıyı yeniden açın.</p>
+		<p class="tiny muted" style="margin:12px 0 0">Katıldığınızda adınız takım arkadaşlarınıza görünür.</p>
+	</div>
+</main>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>İlan ver · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/ilanlar}">← İlanlar</a></p>
+	<div class="page-head"><h1>İlan ver</h1></div>
+
+	<div class="empty" th:if="${#lists.isEmpty(teams)}">
+		<p>İlanı takım kaptanı verir. Önce bir takım kurun; oyuncularınızı davet bağlantısıyla eklersiniz.</p>
+		<a class="btn btn-primary" th:href="@{/takimlar}">Takım kur</a>
+	</div>
+
+	<form class="panel" th:unless="${#lists.isEmpty(teams)}" th:action="@{/ilanlar}" th:object="${form}" method="post">
+		<div class="alert alert-error" role="alert" th:if="${formError}" th:text="${formError}">Hata</div>
+		<fieldset class="field">
+			<legend class="label">Ne arıyorsunuz?</legend>
+			<label class="choice"><input type="radio" th:field="*{kind}" value="PLAYERS_WANTED"> Oyuncu (eksiğimiz var)</label>
+			<label class="choice"><input type="radio" th:field="*{kind}" value="OPPONENT_WANTED"> Rakip takım</label>
+		</fieldset>
+		<div class="field">
+			<label for="lf-team">Takım</label>
+			<select class="select" id="lf-team" th:field="*{teamId}">
+				<option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.name}">Takım</option>
+			</select>
+		</div>
+		<div class="field">
+			<label for="lf-res">Rezervasyonunuz</label>
+			<select class="select" id="lf-res" th:field="*{reservationId}" aria-describedby="lf-res-hint">
+				<option value="">Rezervasyona bağlama (zaman ve yeri aşağıya yazacağım)</option>
+				<option th:each="r : ${reservations}" th:value="${r.id()}" th:text="${r.label()}">4 Eki Cmt 21:00 · Saha 1</option>
+			</select>
+			<p class="hint" id="lf-res-hint">Seçerseniz maç zamanı ve yeri rezervasyondan alınır; rezervasyon iptal edilirse ilan kapanır.</p>
+		</div>
+		<div class="field-row">
+			<div class="field">
+				<label for="lf-city">Şehir</label>
+				<input class="input" id="lf-city" th:field="*{city}" list="lf-cities" maxlength="60" autocomplete="address-level2">
+				<datalist id="lf-cities"><option th:each="c : ${cities}" th:value="${c}"></option></datalist>
+			</div>
+			<div class="field">
+				<label for="lf-district">İlçe</label>
+				<input class="input" id="lf-district" th:field="*{district}" maxlength="60">
+			</div>
+		</div>
+		<div class="field">
+			<label for="lf-when">Maç zamanı <span class="small muted">(rezervasyon seçmediyseniz, isteğe bağlı)</span></label>
+			<input class="input num" id="lf-when" type="datetime-local" step="900" th:field="*{playAt}">
+			<p class="hint">Boş bırakılırsa ilan 7 gün açık kalır.</p>
+		</div>
+		<div class="field-row">
+			<div class="field">
+				<label for="lf-need">Kaç oyuncu <span class="small muted">(oyuncu ilanı)</span></label>
+				<input class="input num" id="lf-need" type="number" min="1" max="11" th:field="*{playersNeeded}">
+			</div>
+			<div class="field">
+				<label for="lf-level">Seviye</label>
+				<select class="select" id="lf-level" th:field="*{level}">
+					<option value="CASUAL">Keyif maçı</option>
+					<option value="INTERMEDIATE">Orta seviye</option>
+					<option value="COMPETITIVE">İddialı</option>
+				</select>
+			</div>
+		</div>
+		<div class="field">
+			<label for="lf-note">Not</label>
+			<textarea class="textarea" id="lf-note" th:field="*{note}" rows="3" maxlength="500" placeholder="Ör. kaleci arıyoruz, saha ücreti paylaşılır"></textarea>
+		</div>
+		<button class="btn btn-primary" type="submit">İlanı yayınla</button>
+		<p class="tiny muted" style="margin:8px 0 0">Telefon numaranız ilanda görünmez; yalnızca kabul ettiğiniz kişiyle paylaşılır.</p>
+	</form>
+</main>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title th:text="${d.card().teamName()} + ' · ' + ${d.card().kind().label()} + ' · SahaHub'">İlan · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow" th:with="c=${d.card()}">
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/ilanlar}">← İlanlar</a></p>
+	<div class="page-head">
+		<div style="min-width:0">
+			<p class="eyebrow" th:text="${c.kind().label()}">Oyuncu arıyoruz</p>
+			<h1 th:text="${c.teamName()}">Kadıköy Kartalları</h1>
+		</div>
+		<span class="status" th:classappend="${c.open()} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${c.statusLabel()}">Açık</span>
+	</div>
+
+	<section class="panel" aria-label="İlan ayrıntısı">
+		<dl class="kv">
+			<dt>Maç</dt>
+			<dd class="num" th:text="${c.playAt() != null} ? ${@fmt.at(c.playAt())} : 'Zaman belirtilmedi'">4 Eki 2026 21:00</dd>
+			<dt th:if="${c.place() != null}">Yer</dt><dd th:if="${c.place() != null}" th:text="${c.place()}">Saha 1 · Kadıköy Şubesi</dd>
+			<dt>Bölge</dt><dd th:text="${c.district() != null} ? ${c.district()} + ', ' + ${c.city()} : ${c.city()}">Kadıköy, İstanbul</dd>
+			<dt>Seviye</dt><dd th:text="${c.level().label()}">Keyif maçı</dd>
+			<dt th:if="${c.playersNeeded() != null}">Aranan</dt>
+			<dd th:if="${c.playersNeeded() != null}" th:text="${c.playersNeeded()} + ' oyuncu (' + ${c.accepted()} + ' kabul edildi)'">2 oyuncu</dd>
+			<dt>İlan sahibi</dt><dd th:text="${d.authorName()}">Emre Yıldız</dd>
+			<dt th:if="${c.open()}">Son başvuru</dt><dd th:if="${c.open()}" class="num" th:text="${@fmt.at(c.expiresAt())}">4 Eki 2026 21:00</dd>
+			<dt th:if="${c.note() != null}">Not</dt><dd th:if="${c.note() != null}" th:text="${c.note()}">Not</dd>
+		</dl>
+	</section>
+
+	<!-- Başvuran: kendi başvurusunun durumu -->
+	<section class="panel" style="margin-top:16px" th:if="${d.mine() != null}" aria-labelledby="mine-title">
+		<h2 id="mine-title" class="section-title">Başvurunuz</h2>
+		<p><span class="status" th:classappend="${d.mine().status().name() == 'ACCEPTED'} ? 'status-CONFIRMED' : (${d.mine().status().name() == 'PENDING'} ? 'status-HELD' : 'status-COMPLETED')"
+		         th:text="${d.mine().status().label()}">Yanıt bekliyor</span></p>
+		<p th:if="${d.mine().status().name() == 'ACCEPTED'}">
+			İlan sahibi: <strong th:text="${d.authorName()}">Emre</strong>
+			<th:block th:if="${d.authorPhone() != null}"> · <a th:href="'tel:' + ${#strings.replace(d.authorPhone(), ' ', '')}" th:text="${d.authorPhone()}">0555</a></th:block>
+			<span class="small muted" th:if="${d.authorPhone() == null}">(telefon numarası paylaşılmamış)</span>
+		</p>
+		<form th:if="${d.mine().status().name() == 'PENDING'}" th:action="@{/basvurular/{id}/geri-cek(id=${d.mine().id()})}" method="post">
+			<input type="hidden" name="ilan" th:value="${c.id()}">
+			<button class="btn btn-secondary btn-sm" type="submit">Başvuruyu geri çek</button>
+		</form>
+	</section>
+
+	<!-- Başvuru formu -->
+	<section class="panel" style="margin-top:16px" th:if="${d.canApply()}" aria-labelledby="apply-title">
+		<h2 id="apply-title" class="section-title" th:text="${c.kind().name() == 'OPPONENT_WANTED'} ? 'Rakip olarak başvur' : 'Oynamak için başvur'">Başvur</h2>
+		<form th:action="@{/ilanlar/{id}/basvur(id=${c.id()})}" method="post">
+			<div class="field" th:if="${c.kind().name() == 'OPPONENT_WANTED'}">
+				<label for="ap-team">Takımınız</label>
+				<select class="select" id="ap-team" name="takim" required>
+					<option th:each="t : ${d.myCaptainTeams()}" th:value="${t.id()}" th:text="${t.name()}">Takım</option>
+				</select>
+			</div>
+			<div class="field">
+				<label for="ap-msg">Mesaj <span class="small muted">(isteğe bağlı)</span></label>
+				<textarea class="textarea" id="ap-msg" name="mesaj" rows="2" maxlength="300" placeholder="Ör. kaleci olarak oynayabilirim"></textarea>
+			</div>
+			<button class="btn btn-primary" type="submit">Başvur</button>
+			<p class="tiny muted" style="margin:8px 0 0">Başvuru kabul edilirse telefon numaralarınız karşılıklı görünür.</p>
+		</form>
+	</section>
+	<p class="small muted" style="margin-top:16px" th:if="${me != null and !d.author() and !d.canApply() and d.mine() == null and c.open() and c.kind().name() == 'OPPONENT_WANTED'}">
+		Rakip olarak başvurmak için kaptanı olduğunuz bir takım gerekir. <a th:href="@{/takimlar}">Takım kur</a>
+	</p>
+	<p class="small" style="margin-top:16px" th:if="${me == null and c.open()}">
+		Başvurmak için <a th:href="@{/giris}">giriş yapın</a>.
+	</p>
+
+	<!-- İlan sahibi: başvurular -->
+	<section style="margin-top:24px" th:if="${d.author()}" aria-labelledby="apps-title">
+		<div class="page-head" style="margin-bottom:8px">
+			<h2 id="apps-title" style="font-size:18px;margin:0">Başvurular</h2>
+			<form class="btn-row" th:if="${c.status().name() == 'OPEN'}" th:action="@{/ilanlar/{id}/kapat(id=${c.id()})}" method="post"
+			      data-confirm="İlan kapatılsın mı? Yeni başvuru alınmaz.">
+				<button class="btn btn-secondary btn-sm" type="submit">İlanı kapat</button>
+			</form>
+		</div>
+		<div class="empty" th:if="${#lists.isEmpty(d.applications())}"><p>Henüz başvuru yok.</p></div>
+		<ul class="res-list" th:unless="${#lists.isEmpty(d.applications())}">
+			<li class="app-item" th:each="a : ${d.applications()}">
+				<div style="min-width:0">
+					<h3 class="truncate" th:text="${a.applicantName()} + (${a.teamName() != null} ? ' · ' + ${a.teamName()} : '')">Deniz Arslan</h3>
+					<p class="small" style="margin:0" th:if="${a.message() != null}" th:text="${a.message()}">Mesaj</p>
+					<p class="small" style="margin:0" th:if="${a.phone() != null}">
+						<a th:href="'tel:' + ${#strings.replace(a.phone(), ' ', '')}" th:text="${a.phone()}">0555</a>
+					</p>
+					<span class="tiny muted num" th:text="${@fmt.at(a.createdAt())}">1 Eki</span>
+				</div>
+				<div class="app-actions">
+					<span class="status" th:unless="${a.status().name() == 'PENDING'}"
+					      th:classappend="${a.status().name() == 'ACCEPTED'} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${a.status().label()}">Kabul edildi</span>
+					<th:block th:if="${a.status().name() == 'PENDING' and c.open()}">
+						<form th:action="@{/basvurular/{id}/kabul(id=${a.id()})}" method="post">
+							<input type="hidden" name="ilan" th:value="${c.id()}">
+							<button class="btn btn-primary btn-sm" type="submit">Kabul et</button>
+						</form>
+						<form th:action="@{/basvurular/{id}/ret(id=${a.id()})}" method="post">
+							<input type="hidden" name="ilan" th:value="${c.id()}">
+							<button class="btn btn-secondary btn-sm" type="submit">Reddet</button>
+						</form>
+					</th:block>
+					<span class="status status-HELD" th:if="${a.status().name() == 'PENDING' and !c.open()}">Yanıt bekliyor</span>
+				</div>
+			</li>
+		</ul>
+	</section>
+</main>
+</body>
+</html>

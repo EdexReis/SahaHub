@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title th:text="${d.name()} + ' · Lig · SahaHub'">Lig · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/ligler}">← Ligler</a></p>
+	<div class="page-head">
+		<div style="min-width:0">
+			<p class="eyebrow" th:text="${d.businessName()} + ' · ' + ${d.branchName()}">İşletme · Şube</p>
+			<h1 th:text="${d.name()}">Kış Ligi</h1>
+		</div>
+		<span class="status" th:classappend="${d.active()} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${d.status().label()}">Sürüyor</span>
+	</div>
+	<div class="league-grid">
+		<section aria-labelledby="st-title">
+			<h2 id="st-title" class="section-title">Puan durumu</h2>
+			<div th:replace="~{tournament/parts :: standings(${d})}"></div>
+		</section>
+		<section aria-labelledby="fx-title">
+			<h2 id="fx-title" class="section-title">Fikstür</h2>
+			<div th:replace="~{tournament/parts :: fixture(${d})}"></div>
+		</section>
+	</div>
+</main>
+</body>
+</html>

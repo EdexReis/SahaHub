@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- İlanlar / ligler / takımlar sekmeleri. Giriş yapmamış kullanıcı yalnızca herkese açık sekmeleri görür. -->
+<nav th:fragment="tabs(active)" class="subnav" aria-label="Topluluk menüsü">
+	<a th:href="@{/ilanlar}" th:aria-current="${active == 'ilanlar'} ? 'page'">İlanlar</a>
+	<a th:href="@{/ligler}" th:aria-current="${active == 'ligler'} ? 'page'">Ligler</a>
+	<a th:if="${me != null}" th:href="@{/takimlar}" th:aria-current="${active == 'takimlar'} ? 'page'">Takımlarım</a>
+	<a th:if="${me != null}" th:href="@{/ilanlarim}" th:aria-current="${active == 'ilanlarim'} ? 'page'">İlanlarım ve başvurularım</a>
+</nav>
+</body>
+</html>
