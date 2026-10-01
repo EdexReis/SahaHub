@@ -62,7 +62,14 @@ public class TournamentQueries implements MatchCalendarPort {
 
 	}
 
-	public record RoundView(int round, String name, List<MatchView> matches) {
+	/** Bir tur (ya da elemede üçüncülük maçı; finalle aynı tur numarasında ayrı başlık). */
+	public record RoundView(int round, String name, List<MatchView> matches, boolean thirdPlace) {
+
+		/** Sayfa içi bağlantı ve başlık kimliği için tekil ad. */
+		public String anchor() {
+			return thirdPlace ? "round-3rd" : "round-" + round;
+		}
+
 	}
 
 	/** Eleme ağacında bir yer: taraflar (belli değilse null), bay, varsa maç ve sonucu. */
@@ -77,7 +84,7 @@ public class TournamentQueries implements MatchCalendarPort {
 			int pointsDraw, int pointsLoss, Long branchId, String branchName, String businessName, String city,
 			List<EntryRow> entries, List<RoundView> rounds, List<Standings.Row> standings, long unscheduled,
 			long unplayed, List<PitchOption> pitches, Tournament.Format format, List<BracketRound> bracket,
-			String champion) {
+			String champion, boolean thirdPlace, String third) {
 
 		public boolean knockout() {
 			return format == Tournament.Format.KNOCKOUT;
@@ -92,11 +99,16 @@ public class TournamentQueries implements MatchCalendarPort {
 		}
 
 		public boolean canStart() {
-			return draft() && entries.size() >= Tournament.MIN_ENTRIES;
+			return draft() && entries.size() >= minEntries();
+		}
+
+		/** Başlatmak için gereken en az takım (üçüncülük maçı varsa 4). */
+		public int minEntries() {
+			return knockout() && thirdPlace ? Bracket.MIN_ENTRIES_THIRD_PLACE : Tournament.MIN_ENTRIES;
 		}
 
 		public boolean canFinish() {
-			return active() && unplayed == 0 && (!knockout() || champion != null);
+			return active() && unplayed == 0 && (!knockout() || (champion != null && (!thirdPlace || third != null)));
 		}
 
 		public int matchCount() {
@@ -193,7 +205,7 @@ public class TournamentQueries implements MatchCalendarPort {
 	private String roundLabel(Tournament t, TournamentMatch m) {
 		if (t.isKnockout()) {
 			int n = (int) entries.countByTournamentId(t.getId());
-			return Bracket.roundName(m.getRound(), n >= 2 ? Bracket.rounds(n) : 1);
+			return Bracket.matchName(m.getRound(), m.getBracketSlot(), n >= 2 ? Bracket.rounds(n) : 1);
 		}
 		return m.getRound() + ". hafta";
 	}
@@ -202,8 +214,9 @@ public class TournamentQueries implements MatchCalendarPort {
 		BranchContext bc = catalog.branchContext(t.getBranchId());
 		List<TournamentMatch> ms = matches.findByTournamentIdOrderByRoundAscIdAsc(t.getId());
 		int n = (int) entries.countByTournamentId(t.getId());
-		// Elemede maçlar sonuçlar geldikçe açılır; toplam, oynanacak maç sayısıdır (takım − 1)
-		long total = t.isKnockout() && t.getStatus() != Tournament.Status.DRAFT ? Math.max(0, n - 1) : ms.size();
+		// Elemede maçlar sonuçlar geldikçe açılır; toplam, oynanacak maç sayısıdır (takım − 1, üçüncülük varsa +1)
+		long total = t.isKnockout() && t.getStatus() != Tournament.Status.DRAFT
+				? TournamentService.knockoutMatchCount(t, n) : ms.size();
 		return new ListRow(t.getId(), t.getName(), t.getStatus(), bc.branch().getName(), bc.business().getName(),
 				bc.branch().getCity(), n, ms.stream().filter(TournamentMatch::isPlayed).count(), total, t.getFormat());
 	}
@@ -221,6 +234,10 @@ public class TournamentQueries implements MatchCalendarPort {
 		Map<Integer, List<MatchView>> byRound = new TreeMap<>();
 		List<Standings.Result> results = new ArrayList<>();
 		int totalRounds = es.size() >= 2 ? Bracket.rounds(es.size()) : 1;
+		java.util.Set<Long> thirdIds = ms.stream()
+			.filter(m -> t.isKnockout() && Bracket.isThirdPlace(m.getRound(), m.getBracketSlot(), totalRounds))
+			.map(TournamentMatch::getId)
+			.collect(Collectors.toSet());
 		for (TournamentMatch m : ms) {
 			int minutes = m.play() == null ? 60 : (int) Duration.between(m.getStartsAt(), m.getEndsAt()).toMinutes();
 			byRound.computeIfAbsent(m.getRound(), k -> new ArrayList<>())
@@ -237,13 +254,25 @@ public class TournamentQueries implements MatchCalendarPort {
 						m.getAwayScore()));
 			}
 		}
-		List<RoundView> rounds = byRound.entrySet()
-			.stream()
-			.map(e -> new RoundView(e.getKey(),
-					t.isKnockout() ? Bracket.roundName(e.getKey(), totalRounds) : e.getKey() + ". hafta", e.getValue()))
-			.toList();
+		List<RoundView> rounds = new ArrayList<>();
+		for (var e : byRound.entrySet()) {
+			if (!t.isKnockout()) {
+				rounds.add(new RoundView(e.getKey(), e.getKey() + ". hafta", e.getValue(), false));
+				continue;
+			}
+			// Üçüncülük maçı finalden önce, kendi başlığıyla
+			List<MatchView> third = e.getValue().stream().filter(m -> thirdIds.contains(m.id())).toList();
+			List<MatchView> rest = e.getValue().stream().filter(m -> !thirdIds.contains(m.id())).toList();
+			if (!third.isEmpty()) {
+				rounds.add(new RoundView(e.getKey(), Bracket.THIRD_PLACE_NAME, third, true));
+			}
+			if (!rest.isEmpty()) {
+				rounds.add(new RoundView(e.getKey(), Bracket.roundName(e.getKey(), totalRounds), rest, false));
+			}
+		}
 		List<BracketRound> bracket = new ArrayList<>();
 		String champion = null;
+		String third = null;
 		if (t.isKnockout() && es.size() >= 2 && !t.isDraft()) {
 			Map<String, TournamentMatch> bySlot = new java.util.HashMap<>();
 			Map<String, Long> winners = new java.util.HashMap<>();
@@ -254,21 +283,35 @@ public class TournamentQueries implements MatchCalendarPort {
 					winners.put(key, m.getWinnerEntryId());
 				}
 			}
-			for (List<Bracket.Slot> round : Bracket.build(es.stream().map(TournamentEntry::getId).toList(), winners)) {
+			for (List<Bracket.Slot> round : Bracket.build(es.stream().map(TournamentEntry::getId).toList(), winners,
+					t.isThirdPlace())) {
 				List<BracketCell> cells = new ArrayList<>();
+				BracketCell thirdCell = null;
 				for (Bracket.Slot sl : round) {
 					TournamentMatch m = bySlot.get(Bracket.key(sl.round(), sl.slot()));
-					cells.add(new BracketCell(sl.home() == null ? null : names.get(sl.home()),
+					BracketCell cell = new BracketCell(sl.home() == null ? null : names.get(sl.home()),
 							sl.away() == null ? null : names.get(sl.away()), sl.bye(), m == null ? null : m.getId(),
 							m == null ? null : m.getHomeScore(), m == null ? null : m.getAwayScore(),
 							m == null || m.getWinnerEntryId() == null ? null : names.get(m.getWinnerEntryId()),
-							m != null && m.isDecidedByPenalties()));
+							m != null && m.isDecidedByPenalties());
+					if (Bracket.isThirdPlace(sl.round(), sl.slot(), totalRounds)) {
+						thirdCell = cell;
+					}
+					else {
+						cells.add(cell);
+					}
 				}
 				bracket.add(new BracketRound(round.getFirst().round(),
 						Bracket.roundName(round.getFirst().round(), totalRounds), cells));
+				if (thirdCell != null) {
+					// Ağaçta finalden sonra ayrı sütun
+					bracket.add(new BracketRound(round.getFirst().round(), Bracket.THIRD_PLACE_NAME, List.of(thirdCell)));
+				}
 			}
 			Long winner = winners.get(Bracket.key(totalRounds, 0));
 			champion = winner == null ? null : names.get(winner);
+			Long thirdWinner = winners.get(Bracket.key(totalRounds, Bracket.THIRD_PLACE_SLOT));
+			third = thirdWinner == null ? null : names.get(thirdWinner);
 		}
 		return new Detail(t.getId(), t.getName(), t.getStatus(), t.isDoubleRound(), t.getPointsWin(),
 				t.getPointsDraw(), t.getPointsLoss(), t.getBranchId(), bc.branch().getName(), bc.business().getName(),
@@ -277,7 +320,7 @@ public class TournamentQueries implements MatchCalendarPort {
 				ms.stream().filter(m -> m.getStatus() == TournamentMatch.Status.UNSCHEDULED).count(),
 				ms.stream().filter(m -> !m.isPlayed()).count(),
 				pitches.stream().map(p -> new PitchOption(p.getId(), p.getName())).toList(), t.getFormat(), bracket,
-				champion);
+				champion, t.isThirdPlace(), third);
 	}
 
 }

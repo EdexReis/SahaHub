@@ -66,8 +66,8 @@ public class TournamentController {
 			@RequestParam(name = "beraberlik", defaultValue = "1") int draw,
 			@RequestParam(name = "maglubiyet", defaultValue = "0") int loss,
 			@RequestParam(name = "bicim", defaultValue = "LEAGUE") com.sahahub.tournament.domain.Tournament.Format format,
-			RedirectAttributes redirect) {
-		Long id = service.create(me, branchId, name, format, doubleRound, win, draw, loss);
+			@RequestParam(name = "ucunculuk", defaultValue = "false") boolean thirdPlace, RedirectAttributes redirect) {
+		Long id = service.create(me, branchId, name, format, doubleRound, win, draw, loss, thirdPlace);
 		redirect.addFlashAttribute("flashSuccess", format == com.sahahub.tournament.domain.Tournament.Format.KNOCKOUT
 				? "Turnuva oluşturuldu. Takımları güç sırasıyla ekleyip eşleşmeleri oluşturun."
 				: "Lig oluşturuldu. Takımları ekleyip fikstürü oluşturun.");
@@ -96,6 +96,15 @@ public class TournamentController {
 			@PathVariable Long entryId, RedirectAttributes redirect) {
 		service.removeEntry(me, id, entryId);
 		redirect.addFlashAttribute("flashSuccess", "Takım çıkarıldı.");
+		return "redirect:/isletme/ligler/" + id;
+	}
+
+	@PostMapping("/isletme/ligler/{id}/ucunculuk")
+	public String thirdPlace(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long id,
+			@RequestParam(name = "acik", defaultValue = "false") boolean on, RedirectAttributes redirect) {
+		service.changeThirdPlace(me, id, on);
+		redirect.addFlashAttribute("flashSuccess", on ? "Üçüncülük maçı eklendi: yarı finalde kaybedenler oynar."
+				: "Üçüncülük maçı kaldırıldı.");
 		return "redirect:/isletme/ligler/" + id;
 	}
 

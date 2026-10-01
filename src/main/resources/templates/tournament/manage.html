@@ -46,11 +46,17 @@
 			<p class="small" th:if="${d.knockout()}">Takımları <strong>güç sırasıyla</strong> ekleyin (ilk eklenen 1. sıra).
 				Güçlü takımlar ilk turlarda karşılaşmaz; takım sayısı 2, 4, 8, 16… değilse en üst sıradakiler ilk turu
 				maç yapmadan geçer (bay). Sonraki tur maçları sonuçlar girildikçe açılır.</p>
+			<form th:if="${d.knockout()}" th:action="@{/isletme/ligler/{id}/ucunculuk(id=${d.id()})}" method="post" class="third-toggle">
+				<input type="hidden" name="acik" th:value="${!d.thirdPlace()}">
+				<p class="small" style="margin:0">Üçüncülük maçı: <strong th:text="${d.thirdPlace()} ? 'var' : 'yok'">yok</strong>
+					<span class="muted" th:if="${d.thirdPlace()}">(yarı finalde kaybedenler oynar; en az 4 takım)</span></p>
+				<button class="btn btn-secondary btn-sm" type="submit" th:text="${d.thirdPlace()} ? 'Üçüncülük maçını kaldır' : 'Üçüncülük maçı ekle'">Üçüncülük maçı ekle</button>
+			</form>
 			<form th:action="@{/isletme/ligler/{id}/baslat(id=${d.id()})}" method="post"
 			      data-confirm="Fikstür oluşturulsun mu? Sonrasında takım listesi değişmez.">
 				<button class="btn btn-primary" type="submit" th:disabled="${!d.canStart()}" th:text="${d.knockout()} ? 'Eşleşmeleri oluştur' : 'Fikstürü oluştur'">Fikstürü oluştur</button>
 			</form>
-			<p class="tiny muted" style="margin:8px 0 0" th:unless="${d.canStart()}" th:text="'En az 3 takım gerekli (en fazla ' + (${d.knockout()} ? 32 : 20) + ').'">En az 3 takım gerekli.</p>
+			<p class="tiny muted" style="margin:8px 0 0" th:unless="${d.canStart()}" th:text="'En az ' + ${d.minEntries()} + ' takım gerekli (en fazla ' + (${d.knockout()} ? 32 : 20) + ').'">En az 3 takım gerekli.</p>
 		</section>
 	</div>
 
@@ -93,8 +99,8 @@
 
 			<section aria-labelledby="fx-title">
 				<h2 id="fx-title" class="section-title" th:text="(${d.knockout()} ? 'Maçlar (' : 'Fikstür (') + ${d.matchCount()} + ' maç, ' + ${d.unplayed()} + ' oynanmadı)'">Fikstür</h2>
-				<section class="round" th:each="rd : ${d.rounds()}" th:aria-labelledby="'round-' + ${rd.round()}">
-					<h3 th:id="'round-' + ${rd.round()}" th:text="${rd.name()}">1. hafta</h3>
+				<section class="round" th:each="rd : ${d.rounds()}" th:aria-labelledby="${rd.anchor()}">
+					<h3 th:id="${rd.anchor()}" th:text="${rd.name()}">1. hafta</h3>
 					<ul class="match-list">
 						<li class="match" th:each="m : ${rd.matches()}" th:id="'mac-' + ${m.id()}">
 							<span class="m-home" th:text="${m.home()}">Kartallar</span>

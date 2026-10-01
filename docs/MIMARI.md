@@ -38,6 +38,7 @@
 | 32 | Parola sıfırlama e-postası outbox'tan değil, commit sonrası doğrudan gönderilir | Outbox gövdesi bağlantıyı (token) düz metin saklardı. Gönderim başarısızsa kullanıcı yeniden ister; bu akışta "en az bir kez" teslim gerekmiyor. |
 | 33 | `SessionRegistry` ile parola değişince oturumların sonlandırılması | Çalınmış bir oturum parola değişikliğinden sonra açık kalmaz. Tek sunucu varsayımı (kayıt bellekte). |
 | 34 | Eleme ağacı saf bir sınıfta (`Bracket`) hesaplanır; maç satırı yalnızca iki taraf belli olunca açılır | "Bekleniyor" taraflı boş satırlar ve onları sonradan doldurma mantığı gerekmez; ağaç her zaman oynanmış maçlardan yeniden hesaplanır. Düzeltmede yalnızca oynanmamış sonraki maçın takımı güncellenir. |
+| 34b | Üçüncülük maçı ayrı tablo değil, son turda 1. yer (`bracket_slot = 1`) | Aynı tekil indeks, aynı ağaç hesabı ve aynı planlama/skor akışı; yalnızca taraflar galip yerine kaybedenden gelir. |
 | 35 | Görsel doğrulama ve saklama ortak (`shared.image`: `ImageNormalizer`, `UploadStore`) | Saha fotoğrafı ve takım logosu aynı güvenlik kurallarından geçer; kural tek yerde. |
 | 36 | Katılım yanıtı tablo satırı (`team_match_attendance`, birincil anahtar maç+kişi), `INSERT … ON CONFLICT DO UPDATE` | Yanıt değiştirmek tek ifade; aynı kişinin iki yanıtı oluşamaz. Sayımlar her açılışta hesaplanır. |
 

@@ -40,8 +40,8 @@
 
 <!-- Salt okunur fikstür (herkese açık sayfa). -->
 <div th:fragment="fixture(d)">
-	<section class="round" th:each="rd : ${d.rounds()}" th:aria-labelledby="'round-' + ${rd.round()}">
-		<h3 th:id="'round-' + ${rd.round()}" th:text="${rd.name()}">1. hafta</h3>
+	<section class="round" th:each="rd : ${d.rounds()}" th:aria-labelledby="${rd.anchor()}">
+		<h3 th:id="${rd.anchor()}" th:text="${rd.name()}">1. hafta</h3>
 		<ul class="match-list">
 			<li class="match" th:each="m : ${rd.matches()}">
 				<span class="m-home" th:text="${m.home()}">Kartallar</span>
@@ -62,6 +62,10 @@
 		<span class="eyebrow">Şampiyon</span>
 		<strong th:text="${d.champion()}">Kadıköy Kartalları</strong>
 	</p>
+	<p class="champion is-third" th:if="${d.third() != null}">
+		<span class="eyebrow">Üçüncü</span>
+		<strong th:text="${d.third()}">Ankara Gençlik</strong>
+	</p>
 	<div class="bracket" role="list" aria-label="Eşleşme ağacı">
 		<section class="b-round" role="listitem" th:each="br : ${d.bracket()}" th:aria-label="${br.name()}">
 			<h3 th:text="${br.name()}">Yarı final</h3>
@@ -81,7 +85,7 @@
 			</ol>
 		</section>
 	</div>
-	<p class="tiny muted">Kalın yazılan takım tur atladı. Bay: takım sayısı tamamlanmadığı için en üst sıradaki takımlar ilk turu maç yapmadan geçer.</p>
+	<p class="tiny muted">Kalın yazılan takım tur atladı. Bay: takım sayısı tamamlanmadığı için en üst sıradaki takımlar ilk turu maç yapmadan geçer.<th:block th:if="${d.thirdPlace()}"> Üçüncülük maçında yarı finalde kaybedenler oynar.</th:block></p>
 </div>
 </body>
 </html>

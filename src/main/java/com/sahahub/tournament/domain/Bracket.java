@@ -14,12 +14,17 @@ import java.util.Map;
  * <li>Eksik takım yerleri "bay"dır ve en üst tohumlara düşer; bay geçen takım maç yapmadan ikinci tura
  * çıkar. Takım sayısı ağaç boyunun yarısından büyük olduğu için iki bay karşılaşmaz.</li>
  * <li>Sonraki turun k. yeri, önceki turun 2k ve 2k+1. yerlerinin galipleri arasındadır.</li>
+ * <li>İsteğe bağlı üçüncülük maçı son turda 1. yerdedir (final 0. yer): iki yarı finalin kaybedenleri arasında.
+ * En az 4 takım gerekir; daha azında yarı finalde bay olur ve kaybeden olmaz.</li>
  * </ul>
  * Testler: BracketTest.
  */
 public final class Bracket {
 
 	public static final int MAX_ENTRIES = 32;
+	/** Üçüncülük maçının son turdaki yeri (final 0). */
+	public static final int THIRD_PLACE_SLOT = 1;
+	public static final int MIN_ENTRIES_THIRD_PLACE = 4;
 
 	/** Ağaçta bir yer. home/away null ise o taraf henüz belli değil. bye: tek takım var, maç yapılmaz. */
 	public record Slot(int round, int slot, Long home, Long away, boolean bye) {
@@ -74,6 +79,13 @@ public final class Bracket {
 	 * @return turlar (1'den başlar), her turun yerleri
 	 */
 	public static List<List<Slot>> build(List<Long> seeds, Map<String, Long> winners) {
+		return build(seeds, winners, false);
+	}
+
+	/**
+	 * @param thirdPlace son tura üçüncülük maçı yeri eklensin mi (en az {@link #MIN_ENTRIES_THIRD_PLACE} takımda)
+	 */
+	public static List<List<Slot>> build(List<Long> seeds, Map<String, Long> winners, boolean thirdPlace) {
 		int size = size(seeds.size());
 		List<Integer> order = seedOrder(size);
 		List<List<Slot>> rounds = new ArrayList<>();
@@ -93,7 +105,27 @@ public final class Bracket {
 			}
 			rounds.add(cur);
 		}
+		if (thirdPlace && seeds.size() >= MIN_ENTRIES_THIRD_PLACE) {
+			List<Slot> semis = rounds.get(rounds.size() - 2);
+			List<Slot> last = rounds.getLast();
+			last.add(new Slot(last.getFirst().round(), THIRD_PLACE_SLOT, losing(semis.get(0), winners),
+					losing(semis.get(1), winners), false));
+		}
 		return rounds;
+	}
+
+	/** Oynanmış maçın kaybedeni; maç oynanmadıysa ya da bay ise null. */
+	static Long losing(Slot s, Map<String, Long> winners) {
+		Long w = s.bye() ? null : winners.get(key(s.round(), s.slot()));
+		if (w == null) {
+			return null;
+		}
+		return w.equals(s.home()) ? s.away() : s.home();
+	}
+
+	/** Son turun bu yeri üçüncülük maçı mı? */
+	public static boolean isThirdPlace(int round, Integer slot, int totalRounds) {
+		return round == totalRounds && slot != null && slot == THIRD_PLACE_SLOT;
 	}
 
 	/** Bir yerden üst tura çıkan takım: bay ise o takım, maç oynandıysa galip, yoksa henüz belli değil. */
@@ -107,6 +139,13 @@ public final class Bracket {
 	public static String key(int round, int slot) {
 		return round + ":" + slot;
 	}
+
+	/** Maçın adı: üçüncülük maçıysa o, değilse turun adı. */
+	public static String matchName(int round, Integer slot, int totalRounds) {
+		return isThirdPlace(round, slot, totalRounds) ? THIRD_PLACE_NAME : roundName(round, totalRounds);
+	}
+
+	public static final String THIRD_PLACE_NAME = "Üçüncülük maçı";
 
 	/** Turun adı: son tur "Final", ondan önceki "Yarı final" … */
 	public static String roundName(int round, int totalRounds) {

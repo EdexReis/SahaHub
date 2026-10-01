@@ -90,6 +90,13 @@ public class TournamentService {
 	@Transactional
 	public Long create(AppUserPrincipal user, Long branchId, String name, Tournament.Format format,
 			boolean doubleRound, int win, int draw, int loss) {
+		return create(user, branchId, name, format, doubleRound, win, draw, loss, false);
+	}
+
+	/** @param thirdPlace yalnızca eleme turnuvasında dikkate alınır (formda "yalnızca kupa" diye belirtilir) */
+	@Transactional
+	public Long create(AppUserPrincipal user, Long branchId, String name, Tournament.Format format,
+			boolean doubleRound, int win, int draw, int loss, boolean thirdPlace) {
 		BranchContext bc = catalog.branchContext(branchId);
 		guard.requireBranch(user, bc.business().getId(), branchId, Permission.TOURNAMENT_MANAGE);
 		if (name == null || name.isBlank() || name.strip().length() > 80) {
@@ -101,6 +108,9 @@ public class TournamentService {
 		Tournament.Format f = format == null ? Tournament.Format.LEAGUE : format;
 		Tournament t = tournaments.save(new Tournament(bc.business().getId(), branchId, name, f,
 				f == Tournament.Format.LEAGUE && doubleRound, win, draw, loss, user.id(), Instant.now(clock)));
+		if (f == Tournament.Format.KNOCKOUT && thirdPlace) {
+			t.changeThirdPlace(true);
+		}
 		audit.record(user.id(), t.getBusinessId(), "TOURNAMENT_CREATED", "Tournament", t.getId(), t.getName());
 		return t.getId();
 	}
@@ -122,6 +132,23 @@ public class TournamentService {
 		}
 		catch (DataIntegrityViolationException ex) {
 			throw new BusinessRuleException("Bu adda bir takım ligde zaten var.");
+		}
+	}
+
+	/** Üçüncülük maçını açar veya kapatır (yalnızca eleme turnuvası, eşleşmeler oluşturulmadan önce). */
+	@Transactional
+	public void changeThirdPlace(AppUserPrincipal user, Long tournamentId, boolean on) {
+		Tournament t = lockedForManage(user, tournamentId);
+		if (!t.isKnockout()) {
+			throw new BusinessRuleException("Üçüncülük maçı yalnızca eleme turnuvasında olur.");
+		}
+		if (!t.isDraft()) {
+			throw new BusinessRuleException("Eşleşmeler oluşturulduktan sonra üçüncülük maçı değiştirilemez.");
+		}
+		if (t.isThirdPlace() != on) {
+			t.changeThirdPlace(on);
+			audit.record(user.id(), t.getBusinessId(), "TOURNAMENT_THIRD_PLACE_CHANGED", "Tournament", t.getId(),
+					"thirdPlace=" + on);
 		}
 	}
 
@@ -147,6 +174,10 @@ public class TournamentService {
 		List<TournamentEntry> list = entries.findByTournamentIdOrderById(tournamentId);
 		if (list.size() < Tournament.MIN_ENTRIES) {
 			throw new BusinessRuleException("Fikstür için en az " + Tournament.MIN_ENTRIES + " takım gerekli.");
+		}
+		if (t.isKnockout() && t.isThirdPlace() && list.size() < Bracket.MIN_ENTRIES_THIRD_PLACE) {
+			throw new BusinessRuleException("Üçüncülük maçı için en az " + Bracket.MIN_ENTRIES_THIRD_PLACE
+					+ " takım gerekli. Takım ekleyin ya da üçüncülük maçını kapatın.");
 		}
 		int created;
 		if (t.isKnockout()) {
@@ -178,8 +209,8 @@ public class TournamentService {
 			throw new BusinessRuleException("Henüz oynanmamış " + left + " maç var.");
 		}
 		if (t.isKnockout() && matches.findByTournamentIdOrderByRoundAscIdAsc(tournamentId).size()
-				< entries.countByTournamentId(tournamentId) - 1) {
-			throw new BusinessRuleException("Final henüz oynanmadı.");
+				< knockoutMatchCount(t, (int) entries.countByTournamentId(tournamentId))) {
+			throw new BusinessRuleException(t.isThirdPlace() ? "Final ve üçüncülük maçı henüz oynanmadı." : "Final henüz oynanmadı.");
 		}
 		t.finish(Instant.now(clock));
 		audit.record(user.id(), t.getBusinessId(), "TOURNAMENT_FINISHED", "Tournament", t.getId(), null);
@@ -331,8 +362,8 @@ public class TournamentService {
 		if (m.isKnockout() && correction) {
 			Long newWinner = penalties ? penaltyWinner : (home > away ? m.getHomeEntryId() : m.getAwayEntryId());
 			if (!newWinner.equals(m.getWinnerEntryId()) && nextMatchPlayed(t, m)) {
-				throw new BusinessRuleException(
-						"Galibi değiştiren düzeltme yapılamaz: bu maçın galibinin oynadığı sonraki tur maçı oynandı.");
+				throw new BusinessRuleException("Galibi değiştiren düzeltme yapılamaz: bu maçın sonucuna bağlı sonraki tur maçı"
+						+ (t.isThirdPlace() ? " ya da üçüncülük maçı" : "") + " oynandı.");
 			}
 		}
 		if (penalties) {
@@ -370,7 +401,7 @@ public class TournamentService {
 			}
 		}
 		int created = 0;
-		for (List<Bracket.Slot> round : Bracket.build(seeds, winners)) {
+		for (List<Bracket.Slot> round : Bracket.build(seeds, winners, t.isThirdPlace())) {
 			for (Bracket.Slot s : round) {
 				if (!s.ready()) {
 					continue;
@@ -388,14 +419,28 @@ public class TournamentService {
 		return created;
 	}
 
-	/** Bu eleme maçının galibinin oynayacağı sonraki tur maçı oynandı mı? */
+	/**
+	 * Bu eleme maçının sonucuna bağlı sonraki maç oynandı mı? Galibin oynadığı sonraki tur maçı; yarı finalse
+	 * kaybedenin oynadığı üçüncülük maçı da.
+	 */
 	private boolean nextMatchPlayed(Tournament t, TournamentMatch m) {
 		int round = m.getRound() + 1;
 		int slot = m.getBracketSlot() / 2;
+		int total = Bracket.rounds((int) entries.countByTournamentId(t.getId()));
+		boolean semi = round == total && !Bracket.isThirdPlace(m.getRound(), m.getBracketSlot(), total);
 		return matches.findByTournamentIdOrderByRoundAscIdAsc(t.getId())
 			.stream()
-			.anyMatch(x -> x.getRound() == round && x.getBracketSlot() != null && x.getBracketSlot() == slot
-					&& x.isPlayed());
+			.filter(x -> x.getRound() == round && x.getBracketSlot() != null && x.isPlayed())
+			.anyMatch(x -> x.getBracketSlot() == slot
+					|| (semi && t.isThirdPlace() && x.getBracketSlot() == Bracket.THIRD_PLACE_SLOT));
+	}
+
+	/** Eleme turnuvasında oynanacak toplam maç: takım − 1 (baylar maç değildir), üçüncülük maçı varsa +1. */
+	public static int knockoutMatchCount(Tournament t, int entryCount) {
+		if (entryCount < 2) {
+			return 0;
+		}
+		return entryCount - 1 + (t.isThirdPlace() && entryCount >= Bracket.MIN_ENTRIES_THIRD_PLACE ? 1 : 0);
 	}
 
 	// ------------------------------------------------------------------ yardımcılar
