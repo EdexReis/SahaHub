@@ -774,12 +774,15 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .defs summary { cursor: pointer; color: var(--green-ink); font-weight: 600; font-size: 14px; }
 
 /* ------------------------------------------------------------ yönetim ekranları */
-.hours-table { border-collapse: collapse; width: 100%; }
+/* Sabit sütunlar: saat kutusu tarayıcının biçimine göre ("09:00" ya da "09:00 AM") genişlese de tabloyu taşırmaz */
+.hours-table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.hours-table thead th:nth-child(1) { width: 44px; }
+.hours-table thead th:nth-child(2) { width: 52px; }
 .hours-table th, .hours-table td { padding: 4px 6px; text-align: left; font-size: 14px; }
 .hours-table thead th { color: var(--ink-3); font-weight: 600; font-size: 13px; }
 .hours-table tbody th { font-weight: 600; width: 48px; }
 .hours-table input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--green); }
-.hours-table .input { min-height: 40px; padding: 6px 8px; }
+.hours-table .input { min-height: 40px; padding: 6px 4px; width: 100%; min-width: 0; }
 .pitch-photo { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--r); border: 1px solid var(--line); margin-bottom: 12px; background: var(--grey-soft); }
 .app-item.is-inactive h3, .app-item.is-inactive .small { color: var(--ink-3); }
 .audit-table td { vertical-align: top; font-size: 14px; }
