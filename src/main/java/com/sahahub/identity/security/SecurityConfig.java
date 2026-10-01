@@ -22,7 +22,8 @@ public class SecurityConfig {
 	public static final String LOGIN_PATH = "/giris";
 
 	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http, LoginAttemptService attempts) throws Exception {
+	SecurityFilterChain securityFilterChain(HttpSecurity http, LoginAttemptService attempts,
+			org.springframework.security.core.session.SessionRegistry sessionRegistry) throws Exception {
 		http
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/", "/sahalar", "/sahalar/**", "/api/sahalar/**", "/kayit", LOGIN_PATH, "/error",
@@ -54,7 +55,11 @@ public class SecurityConfig {
 				.deleteCookies("JSESSIONID"))
 			.sessionManagement(session -> session
 				// Girişte oturum kimliği yenilenir (session fixation koruması)
-				.sessionFixation(fixation -> fixation.changeSessionId()))
+				.sessionFixation(fixation -> fixation.changeSessionId())
+				// Oturumlar kayıt altında tutulur; parola sıfırlanınca kullanıcının tüm oturumları sonlandırılır
+				.maximumSessions(-1)
+				.sessionRegistry(sessionRegistry)
+				.expiredUrl(LOGIN_PATH + "?oturum"))
 			.headers(headers -> headers
 				.contentSecurityPolicy(csp -> csp.policyDirectives(
 						"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
@@ -63,6 +68,17 @@ public class SecurityConfig {
 				.referrerPolicy(ref -> ref.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)))
 			.addFilterBefore(new LoginRateLimitFilter(attempts), UsernamePasswordAuthenticationFilter.class);
 		return http.build();
+	}
+
+	@Bean
+	org.springframework.security.core.session.SessionRegistry sessionRegistry() {
+		return new org.springframework.security.core.session.SessionRegistryImpl();
+	}
+
+	/** Oturum sona erdiğinde SessionRegistry'den düşülmesi için. */
+	@Bean
+	org.springframework.security.web.session.HttpSessionEventPublisher httpSessionEventPublisher() {
+		return new org.springframework.security.web.session.HttpSessionEventPublisher();
 	}
 
 	/**

@@ -65,11 +65,14 @@ public class PasswordResetService {
 	private final String baseUrl;
 	private final String from;
 	private final Map<String, Deque<Instant>> perIp = new ConcurrentHashMap<>();
+	private final org.springframework.security.core.session.SessionRegistry sessions;
 
 	public PasswordResetService(AppUserRepository users, PasswordResetTokenRepository tokens, PasswordEncoder encoder,
 			JavaMailSender mail, AuditService audit, Clock clock,
 			@Value("${sahahub.public-base-url:http://localhost:8080}") String baseUrl,
-			@Value("${sahahub.notification.mail-from:SahaHub <bildirim@sahahub.local>}") String from) {
+			@Value("${sahahub.notification.mail-from:SahaHub <bildirim@sahahub.local>}") String from,
+			org.springframework.security.core.session.SessionRegistry sessions) {
+		this.sessions = sessions;
 		this.users = users;
 		this.tokens = tokens;
 		this.encoder = encoder;
@@ -141,6 +144,16 @@ public class PasswordResetService {
 		t.consume(now);
 		tokens.openForUser(u.getId()).forEach(x -> x.consume(now));
 		audit.record(u.getId(), null, "PASSWORD_RESET", "AppUser", u.getId(), null);
+		expireSessions(u.getId());
+	}
+
+	/** Parola değişince açık oturumlar sonlanır (çalınmış bir oturum açık kalmasın). */
+	private void expireSessions(Long userId) {
+		for (Object p : sessions.getAllPrincipals()) {
+			if (p instanceof com.sahahub.identity.security.AppUserPrincipal ap && userId.equals(ap.id())) {
+				sessions.getAllSessions(p, false).forEach(org.springframework.security.core.session.SessionInformation::expireNow);
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------ yardımcılar

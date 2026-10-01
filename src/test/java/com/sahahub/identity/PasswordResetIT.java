@@ -70,6 +70,9 @@ class PasswordResetIT {
 	@Autowired
 	MockMvc mvc;
 
+	@Autowired
+	org.springframework.security.core.session.SessionRegistry registry;
+
 	@Value("${test.mailpit.api}")
 	String mailpit;
 
@@ -133,6 +136,24 @@ class PasswordResetIT {
 			.andExpect(content().string(Matchers.containsString("Yeni bağlantı iste")));
 		assertThat(jdbc.queryForObject("select count(*) from audit_event where action = 'PASSWORD_RESET' and actor_id = ?",
 				Integer.class, u.id())).isEqualTo(1);
+	}
+
+	@Test
+	void resetEndsExistingSessions() throws Exception {
+		AppUserPrincipal u = data.customer();
+		var login = mvc.perform(post("/giris").param("email", u.email()).param("password", TestData.PASSWORD)
+			.with(csrf())).andExpect(status().is3xxRedirection()).andReturn();
+		var session = (org.springframework.mock.web.MockHttpSession) login.getRequest().getSession(false);
+		mvc.perform(get("/rezervasyonlarim").session(session)).andExpect(status().isOk());
+		assertThat(registry.getAllPrincipals()).as("giriş oturumu kayıtta").isNotEmpty();
+
+		service.request(u.email(), "10.0.0.5");
+		String token = tokensSentTo(u.email()).getFirst();
+		service.reset(token, "yeni-parola-123", "yeni-parola-123");
+
+		mvc.perform(get("/rezervasyonlarim").session(session))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/giris?oturum"));
 	}
 
 	@Test

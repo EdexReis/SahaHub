@@ -6,6 +6,7 @@
 	<div class="auth">
 		<h1>Giriş yap</h1>
 		<div class="alert alert-error" role="alert" th:if="${param.hata}">E-posta veya parola hatalı.</div>
+		<div class="alert alert-warning" role="status" th:if="${param.oturum}">Oturumunuz sonlandırıldı (ör. parola değişti). Yeniden giriş yapın.</div>
 		<div class="alert alert-error" role="alert" th:if="${param.kilitli}">Çok fazla hatalı deneme yapıldı. 15 dakika sonra tekrar deneyin.</div>
 		<div class="panel">
 			<form th:action="@{/giris}" method="post" novalidate>

@@ -100,6 +100,17 @@ public final class AppUserPrincipal implements UserDetails, CredentialsContainer
 		this.passwordHash = null;
 	}
 
+	/** Oturum kaydında (SessionRegistry) aynı kullanıcının oturumlarını bulabilmek için kimliğe göre eşitlik. */
+	@Override
+	public boolean equals(Object o) {
+		return o instanceof AppUserPrincipal other && id != null && id.equals(other.id);
+	}
+
+	@Override
+	public int hashCode() {
+		return id == null ? 0 : id.hashCode();
+	}
+
 	@Override
 	public String toString() {
 		return "AppUserPrincipal[id=" + id + "]";
