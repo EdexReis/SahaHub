@@ -18,23 +18,28 @@ class BookingFlowE2eTest extends E2eTestBase {
 		login(page, "musteri@sahahub.test");
 		page.navigate("/sahalar");
 		page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Saha 2 · Açık")).click();
-		page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName(Pattern.compile("^\\d+ \\S+ \\S+$")))
-			.nth(2)
-			.click(); // bugünden 2 gün sonrası
+		chooseDay(page, 2);
 		Locator firstFree = page.locator("button.slot").first();
 		assertThat(firstFree).isVisible();
 		String label = firstFree.getAttribute("aria-label");
 		firstFree.click();
 
 		page.waitForURL(Pattern.compile(".*/rezervasyon/[A-Z0-9]{8}$"));
-		assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Rezervasyonu onayla")))
+		assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Rezervasyonu tamamla")))
 			.isVisible();
 		assertThat(page.locator(".hold-timer")).containsText("dakika daha");
 		assertThat(page.locator(".price-table tfoot")).containsText("₺");
+		assertThat(page.locator(".paybadge")).hasText("Kapora bekleniyor");
 
-		page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Rezervasyonu onayla")).click();
-		assertThat(page.locator(".alert-success")).containsText("Rezervasyonunuz onaylandı");
+		// Kadıköy şubesi %30 kapora istiyor: onay, simülasyon sağlayıcısında ödemeyle gelir
+		page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(Pattern.compile("^Kaporayı öde"))).click();
+		page.waitForURL(Pattern.compile(".*/odeme-saglayici/simulasyon/.*"));
+		assertThat(page.locator(".sim-banner")).containsText("DEMO");
+		page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Ödeme başarılı")).click();
+		page.waitForURL(Pattern.compile(".*/rezervasyon/[A-Z0-9]{8}\\?odeme=success$"));
 		assertThat(page.locator(".status")).hasText("Onaylandı");
+		assertThat(page.locator(".paybadge")).hasText("Kısmi ödendi");
+		assertThat(page.locator(".pay-history")).containsText("Çevrim içi (simülasyon)");
 
 		page.navigate("/rezervasyonlarim");
 		assertThat(page.locator("#upcoming-title + .res-list")).containsText("Saha 2");
@@ -46,9 +51,7 @@ class BookingFlowE2eTest extends E2eTestBase {
 		login(page, "musteri@sahahub.test");
 		page.navigate("/sahalar");
 		page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Saha 1 · Kapalı")).click();
-		page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName(Pattern.compile("^\\d+ \\S+ \\S+$")))
-			.nth(3)
-			.click();
+		chooseDay(page, 3);
 		Locator slot = page.locator("button.slot").first();
 		String time = slot.locator(".s-time").textContent();
 
@@ -74,7 +77,7 @@ class BookingFlowE2eTest extends E2eTestBase {
 
 		Locator free = page.locator("a.ev-free").last();
 		String freeLabel = free.getAttribute("aria-label");
-		free.click();
+		openPanel(page, free);
 		assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Hızlı rezervasyon")))
 			.isVisible();
 		page.getByLabel("Müşteri adı").fill("Yürüyen Müşteri E2E");
@@ -88,11 +91,33 @@ class BookingFlowE2eTest extends E2eTestBase {
 		org.assertj.core.api.Assertions.assertThat(freeLabel).contains("boş");
 	}
 
+	/** Kabul kriteri: personelin tahsilat kaydetmesi (nakit, açık kasaya). */
+	@Test
+	void receptionCollectsDepositInCash() {
+		login(page, "resepsiyon.kadikoy@yesilvadi.test");
+		page.navigate("/isletme");
+		Locator dueBooking = page.locator("a.ev").filter(new Locator.FilterOptions().setHasText("Okan Tunç"));
+		openPanel(page, dueBooking);
+		assertThat(page.locator("#panel .paybadge").first()).hasText("Kapora bekleniyor");
+
+		page.locator("#panel").getByLabel("Nakit").check();
+		page.locator("#panel").getByLabel("Not").first().fill("Kapora nakit");
+		page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Tahsilatı kaydet")).click();
+
+		assertThat(page.locator(".alert-success")).containsText("Tahsilat kaydedildi");
+		assertThat(page.locator("#panel .paybadge").first()).hasText("Kısmi ödendi");
+		assertThat(page.locator("#panel .pay-history")).containsText("Kapora nakit");
+
+		page.navigate(page.url().replaceAll("/takvim.*$", "/kasa"));
+		assertThat(page.locator("main")).containsText("Kasada olması gereken");
+		shot(page, "desktop-17-cash-after-collection");
+	}
+
 	@Test
 	void quickBookingShowsFieldErrorsNextToFields() {
 		login(page, "resepsiyon.kadikoy@yesilvadi.test");
 		page.navigate("/isletme");
-		page.locator("a.ev-free").last().click();
+		openPanel(page, page.locator("a.ev-free").last());
 		page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Rezervasyonu oluştur")).click();
 		assertThat(page.locator("#panel .error-text")).containsText("Müşteri adını yazın");
 	}

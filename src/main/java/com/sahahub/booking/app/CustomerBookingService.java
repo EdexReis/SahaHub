@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -50,18 +51,27 @@ public class CustomerBookingService {
 	private final ReservationWriter writer;
 	private final OccupancyService occupancy;
 	private final ReservationViewFactory views;
+	private final HoldExpiryService expiry;
+	private final ReservationPricingService pricing;
+	private final PaymentStatusPort paymentStatus;
+	private final ApplicationEventPublisher events;
 	private final AuditService audit;
 	private final Clock clock;
 
 	public CustomerBookingService(CatalogService catalog, AvailabilityService availability,
 			ReservationRepository reservations, ReservationWriter writer, OccupancyService occupancy,
-			ReservationViewFactory views, AuditService audit, Clock clock) {
+			ReservationViewFactory views, HoldExpiryService expiry, ReservationPricingService pricing,
+			PaymentStatusPort paymentStatus, ApplicationEventPublisher events, AuditService audit, Clock clock) {
 		this.catalog = catalog;
 		this.availability = availability;
 		this.reservations = reservations;
 		this.writer = writer;
 		this.occupancy = occupancy;
 		this.views = views;
+		this.expiry = expiry;
+		this.pricing = pricing;
+		this.paymentStatus = paymentStatus;
+		this.events = events;
 		this.audit = audit;
 		this.clock = clock;
 	}
@@ -120,9 +130,12 @@ public class CustomerBookingService {
 		Reservation r = lockOwned(user, code);
 		Instant now = Instant.now(clock);
 		if (r.isHoldExpired(now)) {
-			r.expire(now);
-			occupancy.release(PitchOccupancy.Source.RESERVATION, r.getId());
+			expiry.expire(r, now);
 			throw new HoldExpiredException();
+		}
+		// Kapora kuralı varsa onay ödeme bildirimiyle gelir; ödemesiz onay düğmesiyle atlanamaz
+		if (!paymentStatus.depositCovered(r)) {
+			throw new BusinessRuleException("Onay için önce kaporayı ödeyin.");
 		}
 		r.confirm(now);
 	}
@@ -141,6 +154,9 @@ public class CustomerBookingService {
 		boolean wasHeld = r.getStatus() == ReservationStatus.HELD;
 		r.cancel(user.id(), wasHeld ? "Müşteri tutulan saati bıraktı" : "Müşteri iptali", now);
 		occupancy.release(PitchOccupancy.Source.RESERVATION, r.getId());
+		pricing.releaseCoupons(r.getId());
+		// Commit sonrası ödeme modülü, süresi içindeki iptalde çevrim içi ödemeyi iade eder
+		events.publishEvent(new ReservationCancelled(r.getId(), true));
 		if (!wasHeld) {
 			audit.record(user.id(), r.getBusinessId(), "RESERVATION_CANCELLED_BY_CUSTOMER", "Reservation", r.getId(),
 					"code=" + r.getCode());

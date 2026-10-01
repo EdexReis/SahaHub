@@ -42,6 +42,7 @@ class ReservationWriter {
 		PriceQuote quote = PriceCalculator.quote(reservation.playRange(), ctx.branch().zone(),
 				ctx.pitch().getBaseHourlyPrice(), ctx.pitch().getCurrency(), catalog.priceRules(ctx.pitch().getId()));
 		reservation.applyPrice(quote.total(), quote.currency());
+		reservation.snapshotDepositPolicy(ctx.branch().depositPolicy());
 		Reservation saved = reservations.save(reservation);
 		List<PriceQuote.Line> lines = quote.lines();
 		for (int i = 0; i < lines.size(); i++) {

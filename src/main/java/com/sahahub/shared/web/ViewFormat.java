@@ -84,6 +84,35 @@ public class ViewFormat {
 		return m == 0 ? h + " saat" : h + " sa " + m + " dk";
 	}
 
+	/**
+	 * Formlara gizli alan olarak konan tekil istek anahtarı (idempotency key). Form iki kez gönderilse
+	 * (çift tıklama, geri tuşu) aynı anahtar gelir ve sunucu ikinci bir ödeme hareketi oluşturmaz.
+	 */
+	public String newKey() {
+		return java.util.UUID.randomUUID().toString();
+	}
+
+	/** Haftanın günü kısa adı: "Pzt". */
+	public String dayShort(java.time.DayOfWeek d) {
+		return d.getDisplayName(java.time.format.TextStyle.SHORT, TR);
+	}
+
+	/** Takvimdeki dar kutular için kısa ödeme etiketi. */
+	public String payShort(String state) {
+		return switch (state) {
+			case "DEPOSIT_DUE" -> "Kapora";
+			case "PARTIAL" -> "Kısmi";
+			case "PAID" -> "Ödendi";
+			case "REFUND_DUE" -> "İade";
+			default -> "";
+		};
+	}
+
+	/** "%10" biçiminde yüzde. */
+	public String percent(BigDecimal p) {
+		return p == null ? "" : "%" + p.stripTrailingZeros().toPlainString().replace('.', ',');
+	}
+
 	/** Takvim gün başlığı ve tarih seçici için ISO tarih: 2026-10-01 */
 	public String iso(LocalDate d) {
 		return d.toString();

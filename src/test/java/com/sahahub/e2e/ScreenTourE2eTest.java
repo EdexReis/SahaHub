@@ -37,15 +37,20 @@ class ScreenTourE2eTest extends E2eTestBase {
 			login(p, "uzun.isim@sahahub.test");
 			p.navigate("/sahalar");
 			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Saha 1 · Kapalı")).click();
-			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName(Pattern.compile("^\\d+ \\S+ \\S+$")))
-				.nth(1)
-				.click();
-			p.waitForURL(Pattern.compile(".*tarih=.*")); // HTMX gün değişimi adres çubuğunu günceller
+			chooseDay(p, 1);
 			check(p, size, "03-pitch-day");
 
 			p.locator("button.slot").last().click();
 			p.waitForURL(Pattern.compile(".*/rezervasyon/[A-Z0-9]{8}$"));
 			check(p, size, "04-reservation-held");
+			p.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(Pattern.compile("^Kaporayı öde"))).click();
+			p.waitForURL(Pattern.compile(".*/odeme-saglayici/simulasyon/.*"));
+			check(p, size, "19-payment-simulation");
+			p.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Ödeme başarılı")).click();
+			p.waitForURL(Pattern.compile(".*odeme=success$"));
+			check(p, size, "20-reservation-paid");
+			p.navigate(p.url().replaceAll("\\?.*$", "") + "/ozet");
+			check(p, size, "21-receipt");
 
 			p.navigate("/rezervasyonlarim");
 			check(p, size, "05-my-reservations");
@@ -91,12 +96,12 @@ class ScreenTourE2eTest extends E2eTestBase {
 			assertThat(p.locator(".cal")).isVisible();
 			check(p, size, "10-staff-calendar");
 
-			p.locator("a.ev:not(.ev-free)").first().click();
+			openPanel(p, p.locator("a.ev:not(.ev-free)").first());
 			assertThat(p.locator("#panel .eyebrow")).containsText("Rezervasyon");
 			check(p, size, "11-staff-reservation-panel");
 
 			p.navigate("/isletme");
-			p.locator("a.ev-free").first().click();
+			openPanel(p, p.locator("a.ev-free").first());
 			assertThat(p.locator("#panel h2")).hasText("Hızlı rezervasyon");
 			check(p, size, "12-staff-quick-booking");
 
@@ -107,9 +112,33 @@ class ScreenTourE2eTest extends E2eTestBase {
 		}
 		BrowserContext ctx = newContext(1366, 900);
 		Page p = ctx.newPage();
+		login(p, "sahip@yesilvadi.test");
+		p.navigate("/isletme");
+		p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kadıköy Şubesi")).click(); // sahip iki şubeyi görür
+		openPanel(p, p.locator("a.ev").filter(new com.microsoft.playwright.Locator.FilterOptions().setHasText("Kaan Er")));
+		assertThat(p.locator("#panel h3").first()).hasText("Ödeme");
+		check(p, new Size("desktop", 1366, 900), "15-staff-payment-panel");
+		p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Fiyatlandırma")).click();
+		assertThat(p.locator("h1")).hasText("Fiyatlandırma");
+		check(p, new Size("desktop", 1366, 900), "16-staff-pricing");
+		ctx.close();
+
+		for (Size size : SIZES) {
+			BrowserContext c2 = newContext(size.width(), size.height());
+			Page q = c2.newPage();
+			login(q, "resepsiyon.kadikoy@yesilvadi.test");
+			q.navigate("/isletme");
+			q.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kasa")).click();
+			assertThat(q.locator("h1")).hasText("Kasa");
+			check(q, size, "18-cash");
+			c2.close();
+		}
+
+		ctx = newContext(1366, 900);
+		p = ctx.newPage();
 		login(p, "mudur.kadikoy@yesilvadi.test");
 		p.navigate("/isletme");
-		p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Saha kapat")).click();
+		openPanel(p, p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Saha kapat")));
 		assertThat(p.locator("#panel h2")).hasText("Saha kapat");
 		check(p, new Size("desktop", 1366, 900), "14-staff-block-form");
 		ctx.close();

@@ -101,6 +101,25 @@ abstract class E2eTestBase {
 		page.waitForURL(url -> !url.contains("/giris"));
 	}
 
+	/**
+	 * Gün şeridinde n'inci açık günü seçer ve HTMX yanıtı gelip liste değişene kadar bekler.
+	 * Beklemeden okunan saat, eski günün listesinden gelir (testlerde gerçek yarış olarak yakalandı).
+	 */
+	static void chooseDay(Page page, int nth) {
+		page.waitForResponse(r -> r.request().headerValue("hx-request") != null && r.url().contains("tarih="),
+				() -> page.getByRole(com.microsoft.playwright.options.AriaRole.LINK,
+						new Page.GetByRoleOptions().setName(java.util.regex.Pattern.compile("^\\d+ \\S+ \\S+$")))
+					.nth(nth)
+					.click());
+		page.waitForURL(java.util.regex.Pattern.compile(".*tarih=.*"));
+	}
+
+	/** Takvimde bir öğeye tıklar ve yan panel HTMX ile dolana kadar bekler. */
+	static void openPanel(Page page, com.microsoft.playwright.Locator item) {
+		page.waitForResponse(r -> r.request().headerValue("hx-request") != null, item::click);
+		page.waitForFunction("() => !document.querySelector('#panel').classList.contains('htmx-request')");
+	}
+
 	static void shot(Page page, String name) {
 		page.screenshot(new Page.ScreenshotOptions().setPath(SCREENSHOTS.resolve(name + ".png")).setFullPage(true));
 	}

@@ -2,18 +2,22 @@
 
 Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 + Thymeleaf + PostgreSQL.
 
-> **Durum (1 Ekim 2026):** Aşama 1–2 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
-> takvimi. Ödeme, kasa, düzenli rezervasyon, bildirim, takım, turnuva ve raporlar **henüz yok**.
-> Ayrıntı: [PROGRESS.md](PROGRESS.md). Gerçek ödeme sağlayıcısı, SMS veya e-posta entegrasyonu **yoktur**.
+> **Durum (1 Ekim 2026):** Aşama 1–3 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
+> takvimi, fiyatlandırma (kapora, kupon, ek hizmet, indirim), ödeme hareketleri, iade ve kasa.
+> Düzenli rezervasyon, bekleme listesi, bildirim, takım, turnuva ve raporlar **henüz yok**.
+> Ayrıntı: [PROGRESS.md](PROGRESS.md).
+>
+> **Gerçek entegrasyon yoktur:** çevrim içi ödeme bir **simülasyondur** (kart bilgisi alınmaz, para çekilmez),
+> "manuel POS" yalnızca slip tutarının elle girilmesidir, SMS/e-posta gönderilmez.
 
 ## Neler çalışıyor?
 
 | Kim | Ne yapabilir |
 |---|---|
-| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, fiyat kalemleri, onaylama, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal |
-| Resepsiyon | Şube takvimi (gün: sahalar yan yana, hafta: tek saha), boş saate tıklayıp hızlı rezervasyon (hesabı olmayan misafir dahil), taşıma, geldi / tamamlandı / gelmedi, gerekçeli iptal |
-| Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma (bakım/etkinlik) |
-| İşletme sahibi | İşletmenin tüm şubelerinde yukarıdakilerin hepsi |
+| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, ek hizmet ve kupon ekleme, kaporayı/tamamını çevrim içi ödeme (simülasyon), havale bildirimi, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal (çevrim içi ödeme otomatik iade), yazdırılabilir özet |
+| Resepsiyon | Şube takvimi (ödeme etiketleriyle), boş saatten hızlı rezervasyon, taşıma, geldi / tamamlandı / gelmedi, gerekçeli iptal, nakit / manuel POS tahsilat, havale doğrulama, hatalı tahsilatı ters kayıtla düzeltme, kasa açma/kapama |
+| Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma, iade, personel indirimi, gider kaydı, fiyat kuralları, ek hizmetler, kapora kuralı |
+| İşletme sahibi | İşletmenin tüm şubelerinde yukarıdakilerin hepsi + kuponlar |
 | Platform yöneticisi | İşletmeleri listeleme, gerekçeyle askıya alma/etkinleştirme (denetim kaydına yazılır) |
 
 ## Gereksinimler
@@ -31,7 +35,7 @@ Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 +
 # 1) Bu oturum için JDK 25'i seç (JDK 27 kurulu kalır)
 $env:JAVA_HOME = "C:\Program Files\Java\jdk-25.0.4.1"
 
-# 2) Ortam dosyasını oluştur ve parolayı değiştir
+# 2) Ortam dosyasını oluştur; DB_PASSWORD ve PAYMENT_SIM_WEBHOOK_SECRET değerlerini değiştir
 Copy-Item .env.example .env
 notepad .env
 
@@ -106,6 +110,7 @@ boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGR
 | [docs/MIMARI.md](docs/MIMARI.md) | Modüller, katmanlar, çakışma güvencesi, ER diyagramı |
 | [docs/YETKI_MATRISI.md](docs/YETKI_MATRISI.md) | Rol / izin matrisi |
 | [docs/DURUM_GECISLERI.md](docs/DURUM_GECISLERI.md) | Rezervasyon durum makinesi, fiyat ve iptal kuralları |
+| [docs/ODEME.md](docs/ODEME.md) | Ödeme durumu, hareketler, idempotency, webhook, geç ödeme, kasa |
 | [docs/YEDEKLEME.md](docs/YEDEKLEME.md) | Yedekleme ve geri yükleme |
 | [docs/DEMO_SENARYOSU.md](docs/DEMO_SENARYOSU.md) | Adım adım deneme senaryosu |
 | [LEARNING_GUIDE_TR.md](LEARNING_GUIDE_TR.md) | Projeyi öğrenmek için rehber |
@@ -113,9 +118,12 @@ boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGR
 
 ## Bilinen eksikler ve gerçek/demo ayrımı
 
-- **Ödeme yok.** Arayüzde "Bu sürümde çevrim içi ödeme yoktur" yazar. Kart bilgisi alınmaz/saklanmaz.
+- **Çevrim içi ödeme simülasyondur.** `SimulatedPaymentProvider` gerçek para çekmez; kart bilgisi alınmaz/saklanmaz.
+  Gerçek sağlayıcı `PaymentProvider` arayüzüyle eklenebilir (bkz. [docs/ODEME.md](docs/ODEME.md)).
+- **Manuel POS bir entegrasyon değildir**; personel slip tutarını elle girer.
+- Özet belgesi **fatura değildir**; e-fatura/muhasebe entegrasyonu yoktur.
 - **E-posta/SMS yok.** Mailpit konteyneri hazır ama uygulama henüz e-posta göndermiyor.
-- Saha, fiyat, çalışma saati ve personel **yönetim ekranları yok**; bu veriler şimdilik demo veriyle gelir.
+- Saha, çalışma saati ve personel **yönetim ekranları yok**; bu veriler şimdilik demo veriyle gelir.
 - Parola sıfırlama yok.
 - Giriş hız sınırı bellekte tutulur (tek sunucu için yeterli).
 - CI iş akışı (`.github/workflows/ci.yml`) yazıldı ama bir GitHub deposunda **henüz çalıştırılmadı**.

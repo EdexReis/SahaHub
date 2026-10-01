@@ -131,6 +131,25 @@ public class PriceRule {
 		return endTime;
 	}
 
+	public LocalDate getValidFrom() {
+		return validFrom;
+	}
+
+	public LocalDate getValidTo() {
+		return validTo;
+	}
+
+	/** Seçili günler (Pazartesi'den başlayarak). */
+	public java.util.List<DayOfWeek> days() {
+		java.util.List<DayOfWeek> list = new java.util.ArrayList<>();
+		for (DayOfWeek d : DayOfWeek.values()) {
+			if ((daysMask & (1 << (d.getValue() - 1))) != 0) {
+				list.add(d);
+			}
+		}
+		return list;
+	}
+
 	public BigDecimal getHourlyPrice() {
 		return hourlyPrice;
 	}

@@ -28,12 +28,27 @@ public class HoldExpiryService {
 
 	private final ReservationRepository reservations;
 	private final OccupancyService occupancy;
+	private final ReservationPricingService pricing;
 	private final Clock clock;
 
-	public HoldExpiryService(ReservationRepository reservations, OccupancyService occupancy, Clock clock) {
+	public HoldExpiryService(ReservationRepository reservations, OccupancyService occupancy,
+			ReservationPricingService pricing, Clock clock) {
 		this.reservations = reservations;
 		this.occupancy = occupancy;
+		this.pricing = pricing;
 		this.clock = clock;
+	}
+
+	/**
+	 * Süresi dolmuş tek bir tutmayı kapatır: durum EXPIRED, saha serbest, kupon hakkı geri.
+	 * Zamanlanmış görev, geç onay denemesi ve geç gelen ödeme bildirimi aynı yolu kullanır.
+	 * Çağıranın transaction'ında ve rezervasyon satırı kilitliyken çağrılmalıdır.
+	 */
+	@Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+	public void expire(Reservation r, Instant now) {
+		r.expire(now);
+		occupancy.release(PitchOccupancy.Source.RESERVATION, r.getId());
+		pricing.releaseCoupons(r.getId());
 	}
 
 	/** Bir grup süresi dolmuş tutmayı işler; işlenen kayıt sayısını döner. */
@@ -42,9 +57,7 @@ public class HoldExpiryService {
 		Instant now = Instant.now(clock);
 		List<Long> ids = reservations.lockDueHolds(now, BATCH_SIZE);
 		for (Long id : ids) {
-			Reservation r = reservations.findById(id).orElseThrow();
-			r.expire(now);
-			occupancy.release(PitchOccupancy.Source.RESERVATION, r.getId());
+			expire(reservations.findById(id).orElseThrow(), now);
 		}
 		if (!ids.isEmpty()) {
 			log.info("Süresi dolan {} geçici tutma serbest bırakıldı", ids.size());

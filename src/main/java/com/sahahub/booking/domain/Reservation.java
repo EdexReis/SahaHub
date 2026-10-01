@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 
+import com.sahahub.pricing.domain.DepositPolicy;
 import com.sahahub.shared.domain.BusinessRuleException;
 import com.sahahub.shared.domain.TimeRange;
 
@@ -87,6 +88,14 @@ public class Reservation {
 
 	@Column(nullable = false)
 	private String currency;
+
+	/** Rezervasyon anındaki kapora kuralının kopyası. */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "deposit_type", nullable = false)
+	private DepositPolicy.Type depositType = DepositPolicy.Type.NONE;
+
+	@Column(name = "deposit_value", nullable = false)
+	private BigDecimal depositValue = BigDecimal.ZERO;
 
 	@Column(name = "checked_in_at")
 	private Instant checkedInAt;
@@ -292,6 +301,29 @@ public class Reservation {
 		this.bufferMinutes = newBufferMinutes;
 		this.startsAt = newPlay.start();
 		this.endsAt = newPlay.end();
+		this.updatedAt = now;
+	}
+
+	public void snapshotDepositPolicy(DepositPolicy policy) {
+		this.depositType = policy.type();
+		this.depositValue = policy.value();
+	}
+
+	public DepositPolicy depositPolicy() {
+		return new DepositPolicy(depositType, depositValue);
+	}
+
+	/** Kalemler değişince (ek hizmet, indirim) toplamı günceller. Kalemleri yeniden hesaplar. */
+	public void recalculate(java.util.List<ReservationPriceLine> activeLines, Instant now) {
+		if (!status.isOpen()) {
+			throw new BusinessRuleException("'" + status.label() + "' durumundaki rezervasyonun fiyatı değiştirilemez.");
+		}
+		var result = com.sahahub.pricing.domain.PriceBreakdown
+			.compute(activeLines.stream().map(ReservationPriceLine::toInput).toList());
+		for (int i = 0; i < activeLines.size(); i++) {
+			activeLines.get(i).recalculatedAmount(result.amounts().get(i));
+		}
+		this.totalAmount = result.total();
 		this.updatedAt = now;
 	}
 

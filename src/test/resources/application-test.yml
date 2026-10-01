@@ -3,6 +3,10 @@ sahahub:
   booking:
     expiry-job-enabled: false
   demo-data: false
+  payment:
+    simulation:
+      webhook-secret: test-sim-anahtari
+      dispatch-enabled: false
 server:
   servlet:
     session:

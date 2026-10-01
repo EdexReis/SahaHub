@@ -1,10 +1,15 @@
 package com.sahahub.business.domain;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 
+import com.sahahub.pricing.domain.DepositPolicy;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -53,6 +58,17 @@ public class Branch {
 	@Column(name = "booking_horizon_days", nullable = false)
 	private int bookingHorizonDays = 30;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "deposit_type", nullable = false)
+	private DepositPolicy.Type depositType = DepositPolicy.Type.NONE;
+
+	@Column(name = "deposit_value", nullable = false)
+	private BigDecimal depositValue = BigDecimal.ZERO;
+
+	/** Havale bildirimi için gösterilen IBAN (isteğe bağlı). */
+	@Column(name = "bank_iban")
+	private String bankIban;
+
 	@Column(nullable = false)
 	private boolean archived;
 
@@ -75,6 +91,23 @@ public class Branch {
 		this.holdMinutes = holdMinutes;
 		this.customerCancelCutoffHours = customerCancelCutoffHours;
 		this.bookingHorizonDays = bookingHorizonDays;
+	}
+
+	public void changeDepositPolicy(DepositPolicy policy) {
+		this.depositType = policy.type();
+		this.depositValue = policy.value();
+	}
+
+	public void changeBankIban(String iban) {
+		this.bankIban = iban == null || iban.isBlank() ? null : iban.strip();
+	}
+
+	public DepositPolicy depositPolicy() {
+		return new DepositPolicy(depositType, depositValue);
+	}
+
+	public String getBankIban() {
+		return bankIban;
 	}
 
 	public void describe(String description, String phone) {

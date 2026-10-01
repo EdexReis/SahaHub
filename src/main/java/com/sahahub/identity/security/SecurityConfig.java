@@ -26,12 +26,15 @@ public class SecurityConfig {
 		http
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/", "/sahalar", "/sahalar/**", "/api/sahalar/**", "/kayit", LOGIN_PATH, "/error",
+						"/webhooks/**",
 						"/css/**", "/js/**", "/vendor/**", "/fonts/**", "/img/**", "/favicon.svg",
 						"/actuator/health")
 				.permitAll()
 				.requestMatchers("/admin/**").hasRole("PLATFORM_ADMIN")
 				.requestMatchers("/isletme/**").hasRole("STAFF")
 				.anyRequest().authenticated())
+			// Sağlayıcı bildirimleri tarayıcıdan gelmez; CSRF yerine HMAC imzasıyla doğrulanır
+			.csrf(csrf -> csrf.ignoringRequestMatchers("/webhooks/**"))
 			.formLogin(form -> form
 				.loginPage(LOGIN_PATH)
 				.loginProcessingUrl(LOGIN_PATH)

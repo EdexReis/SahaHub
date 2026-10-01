@@ -67,16 +67,19 @@ public class StaffCalendarService {
 	private final PitchBlockRepository blocks;
 	private final AvailabilityService availability;
 	private final AppUserRepository users;
+	private final PaymentStatusPort paymentStatus;
 	private final Clock clock;
 
 	public StaffCalendarService(CatalogService catalog, AccessGuard guard, ReservationRepository reservations,
-			PitchBlockRepository blocks, AvailabilityService availability, AppUserRepository users, Clock clock) {
+			PitchBlockRepository blocks, AvailabilityService availability, AppUserRepository users,
+			PaymentStatusPort paymentStatus, Clock clock) {
 		this.catalog = catalog;
 		this.guard = guard;
 		this.reservations = reservations;
 		this.blocks = blocks;
 		this.availability = availability;
 		this.users = users;
+		this.paymentStatus = paymentStatus;
 		this.clock = clock;
 	}
 
@@ -180,13 +183,13 @@ public class StaffCalendarService {
 
 	/** Takvimde gösterilecek veriler tek seferde yüklenir (sahada sorgu döngüsü yok). */
 	private record Data(List<Reservation> reservations, List<PitchBlock> blocks, List<PitchOccupancy> occupancies,
-			Map<Long, String> customerNames) {
+			Map<Long, String> customerNames, Map<Long, PaymentStatusPort.Badge> badges) {
 	}
 
 	private Data load(Long branchId, List<Pitch> pitches, TimeRange range) {
 		List<Long> pitchIds = pitches.stream().map(Pitch::getId).toList();
 		if (pitchIds.isEmpty()) {
-			return new Data(List.of(), List.of(), List.of(), Map.of());
+			return new Data(List.of(), List.of(), List.of(), Map.of(), Map.of());
 		}
 		List<Reservation> res = reservations.findForCalendar(branchId, range.start(), range.end(), SHOWN)
 			.stream()
@@ -199,7 +202,7 @@ public class StaffCalendarService {
 		List<Long> customerIds = res.stream().map(Reservation::getCustomerId).filter(id -> id != null).toList();
 		Map<Long, String> names = customerIds.isEmpty() ? Map.of()
 				: users.findAllById(customerIds).stream().collect(Collectors.toMap(AppUser::getId, AppUser::getFullName));
-		return new Data(res, blk, occ, names);
+		return new Data(res, blk, occ, names, paymentStatus.badges(res));
 	}
 
 	private Column column(Pitch pitch, LocalDate day, String title, String subtitle, TimeRange grid,
@@ -211,9 +214,11 @@ public class StaffCalendarService {
 			}
 			String name = r.getCustomerId() != null ? data.customerNames.getOrDefault(r.getCustomerId(), "Müşteri")
 					: r.getGuestName();
-			items.add(item(Kind.RESERVATION, grid, r.playRange(), r.getCode(), name,
-					time(r.playRange(), zone), r.getStatus(), r.getChannel(), r.getCheckedInAt() != null,
-					pitch.getId(), null));
+			PaymentStatusPort.Badge badge = data.badges.get(r.getId());
+			items.add(new Item(Kind.RESERVATION, row(grid, r.getStartsAt()), span(grid, r.playRange()), r.getCode(),
+					name, time(r.playRange(), zone), r.getStatus(), r.getChannel(), r.getCheckedInAt() != null,
+					pitch.getId(), null, null, badge == null ? null : badge.state(),
+					badge == null ? null : badge.label()));
 			if (r.getBufferMinutes() > 0 && r.occupiedRange().end().isAfter(grid.start())) {
 				TimeRange buffer = new TimeRange(r.getEndsAt(), r.occupiedRange().end());
 				if (buffer.overlaps(grid)) {
@@ -226,7 +231,7 @@ public class StaffCalendarService {
 			if (b.getPitchId().equals(pitch.getId()) && b.range().overlaps(grid)) {
 				items.add(new Item(Kind.BLOCK, row(grid, b.getStartsAt()), span(grid, b.range()), null,
 						b.getReason().label(), b.getNote() == null ? time(b.range(), zone) : b.getNote(), null, null,
-						false, pitch.getId(), null, b.getId()));
+						false, pitch.getId(), null, b.getId(), null, null));
 			}
 		}
 		if (openWindow.isPresent()) {
@@ -249,7 +254,7 @@ public class StaffCalendarService {
 	private static Item item(Kind kind, TimeRange grid, TimeRange range, String code, String title, String subtitle,
 			ReservationStatus status, Channel channel, boolean checkedIn, Long pitchId, LocalDateTime start) {
 		return new Item(kind, row(grid, range.start()), span(grid, range), code, title, subtitle, status, channel,
-				checkedIn, pitchId, start, null);
+				checkedIn, pitchId, start, null, null, null);
 	}
 
 	/** Anın ızgaradaki satır numarası (1'den başlar), ızgara dışına taşanlar kenara kırpılır. */

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Şube içi menü. Bağlantılar kullanıcının o şubedeki rolüne göre gösterilir; sunucu her istekte ayrıca kontrol eder. -->
+<nav th:fragment="subnav(branchId, active)" class="subnav" aria-label="Şube menüsü">
+	<a th:href="@{/isletme/subeler/{id}/takvim(id=${branchId})}" th:aria-current="${active == 'takvim'} ? 'page'">Takvim</a>
+	<th:block th:each="b : ${branches}" th:if="${b.id() == branchId}">
+		<a th:if="${b.cashAccess()}" th:href="@{/isletme/subeler/{id}/kasa(id=${branchId})}" th:aria-current="${active == 'kasa'} ? 'page'">Kasa</a>
+		<a th:if="${b.pricingAccess()}" th:href="@{/isletme/subeler/{id}/fiyatlar(id=${branchId})}" th:aria-current="${active == 'fiyatlar'} ? 'page'">Fiyatlandırma</a>
+	</th:block>
+</nav>
+</body>
+</html>

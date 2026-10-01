@@ -26,6 +26,7 @@ import com.sahahub.business.app.StaffBranchService;
 import com.sahahub.business.app.StaffBranchService.BranchRef;
 import com.sahahub.business.domain.PitchBlock;
 import com.sahahub.identity.security.AppUserPrincipal;
+import com.sahahub.payment.app.PaymentPanelService;
 import com.sahahub.shared.domain.BusinessRuleException;
 import com.sahahub.shared.web.Htmx;
 
@@ -44,13 +45,15 @@ public class StaffController {
 	private final StaffCalendarService calendar;
 	private final StaffReservationService reservations;
 	private final PitchBlockService blocks;
+	private final PaymentPanelService payments;
 
 	public StaffController(StaffBranchService branches, StaffCalendarService calendar,
-			StaffReservationService reservations, PitchBlockService blocks) {
+			StaffReservationService reservations, PitchBlockService blocks, PaymentPanelService payments) {
 		this.branches = branches;
 		this.calendar = calendar;
 		this.reservations = reservations;
 		this.blocks = blocks;
+		this.payments = payments;
 	}
 
 	@GetMapping("/isletme")
@@ -73,10 +76,12 @@ public class StaffController {
 				: calendar.day(me, branchId, day);
 		model.addAttribute("cal", view);
 		model.addAttribute("branches", branches.branchesFor(me));
+		model.addAttribute("alerts", payments.alerts(me, branchId));
 		if (selectedCode != null && !selectedCode.isBlank()) {
 			ReservationView r = reservations.view(me, selectedCode);
 			model.addAttribute("r", r);
 			model.addAttribute("moveForm", MoveForm.from(r));
+			model.addAttribute("pay", payments.forStaff(me, selectedCode));
 		}
 		return "staff/calendar";
 	}
@@ -130,6 +135,7 @@ public class StaffController {
 			return "staff/panels :: quick-booking";
 		}
 		model.addAttribute("branches", branches.branchesFor(me));
+		model.addAttribute("alerts", payments.alerts(me, branchId));
 		model.addAttribute("panel", "quick-booking");
 		return "staff/calendar";
 	}
@@ -143,6 +149,7 @@ public class StaffController {
 		if (Htmx.isHtmx(request)) {
 			model.addAttribute("r", r);
 			model.addAttribute("moveForm", MoveForm.from(r));
+			model.addAttribute("pay", payments.forStaff(me, code));
 			model.addAttribute("cal", calendar.day(me, r.branchId(), r.businessDay()));
 			return "staff/panels :: reservation";
 		}
@@ -205,6 +212,7 @@ public class StaffController {
 			return "staff/panels :: block";
 		}
 		model.addAttribute("branches", branches.branchesFor(me));
+		model.addAttribute("alerts", payments.alerts(me, branchId));
 		model.addAttribute("panel", "block");
 		return "staff/calendar";
 	}

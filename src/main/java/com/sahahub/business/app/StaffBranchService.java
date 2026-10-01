@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sahahub.business.domain.Branch;
 import com.sahahub.business.domain.BranchRepository;
 import com.sahahub.business.domain.BusinessRepository;
+import com.sahahub.identity.domain.Permission;
+import com.sahahub.identity.domain.RolePermissions;
 import com.sahahub.identity.domain.StaffMembership;
 import com.sahahub.identity.domain.StaffMembershipRepository;
 import com.sahahub.identity.domain.StaffRole;
@@ -22,7 +24,17 @@ import com.sahahub.identity.security.AppUserPrincipal;
 @Transactional(readOnly = true)
 public class StaffBranchService {
 
+	/** Personelin erişebildiği şube. Menüde yalnızca yetkili bağlantılar gösterilsin diye izin bayrakları da var. */
 	public record BranchRef(Long id, String name, Long businessId, String businessName, StaffRole role) {
+
+		public boolean cashAccess() {
+			return RolePermissions.allows(role, Permission.CASH_MANAGE);
+		}
+
+		public boolean pricingAccess() {
+			return RolePermissions.allows(role, Permission.PRICE_MANAGE);
+		}
+
 	}
 
 	private final StaffMembershipRepository memberships;

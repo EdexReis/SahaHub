@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Ödeme simülasyonu · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<div class="sim-banner" role="note">
+		<strong>DEMO ÖDEME SAĞLAYICISI</strong>
+		<span>Bu sayfa gerçek bir ödeme sayfası değildir. Kart bilgisi istenmez, para çekilmez.
+			Gerçek bir sağlayıcı entegre edildiğinde müşteri bunun yerine sağlayıcının sayfasına gider.</span>
+	</div>
+	<h1>Ödemeyi sonuçlandır</h1>
+	<div class="panel">
+		<dl class="kv">
+			<dt>Rezervasyon</dt><dd class="num" th:text="${code}">ABC</dd>
+			<dt>Tutar</dt><dd><strong th:text="${@fmt.money(charge.amount, 'TRY')}">300 ₺</strong></dd>
+			<dt>Sağlayıcı referansı</dt><dd class="num tiny" th:text="${ref}">sim_</dd>
+		</dl>
+		<th:block th:if="${charge.status == 'CREATED'}">
+			<hr class="rule">
+			<p class="small">Denemek istediğiniz sonucu seçin:</p>
+			<form th:action="@{/odeme-saglayici/simulasyon/{ref}(ref=${ref})}" method="post" class="sim-choices">
+				<button th:each="s : ${scenarios}" class="btn btn-block" th:classappend="${s.name() == 'SUCCESS'} ? 'btn-primary' : 'btn-secondary'"
+				        type="submit" name="scenario" th:value="${s.name()}" th:text="${s.label()}">Ödeme başarılı</button>
+			</form>
+		</th:block>
+		<p th:unless="${charge.status == 'CREATED'}" class="small">Bu ödeme zaten sonuçlandı.
+			<a th:href="@{/rezervasyon/{c}(c=${code})}">Rezervasyona dön</a></p>
+	</div>
+</main>
+</body>
+</html>
