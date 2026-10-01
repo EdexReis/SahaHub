@@ -14,6 +14,8 @@ import jakarta.persistence.Version;
 
 /**
  * Takımın maçı. Kaptanın onaylı rezervasyonuna bağlıysa yer ve saat oradan gelir; değilse serbest (başka tesis).
+ * Takım bir şube ligine bağlıysa lig maçları da buraya yansır ({@code tournamentMatchId}): yer, saat, rakip ve skor
+ * ligden gelir; kaptan değiştiremez.
  *
  * <pre>
  * SCHEDULED ──skor (maç başladıktan sonra)──► PLAYED
@@ -50,17 +52,21 @@ public class TeamMatch {
 	@Column(name = "reservation_id", updatable = false)
 	private Long reservationId;
 
-	@Column(name = "starts_at", nullable = false, updatable = false)
+	@Column(name = "starts_at", nullable = false)
 	private Instant startsAt;
 
-	@Column(nullable = false, updatable = false)
+	@Column(nullable = false)
 	private String place;
 
-	@Column(updatable = false)
 	private String opponent;
 
-	@Column(updatable = false)
 	private String note;
+
+	@Column(name = "tournament_id", updatable = false)
+	private Long tournamentId;
+
+	@Column(name = "tournament_match_id", updatable = false)
+	private Long tournamentMatchId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
@@ -95,6 +101,32 @@ public class TeamMatch {
 		this.status = Status.SCHEDULED;
 		this.createdBy = createdBy;
 		this.createdAt = now;
+	}
+
+	/** Lig maçının takım tarafındaki kopyası. */
+	public static TeamMatch fromLeague(Long teamId, Long tournamentId, Long tournamentMatchId, Instant startsAt,
+			String place, String opponent, String note, Long createdBy, Instant now) {
+		TeamMatch m = new TeamMatch(teamId, null, startsAt, place, opponent, note, createdBy, now);
+		m.tournamentId = tournamentId;
+		m.tournamentMatchId = tournamentMatchId;
+		return m;
+	}
+
+	/** Lig maçı yeniden planlandı ya da rakibi değişti (eleme düzeltmesi). Yalnızca planlı lig maçında. */
+	public boolean syncFromLeague(Instant startsAt, String place, String opponent, String note) {
+		if (!isLeague() || status != Status.SCHEDULED) {
+			throw new IllegalStateException("Yalnızca planlı lig maçı güncellenir: " + id);
+		}
+		boolean moved = !this.startsAt.equals(startsAt) || !this.place.equals(place);
+		this.startsAt = startsAt;
+		this.place = place;
+		this.opponent = opponent;
+		this.note = note;
+		return moved;
+	}
+
+	public boolean isLeague() {
+		return tournamentMatchId != null;
 	}
 
 	public boolean isOpenForAnswers(Instant now) {
@@ -162,6 +194,14 @@ public class TeamMatch {
 
 	public Integer getTheirScore() {
 		return theirScore;
+	}
+
+	public Long getTournamentId() {
+		return tournamentId;
+	}
+
+	public Long getTournamentMatchId() {
+		return tournamentMatchId;
 	}
 
 	public Instant getCreatedAt() {

@@ -150,6 +150,17 @@ değişmez.
 - Üye yanıtı: Geliyorum / Kararsızım / Gelmiyorum. Maç başlayana kadar değiştirilebilir; kişi başına tek yanıt.
   Takımdan ayrılan üyenin yanıtı sayılmaz. "Yanıt vermedi" = aktif üye − yanıt verenler.
 
+## Lig kaydı ve platform takımı
+
+- Her kaydın bir bağlantı kodu vardır. Kaptan bağlantıyı açıp kendi takımını seçer → kayıt bağlanır. Kayıt zaten
+  bağlıysa ya da takım o turnuvada başka bir kayda bağlıysa reddedilir (veritabanında da tekil indeks). Turnuva
+  satırı kilitlenir: iki kaptan aynı kaydı aynı anda alamaz.
+- Personel bağlantıyı kaldırınca kayıt yeni kod alır; eski bağlantı çalışmaz.
+- Bağlı takımda lig maçının kopyası (takım maçı): maç planlanınca açılır (üyelere "Lig maçınız planlandı"), saati
+  değişince güncellenir ("saati değişti"; yanıtlar korunur), planı kaldırılınca iptal olur, sonuç girilince takımın
+  bakış açısından skor yazılır (düzeltmeler de). Eleme düzeltmesi maçın takımını değiştirirse eski takımın planlı
+  kopyası iptal olur. Bağlantı kaldırılınca planlı kopyalar iptal olur, oynanmışlar geçmişte kalır.
+
 ## Takım ve ilan
 
 - Takım: kuran kaptandır. Kaptan, başka üye varken ayrılamaz (önce kaptanlığı devreder); tek üye kaptan ayrılırsa

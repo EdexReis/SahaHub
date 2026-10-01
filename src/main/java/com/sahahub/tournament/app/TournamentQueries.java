@@ -41,7 +41,22 @@ public class TournamentQueries implements MatchCalendarPort {
 			String city, int entries, long played, long total, Tournament.Format format) {
 	}
 
-	public record EntryRow(Long id, String name) {
+	/**
+	 * @param linkCode platform takımına bağlama kodu (bağlıyken de durur; bağlantı kaldırılınca yenilenir)
+	 * @param linkedTeam bağlı platform takımının adı; bağlı değilse null
+	 */
+	public record EntryRow(Long id, String name, String linkCode, String linkedTeam, boolean linked) {
+	}
+
+	/** Kaptanın açtığı bağlama sayfası. */
+	public record LinkPreview(String code, String tournamentName, Tournament.Format format, String statusLabel,
+			String branchName, String businessName, String entryName, boolean alreadyLinked,
+			List<TeamLinkPort.TeamOption> myTeams) {
+	}
+
+	/** Takım sayfasındaki "Lig ve turnuvalar" satırı. */
+	public record TeamTournamentRow(Long tournamentId, String name, Tournament.Format format, String statusLabel,
+			String entryName, boolean publicPage, String summary) {
 	}
 
 	public record PitchOption(Long id, String name) {
@@ -111,6 +126,10 @@ public class TournamentQueries implements MatchCalendarPort {
 			return active() && unplayed == 0 && (!knockout() || (champion != null && (!thirdPlace || third != null)));
 		}
 
+		public long linkedCount() {
+			return entries.stream().filter(EntryRow::linked).count();
+		}
+
 		public int matchCount() {
 			return rounds.stream().mapToInt(r -> r.matches().size()).sum();
 		}
@@ -123,9 +142,12 @@ public class TournamentQueries implements MatchCalendarPort {
 	private final CatalogService catalog;
 	private final AccessGuard guard;
 	private final Clock clock;
+	private final TeamLinkPort teamLinks;
 
 	public TournamentQueries(TournamentRepository tournaments, TournamentEntryRepository entries,
-			TournamentMatchRepository matches, CatalogService catalog, AccessGuard guard, Clock clock) {
+			TournamentMatchRepository matches, CatalogService catalog, AccessGuard guard, Clock clock,
+			TeamLinkPort teamLinks) {
+		this.teamLinks = teamLinks;
 		this.tournaments = tournaments;
 		this.entries = entries;
 		this.matches = matches;
@@ -146,7 +168,7 @@ public class TournamentQueries implements MatchCalendarPort {
 	public Detail forStaff(AppUserPrincipal user, Long tournamentId) {
 		Tournament t = tournaments.findById(tournamentId).orElseThrow(() -> new NotFoundException("Lig"));
 		guard.requireBranch(user, t.getBusinessId(), t.getBranchId(), Permission.TOURNAMENT_MANAGE);
-		return detail(t);
+		return detail(t, true);
 	}
 
 	/** Herkese açık lig sayfası. Taslak lig ve askıdaki işletmenin ligi "bulunamadı" döner. */
@@ -159,12 +181,61 @@ public class TournamentQueries implements MatchCalendarPort {
 		if (!bc.business().isActive() || bc.branch().isArchived()) {
 			throw new NotFoundException("Lig");
 		}
-		return detail(t);
+		return detail(t, false);
 	}
 
 	@Transactional(readOnly = true)
 	public List<ListRow> publicList() {
 		return tournaments.publicTournaments().stream().map(this::row).toList();
+	}
+
+	// ------------------------------------------------------------------ platform takımı bağlantısı
+
+	/** Bağlama sayfası (giriş yapmış kullanıcı). Bilinmeyen ya da yenilenmiş kod "bulunamadı". */
+	@Transactional(readOnly = true)
+	public LinkPreview linkPreview(AppUserPrincipal user, String code) {
+		TournamentEntry e = entries.findByLinkCode(code).orElseThrow(() -> new NotFoundException("Bağlantı"));
+		Tournament t = tournaments.findById(e.getTournamentId()).orElseThrow();
+		BranchContext bc = catalog.branchContext(t.getBranchId());
+		return new LinkPreview(code, t.getName(), t.getFormat(), t.getStatus().label(), bc.branch().getName(),
+				bc.business().getName(), e.getName(), e.isLinked(), teamLinks.captainedTeams(user.id()));
+	}
+
+	/**
+	 * Takımın bağlı olduğu lig ve turnuvalar, özetiyle: ligde sıra ve puan, kupada "Şampiyon" / "Elendi" /
+	 * "Turda". Çağıran takım üyeliğini denetler.
+	 */
+	@Transactional(readOnly = true)
+	public List<TeamTournamentRow> forTeam(Long teamId) {
+		List<TeamTournamentRow> rows = new ArrayList<>();
+		for (TournamentEntry e : entries.findByTeamIdOrderByIdDesc(teamId)) {
+			Tournament t = tournaments.findById(e.getTournamentId()).orElseThrow();
+			String summary;
+			if (t.isDraft()) {
+				summary = "Fikstür bekleniyor";
+			}
+			else if (t.isKnockout()) {
+				List<TournamentMatch> ms = matches.findByTournamentIdOrderByRoundAscIdAsc(t.getId());
+				boolean lost = ms.stream().anyMatch(m -> m.isPlayed() && m.getWinnerEntryId() != null
+						&& (m.getHomeEntryId().equals(e.getId()) || m.getAwayEntryId().equals(e.getId()))
+						&& !m.getWinnerEntryId().equals(e.getId())
+						&& !Bracket.isThirdPlace(m.getRound(), m.getBracketSlot(),
+								Bracket.rounds((int) entries.countByTournamentId(t.getId()))));
+				Detail d = detail(t, false);
+				summary = e.getName().equals(d.champion()) ? "Şampiyon"
+						: e.getName().equals(d.third()) ? "Üçüncü" : lost ? "Elendi" : "Turda";
+			}
+			else {
+				summary = detail(t, false).standings().stream()
+					.filter(r -> r.name().equals(e.getName()))
+					.findFirst()
+					.map(r -> r.position() + ". sıra · " + r.points() + " puan · " + r.played() + " maç")
+					.orElse("");
+			}
+			rows.add(new TeamTournamentRow(t.getId(), t.getName(), t.getFormat(), t.getStatus().label(), e.getName(),
+					t.isPublic(), summary));
+		}
+		return rows;
 	}
 
 	// ------------------------------------------------------------------ takvim portu
@@ -210,6 +281,15 @@ public class TournamentQueries implements MatchCalendarPort {
 		return m.getRound() + ". hafta";
 	}
 
+	private List<EntryRow> entryRows(List<TournamentEntry> es, boolean staff) {
+		Map<Long, String> teamNames = teamLinks.activeTeamNames(
+				es.stream().map(TournamentEntry::getTeamId).filter(java.util.Objects::nonNull).toList());
+		return es.stream()
+			.map(e -> new EntryRow(e.getId(), e.getName(), staff ? e.getLinkCode() : null,
+					e.isLinked() ? teamNames.getOrDefault(e.getTeamId(), "Dağılmış takım") : null, e.isLinked()))
+			.toList();
+	}
+
 	private ListRow row(Tournament t) {
 		BranchContext bc = catalog.branchContext(t.getBranchId());
 		List<TournamentMatch> ms = matches.findByTournamentIdOrderByRoundAscIdAsc(t.getId());
@@ -221,7 +301,8 @@ public class TournamentQueries implements MatchCalendarPort {
 				bc.branch().getCity(), n, ms.stream().filter(TournamentMatch::isPlayed).count(), total, t.getFormat());
 	}
 
-	private Detail detail(Tournament t) {
+	/** @param staff bağlantı kodları yalnızca personel görünümünde yer alır (herkese açık sayfaya hiç girmez) */
+	private Detail detail(Tournament t, boolean staff) {
 		BranchContext bc = catalog.branchContext(t.getBranchId());
 		ZoneId zone = bc.branch().zone();
 		Instant now = Instant.now(clock);
@@ -315,7 +396,7 @@ public class TournamentQueries implements MatchCalendarPort {
 		}
 		return new Detail(t.getId(), t.getName(), t.getStatus(), t.isDoubleRound(), t.getPointsWin(),
 				t.getPointsDraw(), t.getPointsLoss(), t.getBranchId(), bc.branch().getName(), bc.business().getName(),
-				bc.branch().getCity(), es.stream().map(e -> new EntryRow(e.getId(), e.getName())).toList(), rounds,
+				bc.branch().getCity(), entryRows(es, staff), rounds,
 				Standings.compute(names, results, t.points()),
 				ms.stream().filter(m -> m.getStatus() == TournamentMatch.Status.UNSCHEDULED).count(),
 				ms.stream().filter(m -> !m.isPlayed()).count(),

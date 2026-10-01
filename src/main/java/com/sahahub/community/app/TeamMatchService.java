@@ -41,6 +41,8 @@ import com.sahahub.identity.security.AppUserPrincipal;
 import com.sahahub.notification.app.NotificationWriter;
 import com.sahahub.shared.domain.BusinessRuleException;
 import com.sahahub.shared.domain.NotFoundException;
+import com.sahahub.tournament.app.TournamentEvents;
+import com.sahahub.tournament.domain.TournamentMatch;
 
 /**
  * Takım maçları ve katılım ("geliyorum / kararsızım / gelmiyorum").
@@ -51,6 +53,9 @@ import com.sahahub.shared.domain.NotFoundException;
  * takım üyeleri görür.</li>
  * <li>Maç eklenince/iptal edilince diğer üyelere bildirim gider (tercihlerine göre e-posta/SMS); maçtan 24 saat
  * önce "gelmiyorum" demeyenlere hatırlatma gider ({@link #enqueueReminders()}).</li>
+ * <li>Takım bir şube ligine bağlıysa lig maçları buraya kendiliğinden yansır ({@link #onTournamentMatchChanged}):
+ * planlanınca açılır, saati değişince güncellenir, planı kaldırılınca iptal olur, sonuç girilince skoru yazılır.
+ * Kaptan lig maçını iptal edemez, skorunu değiştiremez; bunları şube yapar.</li>
  * </ul>
  */
 @Service
@@ -83,7 +88,14 @@ public class TeamMatchService {
 
 	public record MatchView(Long id, Long teamId, String teamName, Instant startsAt, String place, String opponent,
 			String note, TeamMatch.Status status, Integer ourScore, Integer theirScore, int going, int maybe,
-			int notGoing, int noAnswer, Answer myAnswer, boolean open, boolean canScore, List<Attendee> attendees) {
+			int notGoing, int noAnswer, Answer myAnswer, boolean open, boolean canScore, List<Attendee> attendees,
+			Long leagueId) {
+
+		/** Şube liginden gelen maç (iptal ve skor şubede). */
+		public boolean league() {
+			return leagueId != null;
+		}
+
 	}
 
 	public record TeamMatches(boolean captain, List<MatchView> upcoming, List<MatchView> history) {
@@ -166,6 +178,7 @@ public class TeamMatchService {
 	public void cancel(AppUserPrincipal user, Long matchId) {
 		TeamMatch m = matches.findById(matchId).orElseThrow(() -> new NotFoundException("Takım maçı"));
 		Team team = captainTeam(user, m.getTeamId());
+		requireNotLeague(m);
 		if (m.getStatus() != TeamMatch.Status.SCHEDULED) {
 			throw new BusinessRuleException("Yalnızca planlanmış maç iptal edilir.");
 		}
@@ -177,6 +190,7 @@ public class TeamMatchService {
 	public void recordScore(AppUserPrincipal user, Long matchId, Integer ours, Integer theirs) {
 		TeamMatch m = matches.findById(matchId).orElseThrow(() -> new NotFoundException("Takım maçı"));
 		captainTeam(user, m.getTeamId());
+		requireNotLeague(m);
 		if (ours == null || theirs == null || ours < 0 || theirs < 0 || ours > 99 || theirs > 99) {
 			throw new BusinessRuleException("Skor 0-99 arasında iki sayı olmalı.");
 		}
@@ -216,6 +230,78 @@ public class TeamMatchService {
 		for (TeamMatch m : matches.scheduledForReservation(event.reservationId())) {
 			m.cancel();
 			teams.findById(m.getTeamId()).ifPresent(t -> notifyCancelled(t, m, null));
+		}
+	}
+
+	// ------------------------------------------------------------------ lig maçları
+
+	/**
+	 * Lig maçı değişti: bağlı takımların kopyasını günceller. Takımı artık maçta olmayan (bağlantısı kaldırılmış ya
+	 * da eleme düzeltmesiyle değişmiş) planlı kopyalar iptal edilir; oynanmış olanlar geçmişte kalır.
+	 */
+	@TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+	void onTournamentMatchChanged(TournamentEvents.MatchChanged e) {
+		Instant now = Instant.now(clock);
+		Map<Long, TournamentEvents.Side[]> current = new java.util.LinkedHashMap<>(); // takım → {biz, rakip}
+		if (e.status() != TournamentMatch.Status.UNSCHEDULED) {
+			if (e.home().teamId() != null) {
+				current.put(e.home().teamId(), new TournamentEvents.Side[] { e.home(), e.away() });
+			}
+			if (e.away().teamId() != null) {
+				current.put(e.away().teamId(), new TournamentEvents.Side[] { e.away(), e.home() });
+			}
+		}
+		Map<Long, TeamMatch> byTeam = new HashMap<>();
+		for (TeamMatch m : matches.liveForTournamentMatch(e.matchId())) {
+			if (current.containsKey(m.getTeamId())) {
+				byTeam.put(m.getTeamId(), m);
+			}
+			else if (m.getStatus() == TeamMatch.Status.SCHEDULED) {
+				m.cancel();
+				teams.findById(m.getTeamId()).filter(Team::isActive).ifPresent(t -> notifyCancelled(t, m, null));
+			}
+		}
+		String note = e.tournamentName() + " · " + e.label();
+		for (var entry : current.entrySet()) {
+			Team team = teams.findById(entry.getKey()).filter(Team::isActive).orElse(null);
+			if (team == null) {
+				continue;
+			}
+			TournamentEvents.Side us = entry.getValue()[0];
+			TournamentEvents.Side them = entry.getValue()[1];
+			TeamMatch m = byTeam.get(team.getId());
+			boolean played = e.status() == TournamentMatch.Status.PLAYED;
+			if (m == null) {
+				Long captain = members.activeMembers(team.getId()).stream().filter(TeamMember::isCaptain)
+					.map(TeamMember::getUserId).findFirst().orElseThrow();
+				m = matches.save(TeamMatch.fromLeague(team.getId(), e.tournamentId(), e.matchId(), e.startsAt(),
+						e.place(), them.name(), note, captain, now));
+				if (!played && e.startsAt().isAfter(now)) {
+					notifyMembers(team, null, "TEAM_LEAGUE_MATCH", "Lig maçınız planlandı",
+							team.getName() + ": " + e.startsAt().atZone(TR).format(WHEN) + " · " + e.place() + " · rakip "
+									+ them.name() + " (" + note + "). Gelip gelmeyeceğinizi bildirin.",
+							"team-league-match:" + m.getId());
+				}
+			}
+			else if (m.getStatus() == TeamMatch.Status.SCHEDULED && !played) {
+				if (m.syncFromLeague(e.startsAt(), e.place(), them.name(), note) && e.startsAt().isAfter(now)) {
+					notifyMembers(team, null, "TEAM_LEAGUE_MATCH_MOVED", "Lig maçınızın saati değişti",
+							team.getName() + ": yeni saat " + e.startsAt().atZone(TR).format(WHEN) + " · " + e.place()
+									+ " · rakip " + them.name() + ". Yanıtınızı gözden geçirin.",
+							"team-league-moved:" + m.getId() + ":" + e.startsAt().getEpochSecond());
+				}
+			}
+			if (played) {
+				// Skor ligde girilir (maç başladıktan sonra); düzeltmeler de buraya yansır
+				Instant at = now.isBefore(m.getStartsAt()) ? m.getStartsAt() : now;
+				m.recordScore(us.score(), them.score(), at);
+			}
+		}
+	}
+
+	private static void requireNotLeague(TeamMatch m) {
+		if (m.isLeague()) {
+			throw new BusinessRuleException("Bu bir lig maçı: saatini, iptalini ve skorunu şube belirler.");
 		}
 	}
 
@@ -324,7 +410,9 @@ public class TeamMatchService {
 			out.add(new MatchView(m.getId(), m.getTeamId(), teamById.get(m.getTeamId()).getName(), m.getStartsAt(),
 					m.getPlace(), m.getOpponent(), m.getNote(), m.getStatus(), m.getOurScore(), m.getTheirScore(), going,
 					maybe, no, active.size() - mine.size(), my, m.isOpenForAnswers(now),
-					captain && m.getStatus() != TeamMatch.Status.CANCELLED && !now.isBefore(m.getStartsAt()), names));
+					captain && !m.isLeague() && m.getStatus() != TeamMatch.Status.CANCELLED
+							&& !now.isBefore(m.getStartsAt()),
+					names, m.getTournamentId()));
 		}
 		return out;
 	}

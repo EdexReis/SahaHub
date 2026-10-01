@@ -67,7 +67,10 @@ Takım ve ilan kuralları (müşteri tarafı, `CommunityIT`):
 | Başvuru | Kendi ilanına ve üyesi olduğu takımın oyuncu ilanına başvurulamaz; rakip ilanına yalnızca kaptanı olduğu takımla |
 | Başvuru kabul/ret, ilanı kapatma | Yalnızca ilan sahibi |
 | Telefon numarası | Yalnızca kabul edilen başvuruda karşılıklı görünür |
-| Lig sayfası (`/ligler`) | Herkese açık; taslak lig ve askıdaki işletmenin ligi "bulunamadı" |
+| Lig sayfası (`/ligler`) | Herkese açık; taslak lig ve askıdaki işletmenin ligi "bulunamadı". Takım bağlantı kodları bu sayfada hiç yer almaz |
+| Lig kaydının bağlantısı (kod) ve bağlantıyı kaldırma | `TOURNAMENT_MANAGE` ve ligin şubesi |
+| Bağlantıyı açıp takım bağlama (`/lig-davet/{kod}`) | Giriş yapmış kullanıcı; yalnızca kaptanı olduğu, dağılmamış takımı bağlayabilir |
+| Lig maçının takım tarafındaki kopyası | Saat, iptal ve skor yalnızca şubeden (kaptan değiştiremez); katılım yanıtı takım üyelerinden |
 
 Personel tarafında düzenli rezervasyon yeni izin gerektirmez: oluşturma `RESERVATION_CREATE`, "bu ve sonraki
 maçları iptal" `RESERVATION_CANCEL` ister (her ikisi de rol matrisinde zaten tanımlı).

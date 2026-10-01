@@ -16,7 +16,7 @@ Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 +
 
 | Kim | Ne yapabilir |
 |---|---|
-| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, ek hizmet ve kupon ekleme, kaporayı/tamamını çevrim içi ödeme (simülasyon), havale bildirimi, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal (çevrim içi ödeme otomatik iade), yazdırılabilir özet, dolu saat için bekleme listesi (sıra numarası, boşalınca 15 dk'lık teklif), bildirim kutusu ve e-posta/SMS tercihleri, takım kurma ve davet bağlantısıyla katılma, takım maçlarına katılım yanıtı (geliyor/kararsız/gelmiyor) ve takım maç geçmişi, oyuncu/rakip ilanı verme ve başvurma, ligleri izleme |
+| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, ek hizmet ve kupon ekleme, kaporayı/tamamını çevrim içi ödeme (simülasyon), havale bildirimi, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal (çevrim içi ödeme otomatik iade), yazdırılabilir özet, dolu saat için bekleme listesi (sıra numarası, boşalınca 15 dk'lık teklif), bildirim kutusu ve e-posta/SMS tercihleri, takım kurma ve davet bağlantısıyla katılma, takım maçlarına katılım yanıtı (geliyor/kararsız/gelmiyor) ve takım maç geçmişi, takımı şube ligine bağlama (lig maçları takım sayfasında), oyuncu/rakip ilanı verme ve başvurma, ligleri izleme |
 | Resepsiyon | Şube takvimi (ödeme etiketleriyle), boş saatten hızlı rezervasyon, önizlemeli düzenli (haftalık) rezervasyon ve "bu ve sonraki maçları iptal", taşıma, geldi / tamamlandı / gelmedi, gerekçeli iptal, nakit / manuel POS tahsilat, havale doğrulama, hatalı tahsilatı ters kayıtla düzeltme, kasa açma/kapama |
 | Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma, iade, personel indirimi, gider kaydı, fiyat kuralları, ek hizmetler, kapora kuralı, lig ve eleme usulü kupa (fikstür/eşleşme ağacı, isteğe bağlı üçüncülük maçı, maç planlama, skor, penaltı), raporlar ve CSV, saha ekleme/düzenleme ve fotoğraf, çalışma saatleri ve özel günler |
 | İşletme sahibi | İşletmenin tüm şubelerinde yukarıdakilerin hepsi + kuponlar, personel ve yetkiler, denetim kaydı, şube karşılaştırması |
@@ -128,9 +128,9 @@ boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGR
 - **E-posta yalnızca Mailpit'e** (http://localhost:8025) gider; gerçek bir SMTP sunucusu yapılandırılmadı.
   Canlıda `MAIL_HOST`/`MAIL_SMTP_PORT` ve gönderici alan adı (SPF/DKIM) ayrı bir karar ve adımdır.
 - **SMS/WhatsApp demo kanaldır.** Gerçek sağlayıcı ücretlidir ve gerçek kişilere ulaşır; bilinçli olarak eklenmedi.
-- Saha, çalışma saati ve personel **yönetim ekranları yok**; bu veriler şimdilik demo veriyle gelir.
 - Parola sıfırlama e-postası yerelde Mailpit'e gider; canlıda gerçek SMTP ayrı bir adımdır.
-- Takım maçlarına katılım (geliyor/gelmiyor), takım logosu ve takım maç geçmişi yok (istek §8; bkz. PROGRESS.md).
-- Saha fotoğrafları `./data/uploads` klasöründe; yedeklemede bu klasör de alınmalı (bkz. docs/YEDEKLEME.md).
+- Saha fotoğrafları ve takım logoları `./data/uploads` klasöründe; yedeklemede bu klasör de alınmalı (bkz. docs/YEDEKLEME.md).
+- Lig/kupa kaydını platform takımına bağlamak kaptanın onayını ister (personelin paylaştığı bağlantı); bağlanmayan
+  takımlar yalnızca adıyla yer alır.
 - Giriş hız sınırı bellekte tutulur (tek sunucu için yeterli).
 - CI iş akışı (`.github/workflows/ci.yml`) yazıldı ama bir GitHub deposunda **henüz çalıştırılmadı**.

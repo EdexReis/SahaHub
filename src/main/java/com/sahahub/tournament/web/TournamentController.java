@@ -28,11 +28,14 @@ public class TournamentController {
 	private final TournamentService service;
 	private final TournamentQueries queries;
 	private final StaffBranchService branches;
+	private final String baseUrl;
 
-	public TournamentController(TournamentService service, TournamentQueries queries, StaffBranchService branches) {
+	public TournamentController(TournamentService service, TournamentQueries queries, StaffBranchService branches,
+			@org.springframework.beans.factory.annotation.Value("${sahahub.public-base-url:http://localhost:8080}") String baseUrl) {
 		this.service = service;
 		this.queries = queries;
 		this.branches = branches;
+		this.baseUrl = baseUrl;
 	}
 
 	// ------------------------------------------------------------------ herkese açık
@@ -78,6 +81,7 @@ public class TournamentController {
 	public String manage(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long id, Model model) {
 		TournamentQueries.Detail d = queries.forStaff(me, id);
 		model.addAttribute("d", d);
+		model.addAttribute("linkBase", baseUrl + "/lig-davet/");
 		model.addAttribute("branchId", d.branchId());
 		model.addAttribute("branches", branches.branchesFor(me));
 		return "tournament/manage";
@@ -89,6 +93,31 @@ public class TournamentController {
 		service.addEntry(me, id, name);
 		redirect.addFlashAttribute("flashSuccess", "Takım eklendi.");
 		return "redirect:/isletme/ligler/" + id;
+	}
+
+	@PostMapping("/isletme/ligler/{id}/takimlar/{entryId}/bag-kaldir")
+	public String unlink(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long id, @PathVariable Long entryId,
+			RedirectAttributes redirect) {
+		service.unlinkTeam(me, id, entryId);
+		redirect.addFlashAttribute("flashSuccess", "Takım bağlantısı kaldırıldı; kaydın yeni bir bağlantısı var.");
+		return "redirect:/isletme/ligler/" + id + "#platform";
+	}
+
+	// ------------------------------------------------------------------ kaptan: kaydı takıma bağlama
+
+	@GetMapping("/lig-davet/{code}")
+	public String linkPage(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable String code, Model model) {
+		model.addAttribute("p", queries.linkPreview(me, code));
+		return "tournament/link";
+	}
+
+	@PostMapping("/lig-davet/{code}")
+	public String link(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable String code,
+			@RequestParam(name = "takim", required = false) Long teamId, RedirectAttributes redirect) {
+		service.linkTeam(me, code, teamId);
+		redirect.addFlashAttribute("flashSuccess",
+				"Takımınız bağlandı. Planlanan lig maçları burada görünür; oyuncularınız katılımını bildirebilir.");
+		return "redirect:/takimlar/" + teamId;
 	}
 
 	@PostMapping("/isletme/ligler/{id}/takimlar/{entryId}/sil")

@@ -41,6 +41,7 @@
 | 34b | Üçüncülük maçı ayrı tablo değil, son turda 1. yer (`bracket_slot = 1`) | Aynı tekil indeks, aynı ağaç hesabı ve aynı planlama/skor akışı; yalnızca taraflar galip yerine kaybedenden gelir. |
 | 35 | Görsel doğrulama ve saklama ortak (`shared.image`: `ImageNormalizer`, `UploadStore`) | Saha fotoğrafı ve takım logosu aynı güvenlik kurallarından geçer; kural tek yerde. |
 | 35b | Takım logosu bağlantısı sürümlü (`?v=` dosya adının özeti) | Logo 1 saat önbellekte tutulur; değişince adres değişir, eski logo görünmez. Dosya adı dışarı verilmez. |
+| 36b | Lig kaydı ↔ platform takımı: rıza kaptanda (paylaşılan kod), turnuva modülü takımları `TeamLinkPort` ile görür, maç değişikliklerini `MatchChanged` olayıyla yayınlar | Bağımlılık tek yönlü (topluluk → turnuva). Olay maçın tamamını taşır; takım tarafı kopyasını her seferinde buna göre günceller (planlama, iptal, skor, eleme düzeltmesi, bağlantı değişikliği aynı yoldan). |
 | 36 | Katılım yanıtı tablo satırı (`team_match_attendance`, birincil anahtar maç+kişi), `INSERT … ON CONFLICT DO UPDATE` | Yanıt değiştirmek tek ifade; aynı kişinin iki yanıtı oluşamaz. Sayımlar her açılışta hesaplanır. |
 
 ## 2. Paketler (modüller)
@@ -196,6 +197,8 @@ erDiagram
     LISTING ||--o{ LISTING_APPLICATION : ""
     BRANCH ||--o{ TOURNAMENT : ""
     TOURNAMENT ||--o{ TOURNAMENT_ENTRY : "3-20 takım"
+    TEAM |o--o{ TOURNAMENT_ENTRY : "isteğe bağlı bağlantı"
+    TOURNAMENT_MATCH |o--o{ TEAM_MATCH : "bağlı takımdaki kopya"
     TOURNAMENT ||--o{ TOURNAMENT_MATCH : "fikstür"
     TOURNAMENT_MATCH ||--o| PITCH_OCCUPANCY : "source TOURNAMENT_MATCH"
 
