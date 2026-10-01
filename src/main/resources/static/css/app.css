@@ -112,6 +112,8 @@ a:hover { color: var(--ink); }
 .nav a:hover, .nav button:hover { color: #fff; background: rgba(255,255,255,.08); }
 .nav a[aria-current="page"] { color: #fff; box-shadow: inset 0 -2px 0 var(--green); border-radius: 0; }
 .nav form { margin: 0; }
+.nav-icon { width: 20px; height: 20px; vertical-align: -4px; }
+.nav-count { display: inline-block; min-width: 20px; padding: 0 5px; margin-left: 4px; border-radius: 10px; background: var(--green); color: #fff; font-size: 13px; font-weight: 700; line-height: 20px; text-align: center; }
 .nav .nav-staff { color: #fff; border: 1px solid rgba(255,255,255,.3); }
 .short { display: none; }
 @media (max-width: 640px) {
@@ -129,7 +131,7 @@ a:hover { color: var(--ink); }
 .page-narrow { max-width: 640px; }
 .page-head { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 24px; margin-bottom: 20px; }
 .page-head h1 { margin: 0; }
-.page-head .count { margin: 0 0 0 auto; }
+.page-head .count, .page-head > .btn-row { margin: 0 0 0 auto; }
 .eyebrow { font: 600 13px var(--font); color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
 .footer { border-top: 1px solid var(--line); color: var(--ink-3); font-size: 13px; padding: 16px var(--gutter); text-align: center; }
 
@@ -349,6 +351,9 @@ legend { font: 600 14px var(--font); margin-bottom: 8px; padding: 0; }
 .slot.is-off { background: var(--grey-soft); border-color: var(--line); cursor: default; }
 .slot.is-off .s-time { color: var(--ink-3); }
 .slot.is-off .s-price { color: var(--ink-3); font-weight: 500; }
+.slot.is-waitable { cursor: pointer; }
+.slot.is-waitable:hover { border-color: var(--ink-3); background: #E4E7E3; }
+.slot.is-waitable u { text-underline-offset: 3px; color: var(--ink-2); }
 .slot.is-blocked { background: repeating-linear-gradient(135deg, var(--grey-soft) 0 6px, #E2E6E1 6px 12px); }
 .night-divider {
 	grid-column: 1 / -1;
@@ -393,8 +398,19 @@ legend { font: 600 14px var(--font); margin-bottom: 8px; padding: 0; }
 .res-item h3 a { color: var(--ink); }
 @media (max-width: 520px) {
 	.res-item { grid-template-columns: 64px minmax(0,1fr); }
-	.res-item .status { grid-column: 2; justify-self: start; }
+	.res-item .status, .res-item .res-action { grid-column: 2; justify-self: start; }
 }
+.wait-pos { font: 700 22px/1 var(--font-num); color: var(--ink-2); }
+.status-OFFERED { color: var(--amber); background: var(--amber-soft); border-color: #F0D29C; }
+.status-WAITING { color: var(--ink-2); background: var(--surface); border-color: var(--line-strong); }
+.note-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.note-item { padding: 14px 0 14px 14px; border-bottom: 1px solid var(--line); border-left: 3px solid transparent; }
+.note-item.is-unread { border-left-color: var(--green); background: var(--surface); }
+.note-item h2 { font-size: 16px; margin: 0 0 2px; }
+.note-item p { margin: 0 0 4px; font-size: 15px; color: var(--ink-2); overflow-wrap: anywhere; }
+.check { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; font-size: 15px; }
+.check input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--green); flex: none; }
+.res-action { margin: 0; }
 .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
 
 /* ------------------------------------------------------------ giriş */
@@ -677,3 +693,11 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 @media (prefers-reduced-motion: reduce) {
 	*, *::before, *::after { transition: none !important; }
 }
+
+/* ------------------------------------------------------------ personel: düzenli rezervasyon */
+.series-grid { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 16px; }
+@media (max-width: 860px) { .series-grid { grid-template-columns: minmax(0, 1fr); } }
+.series-table td { padding: 8px 10px; }
+.series-table input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--green); margin: 0; }
+.series-table tr.is-unavailable td { background: #FAFBF9; color: var(--ink-3); }
+.series-table .status + .tiny { display: block; margin-top: 2px; }

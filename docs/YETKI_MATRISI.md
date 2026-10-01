@@ -46,6 +46,12 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | Çevrim içi ödeme | Yalnızca kendi geçici tutması; simülasyon sayfasını yalnızca ödemenin sahibi görür |
 | Havale bildirimi | Yalnızca kendi onaylı rezervasyonu |
 | Platform: işletme askıya alma | Gerekçe zorunlu, `PLATFORM_BUSINESS_STATUS_CHANGED` denetim kaydı |
+| Bekleme listesi | Yalnızca kayıtlı müşteri, yalnızca dolu saat; aynı saate bir kez, aynı anda en fazla 5 saat; yalnızca kendi kaydından çıkabilir |
+| Bildirimler, tercihler | Yalnızca kendi bildirimleri (`user_id`) ve kendi tercihleri |
+| Platform: demo mesaj kutusu | Yalnızca platform yöneticisi (`/admin/**`); kayıtlar demo SMS/WhatsApp, gerçek gönderim yok |
+
+Personel tarafında düzenli rezervasyon yeni izin gerektirmez: oluşturma `RESERVATION_CREATE`, "bu ve sonraki
+maçları iptal" `RESERVATION_CANCEL` ister (her ikisi de rol matrisinde zaten tanımlı).
 
 ## Kontrol nasıl yapılır?
 

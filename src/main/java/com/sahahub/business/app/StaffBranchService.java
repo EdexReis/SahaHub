@@ -27,6 +27,10 @@ public class StaffBranchService {
 	/** Personelin erişebildiği şube. Menüde yalnızca yetkili bağlantılar gösterilsin diye izin bayrakları da var. */
 	public record BranchRef(Long id, String name, Long businessId, String businessName, StaffRole role) {
 
+		public boolean seriesAccess() {
+			return RolePermissions.allows(role, Permission.RESERVATION_CREATE);
+		}
+
 		public boolean cashAccess() {
 			return RolePermissions.allows(role, Permission.CASH_MANAGE);
 		}

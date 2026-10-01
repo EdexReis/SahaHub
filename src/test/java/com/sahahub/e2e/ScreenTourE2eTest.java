@@ -40,7 +40,7 @@ class ScreenTourE2eTest extends E2eTestBase {
 			chooseDay(p, 1);
 			check(p, size, "03-pitch-day");
 
-			p.locator("button.slot").last().click();
+			p.locator("button.slot:not(.is-waitable)").last().click();
 			p.waitForURL(Pattern.compile(".*/rezervasyon/[A-Z0-9]{8}$"));
 			check(p, size, "04-reservation-held");
 			p.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(Pattern.compile("^Kaporayı öde"))).click();
@@ -54,6 +54,18 @@ class ScreenTourE2eTest extends E2eTestBase {
 
 			p.navigate("/rezervasyonlarim");
 			check(p, size, "05-my-reservations");
+
+			// Bekleme listesi: bugün Saha 1'in akşamı dolu; her ekran boyutu ayrı bir saat için sıraya girer
+			p.navigate("/sahalar");
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Saha 1 · Kapalı")).click();
+			p.locator("button.slot.is-waitable").nth(SIZES.indexOf(size)).click();
+			p.waitForURL(Pattern.compile(".*/rezervasyonlarim.*"));
+			assertThat(p.locator("#bekleme")).containsText("sıradasınız");
+			check(p, size, "22-waitlist");
+			p.navigate("/bildirimler");
+			check(p, size, "23-notifications");
+			p.navigate("/profil");
+			check(p, size, "24-notification-preferences");
 
 			// Kapalı gün (Ataşehir şubesinde kurgusal tatil)
 			p.navigate("/sahalar");
@@ -131,6 +143,15 @@ class ScreenTourE2eTest extends E2eTestBase {
 			q.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kasa")).click();
 			assertThat(q.locator("h1")).hasText("Kasa");
 			check(q, size, "18-cash");
+
+			q.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Düzenli rezervasyon")).click();
+			q.getByLabel("Saha", new Page.GetByLabelOptions().setExact(true)).selectOption(new com.microsoft.playwright.options.SelectOption().setLabel("Saha 2 · Açık"));
+			q.getByLabel("İlk maç tarihi").fill(java.time.LocalDate.now(java.time.ZoneId.of("Europe/Istanbul")).plusDays(7).toString());
+			q.getByLabel("Başlangıç", new Page.GetByLabelOptions().setExact(true)).fill("23:00");
+			q.getByLabel("Müşteri / takım adı").fill("Perşembe Takımı");
+			q.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Tarihleri önizle")).click();
+			assertThat(q.locator(".series-table")).isVisible();
+			check(q, size, "25-staff-series-preview");
 			c2.close();
 		}
 

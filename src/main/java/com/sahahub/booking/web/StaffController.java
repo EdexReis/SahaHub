@@ -20,6 +20,7 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 import com.sahahub.booking.app.CalendarView;
 import com.sahahub.booking.app.PitchBlockService;
 import com.sahahub.booking.app.ReservationView;
+import com.sahahub.booking.app.SeriesService;
 import com.sahahub.booking.app.StaffCalendarService;
 import com.sahahub.booking.app.StaffReservationService;
 import com.sahahub.business.app.StaffBranchService;
@@ -46,14 +47,17 @@ public class StaffController {
 	private final StaffReservationService reservations;
 	private final PitchBlockService blocks;
 	private final PaymentPanelService payments;
+	private final SeriesService series;
 
 	public StaffController(StaffBranchService branches, StaffCalendarService calendar,
-			StaffReservationService reservations, PitchBlockService blocks, PaymentPanelService payments) {
+			StaffReservationService reservations, PitchBlockService blocks, PaymentPanelService payments,
+			SeriesService series) {
 		this.branches = branches;
 		this.calendar = calendar;
 		this.reservations = reservations;
 		this.blocks = blocks;
 		this.payments = payments;
+		this.series = series;
 	}
 
 	@GetMapping("/isletme")
@@ -82,6 +86,7 @@ public class StaffController {
 			model.addAttribute("r", r);
 			model.addAttribute("moveForm", MoveForm.from(r));
 			model.addAttribute("pay", payments.forStaff(me, selectedCode));
+			model.addAttribute("series", series.info(me, selectedCode));
 		}
 		return "staff/calendar";
 	}
@@ -150,6 +155,7 @@ public class StaffController {
 			model.addAttribute("r", r);
 			model.addAttribute("moveForm", MoveForm.from(r));
 			model.addAttribute("pay", payments.forStaff(me, code));
+			model.addAttribute("series", series.info(me, code));
 			model.addAttribute("cal", calendar.day(me, r.branchId(), r.businessDay()));
 			return "staff/panels :: reservation";
 		}

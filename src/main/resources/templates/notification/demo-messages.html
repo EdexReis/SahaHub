@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Demo mesaj kutusu · Platform · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<div class="page-head">
+		<div><p class="eyebrow">Platform yönetimi</p><h1>Demo mesaj kutusu</h1></div>
+		<a class="btn btn-secondary btn-sm" th:href="@{/admin/isletmeler}">İşletmeler</a>
+	</div>
+	<p class="notice-demo">SMS ve WhatsApp bu sürümde demo kanaldır. Buradaki mesajların hiçbiri gerçek bir telefona gönderilmedi. Son 100 mesaj gösterilir.</p>
+
+	<div class="empty" th:if="${#lists.isEmpty(messages)}"><p>Henüz kısa mesaj oluşmadı.</p></div>
+
+	<div class="table-wrap" th:unless="${#lists.isEmpty(messages)}">
+		<table class="table">
+			<thead><tr><th scope="col">Zaman</th><th scope="col">Kanal</th><th scope="col">Alıcı</th><th scope="col">Mesaj</th><th scope="col">Durum</th></tr></thead>
+			<tbody>
+			<tr th:each="m : ${messages}">
+				<td class="num" th:text="${@fmt.at(m.createdAt)}">1 Eki 2026 20:15</td>
+				<td th:text="${m.channel.name() == 'SMS'} ? 'SMS' : 'WhatsApp'">SMS</td>
+				<td class="num" th:text="${m.recipient}">0532…</td>
+				<td th:text="${m.body}">Mesaj</td>
+				<td th:text="${m.status.name() == 'SENT'} ? 'Kaydedildi (demo)' : (${m.status.name() == 'PENDING'} ? 'Sırada' : 'Başarısız')">Kaydedildi</td>
+			</tr>
+			</tbody>
+		</table>
+	</div>
+</main>
+</body>
+</html>

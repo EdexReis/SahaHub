@@ -118,6 +118,13 @@ public class Reservation {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
+	/** Düzenli rezervasyonun parçasıysa seri ve serideki sırası (1'den başlar). */
+	@Column(name = "series_id", updatable = false)
+	private Long seriesId;
+
+	@Column(name = "series_index", updatable = false)
+	private Integer seriesIndex;
+
 	/** İyimser kilit: aynı kaydı aynı anda değiştiren iki işlemden biri hata alır. */
 	@Version
 	private long version;
@@ -302,6 +309,23 @@ public class Reservation {
 		this.startsAt = newPlay.start();
 		this.endsAt = newPlay.end();
 		this.updatedAt = now;
+	}
+
+	/** Kaydedilmeden önce seriye bağlanır; sonradan değiştirilemez. */
+	public void attachToSeries(Long seriesId, int index) {
+		if (this.id != null) {
+			throw new IllegalStateException("Kaydedilmiş rezervasyon seriye bağlanamaz");
+		}
+		this.seriesId = seriesId;
+		this.seriesIndex = index;
+	}
+
+	public Long getSeriesId() {
+		return seriesId;
+	}
+
+	public Integer getSeriesIndex() {
+		return seriesIndex;
 	}
 
 	public void snapshotDepositPolicy(DepositPolicy policy) {

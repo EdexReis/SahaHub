@@ -66,4 +66,19 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
 	long countByCustomerIdAndStatus(Long customerId, ReservationStatus status);
 
+	/** Serinin verilen andan sonra başlayan açık maçları (kilitli). */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select r from Reservation r where r.seriesId = :seriesId and r.startsAt >= :from
+			  and r.status in ('HELD', 'CONFIRMED') order by r.startsAt""")
+	List<Reservation> openInSeriesFromForUpdate(Long seriesId, Instant from);
+
+	List<Reservation> findBySeriesIdOrderBySeriesIndex(Long seriesId);
+
+	/** Hatırlatma görevi: başlangıcı verilen aralıkta olan onaylı rezervasyonlar. */
+	@Query("""
+			select r from Reservation r where r.status = 'CONFIRMED' and r.startsAt > :from and r.startsAt <= :to
+			order by r.startsAt""")
+	List<Reservation> confirmedStartingBetween(Instant from, Instant to);
+
 }

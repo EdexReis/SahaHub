@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Bildirim tercihleri · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/bildirimler}">← Bildirimler</a></p>
+	<div class="page-head"><h1>Bildirim tercihleri</h1></div>
+
+	<form class="panel" th:action="@{/profil/bildirimler}" method="post">
+		<p class="small muted">Uygulama içi bildirimler her zaman açıktır. Aşağıdakiler ek kanallardır.</p>
+		<label class="check">
+			<input type="checkbox" name="eposta" value="true" th:checked="${prefs.email()}">
+			<span>E-posta ile bildir <span class="small muted" th:text="'(' + ${prefs.emailAddress()} + ')'">(ad@ornek.com)</span></span>
+		</label>
+		<label class="check">
+			<input type="checkbox" name="sms" value="true" th:checked="${prefs.sms()}">
+			<span>SMS ile bildir</span>
+		</label>
+		<div class="field">
+			<label for="telefon">Telefon</label>
+			<input class="input" id="telefon" name="telefon" type="tel" autocomplete="tel" inputmode="tel" maxlength="20"
+			       th:value="${prefs.phone()}" placeholder="0532 000 00 00">
+			<p class="hint">SMS bildirimi için gerekli.</p>
+		</div>
+		<p class="notice-demo">SMS bu sürümde demo kanaldır: mesaj gerçekten gönderilmez, yalnızca kaydedilir. E-postalar yerel geliştirme ortamında Mailpit'e düşer.</p>
+		<button type="submit" class="btn btn-primary">Kaydet</button>
+	</form>
+</main>
+</body>
+</html>

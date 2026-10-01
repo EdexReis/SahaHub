@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title th:text="${cal.branchName} + ' · Düzenli rezervasyon · SahaHub'">Düzenli rezervasyon · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide">
+	<nav th:replace="~{fragments/staffnav :: subnav(${cal.branchId}, 'duzenli')}"></nav>
+	<div class="page-head">
+		<div><p class="eyebrow" th:text="${cal.branchName}">Şube</p><h1>Düzenli rezervasyon</h1></div>
+	</div>
+	<p class="small muted" style="max-width:70ch">Her hafta aynı gün ve saatte oynayan takımlar için. Önce önizleyin: dolu ya da kapalı tarihler işaretlenir.
+		Her maç ayrı bir rezervasyondur; tek tek taşınabilir, iptal edilebilir ve ayrı ödenir.</p>
+
+	<form class="series-grid" th:action="@{/isletme/subeler/{id}/duzenli(id=${cal.branchId})}" th:object="${form}" method="post" novalidate>
+		<section class="panel" aria-labelledby="sf-title">
+			<h2 id="sf-title" class="section-title">Bilgiler</h2>
+			<div class="alert alert-error" role="alert" th:if="${formError}" th:text="${formError}">Hata</div>
+			<div class="field" th:classappend="${#fields.hasErrors('pitchId')} ? 'field-error'">
+				<label for="sf-pitch">Saha</label>
+				<select class="select" id="sf-pitch" th:field="*{pitchId}">
+					<option value="">Saha seçin</option>
+					<option th:each="p : ${cal.pitches}" th:value="${p.id()}" th:text="${p.name()}">Saha 1</option>
+				</select>
+				<p class="error-text" th:if="${#fields.hasErrors('pitchId')}" th:errors="*{pitchId}">Hata</p>
+			</div>
+			<div class="field-row">
+				<div class="field" th:classappend="${#fields.hasErrors('date')} ? 'field-error'">
+					<label for="sf-date">İlk maç tarihi</label>
+					<input class="input num" id="sf-date" type="date" th:field="*{date}">
+					<p class="error-text" th:if="${#fields.hasErrors('date')}" th:errors="*{date}">Hata</p>
+				</div>
+				<div class="field" th:classappend="${#fields.hasErrors('time')} ? 'field-error'">
+					<label for="sf-time">Başlangıç</label>
+					<input class="input num" id="sf-time" type="time" step="900" th:field="*{time}">
+					<p class="error-text" th:if="${#fields.hasErrors('time')}" th:errors="*{time}">Hata</p>
+				</div>
+			</div>
+			<div class="field-row">
+				<div class="field">
+					<label for="sf-dur">Süre</label>
+					<select class="select" id="sf-dur" th:field="*{durationMinutes}">
+						<option th:each="m : ${ {30, 45, 60, 90, 120, 150, 180} }" th:value="${m}" th:text="${@fmt.duration(m)}">1 saat</option>
+					</select>
+				</div>
+				<div class="field" th:classappend="${#fields.hasErrors('occurrences')} ? 'field-error'">
+					<label for="sf-count">Kaç hafta</label>
+					<input class="input num" id="sf-count" type="number" min="2" th:max="${maxOccurrences}" th:field="*{occurrences}" aria-describedby="sf-count-hint">
+					<p class="hint" id="sf-count-hint" th:text="'2 ile ' + ${maxOccurrences} + ' arası'">2 ile 26 arası</p>
+				</div>
+			</div>
+			<div class="field">
+				<label for="sf-channel">Kanal</label>
+				<select class="select" id="sf-channel" th:field="*{channel}">
+					<option value="PHONE">Telefon</option>
+					<option value="WALK_IN">Yüz yüze</option>
+				</select>
+			</div>
+			<div class="field" th:classappend="${#fields.hasErrors('guestName')} ? 'field-error'">
+				<label for="sf-name">Müşteri / takım adı</label>
+				<input class="input" id="sf-name" th:field="*{guestName}" autocomplete="off">
+				<p class="error-text" th:if="${#fields.hasErrors('guestName')}" th:errors="*{guestName}">Hata</p>
+			</div>
+			<div class="field" th:classappend="${#fields.hasErrors('guestPhone')} ? 'field-error'">
+				<label for="sf-phone">Telefon</label>
+				<input class="input" id="sf-phone" type="tel" inputmode="tel" th:field="*{guestPhone}" autocomplete="off">
+				<p class="error-text" th:if="${#fields.hasErrors('guestPhone')}" th:errors="*{guestPhone}">Hata</p>
+			</div>
+			<div class="field" th:classappend="${#fields.hasErrors('customerEmail')} ? 'field-error'">
+				<label for="sf-email">Kayıtlı müşteri e-postası</label>
+				<input class="input" id="sf-email" type="email" th:field="*{customerEmail}" autocomplete="off">
+				<p class="error-text" th:if="${#fields.hasErrors('customerEmail')}" th:errors="*{customerEmail}">Hata</p>
+			</div>
+			<div class="field">
+				<label for="sf-note">Not</label>
+				<textarea class="textarea" id="sf-note" th:field="*{note}" rows="2"></textarea>
+			</div>
+			<button class="btn btn-secondary btn-block" type="submit"
+			        th:formaction="@{/isletme/subeler/{id}/duzenli/onizleme(id=${cal.branchId})}">Tarihleri önizle</button>
+		</section>
+
+		<section class="panel" aria-labelledby="sp-title" aria-live="polite">
+			<h2 id="sp-title" class="section-title">Önizleme</h2>
+			<div class="empty" th:if="${preview == null}">
+				<p>Bilgileri doldurup “Tarihleri önizle”ye basın.</p>
+			</div>
+			<th:block th:if="${preview != null}">
+				<p class="small" th:text="${preview.availableCount()} + ' / ' + ${#lists.size(preview.items())} + ' tarih uygun.'">7 / 8 tarih uygun.</p>
+				<div class="table-wrap">
+					<table class="table series-table">
+						<thead><tr><th scope="col"><span class="sr-only">Seç</span></th><th scope="col">Tarih</th><th scope="col">Saat</th><th scope="col">Durum</th><th scope="col" class="num">Ücret</th></tr></thead>
+						<tbody>
+						<tr th:each="o : ${preview.items()}" th:classappend="${!o.available()} ? 'is-unavailable'">
+							<td>
+								<input type="checkbox" name="chosen" th:value="${o.date()}" th:id="'occ-' + ${o.index()}"
+								       th:checked="${#lists.contains(form.chosen, o.date())}" th:disabled="${!o.available()}">
+							</td>
+							<td><label th:for="'occ-' + ${o.index()}" th:text="${@fmt.dayMonth(o.date())}">8 Ekim Perşembe</label></td>
+							<td class="num" th:text="${@fmt.timeRange(o.start(), o.end())}">21:00–22:00</td>
+							<td>
+								<span th:if="${o.available()}" class="status status-CONFIRMED">Uygun</span>
+								<span th:unless="${o.available()}" class="status status-NO_SHOW" th:text="${o.status().label()}">Dolu</span>
+								<span class="tiny muted" th:if="${o.reason() != null and !o.available()}" th:text="${o.reason()}">Neden</span>
+							</td>
+							<td class="num" th:text="${@fmt.money(o.price(), o.currency())}">1.400 ₺</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="btn-row" style="margin-top:16px">
+					<button class="btn btn-primary" type="submit" name="mod" value="ALL" th:disabled="${!preview.allAvailable()}"
+					        th:text="'Tümünü oluştur (' + ${#lists.size(preview.items())} + ')'">Tümünü oluştur (8)</button>
+					<button class="btn btn-secondary" type="submit" name="mod" value="SELECTED" th:disabled="${preview.availableCount() == 0}">Yalnızca seçili tarihleri oluştur</button>
+				</div>
+				<p class="tiny muted" style="margin:8px 0 0" th:unless="${preview.allAvailable()}">Uygun olmayan tarih olduğu için “Tümünü oluştur” kapalı. Seçili tarihlerle devam edebilir ya da saati değiştirip yeniden önizleyebilirsiniz.</p>
+				<p class="tiny muted" style="margin:8px 0 0">Oluşturma sırasında tarihlerden biri dolarsa hiçbir maç oluşturulmaz.</p>
+			</th:block>
+		</section>
+	</form>
+</main>
+</body>
+</html>

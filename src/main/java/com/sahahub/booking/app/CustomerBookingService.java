@@ -138,6 +138,7 @@ public class CustomerBookingService {
 			throw new BusinessRuleException("Onay için önce kaporayı ödeyin.");
 		}
 		r.confirm(now);
+		events.publishEvent(new BookingEvents.ReservationConfirmed(r.getId()));
 	}
 
 	@Transactional
@@ -157,6 +158,8 @@ public class CustomerBookingService {
 		pricing.releaseCoupons(r.getId());
 		// Commit sonrası ödeme modülü, süresi içindeki iptalde çevrim içi ödemeyi iade eder
 		events.publishEvent(new ReservationCancelled(r.getId(), true));
+		events.publishEvent(new BookingEvents.SlotReleased(r.getId(), r.getPitchId(), r.getStartsAt(),
+				r.occupiedRange().end()));
 		if (!wasHeld) {
 			audit.record(user.id(), r.getBusinessId(), "RESERVATION_CANCELLED_BY_CUSTOMER", "Reservation", r.getId(),
 					"code=" + r.getCode());
