@@ -604,7 +604,9 @@ p.night-note { margin: 2px 0 0; }
 .table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); font-size: 15px; }
 .table th, .table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .table th { font-size: 13px; color: var(--ink-3); font-weight: 600; background: #FAFBF9; }
-.table-wrap { overflow-x: auto; }
+/* position: relative — içindeki ekran okuyucu etiketleri (mutlak konumlu .sr-only) kaydırma kutusunun
+   dışına taşıp sayfayı yatayda genişletmesin (telefonda E2E taşma kontrolü yakaladı) */
+.table-wrap { overflow-x: auto; position: relative; }
 .table td.num, .price-table td:last-child { white-space: nowrap; }
 .coupon-code { font-weight: 700; }
 .inline-form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0; }
@@ -711,7 +713,7 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .app-item h3 a { color: var(--ink); }
 .app-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .app-actions form { margin: 0; }
-.field-row.three { grid-template-columns: repeat(3, 1fr); }
+.field-row.three { grid-template-columns: repeat(3, 1fr); align-items: end; }
 @media (max-width: 480px) { .field-row.three { grid-template-columns: 1fr 1fr; } }
 
 /* ------------------------------------------------------------ lig: puan durumu ve fikstür */
@@ -742,6 +744,7 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .report-filter { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin-bottom: 4px; }
 .report-filter .field { margin: 0; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 16px 0 24px; }
+@media (max-width: 480px) { .kpis { grid-template-columns: 1fr 1fr; gap: 8px; } .kpi { padding: 10px; } .kpi-value { font-size: 21px; } }
 .kpi { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--green); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
 .kpi-label { font-size: 13px; font-weight: 600; color: var(--ink-3); }
 .kpi-value { font: 700 26px/1.1 var(--font-num); }
@@ -752,7 +755,7 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .report-table th, .report-table td { padding: 8px 10px; }
 .report-table td.num, .report-table th.num { text-align: right; white-space: nowrap; font-family: var(--font-num); font-size: 15px; }
 .report-table tbody th { font-weight: 600; text-align: left; background: none; color: var(--ink); font-size: 15px; white-space: nowrap; }
-.report-table tfoot th, .report-table tfoot td { font-weight: 700; border-top: 2px solid var(--line-strong); }
+.report-table tfoot th, .report-table tfoot td { font-weight: 700; border-top: 2px solid var(--line-strong); background: var(--surface); color: var(--ink); }
 .report-table tr.is-empty td { color: var(--ink-3); }
 .report-table .strong { font-weight: 700; }
 .bar { display: inline-block; width: 56px; height: 6px; background: var(--grey-soft); border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }

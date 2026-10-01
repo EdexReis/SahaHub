@@ -65,7 +65,9 @@ public class SecurityConfig {
 						"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
 								+ "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
 								+ "frame-ancestors 'none'; form-action 'self'; base-uri 'self'"))
-				.referrerPolicy(ref -> ref.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)))
+				.referrerPolicy(ref -> ref.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+				// Uygulama kamera, mikrofon, konum vb. kullanmaz; gömülü içerik de kullanamasın
+				.permissionsPolicyHeader(pp -> pp.policy("camera=(), microphone=(), geolocation=(), payment=(), usb=()")))
 			.addFilterBefore(new LoginRateLimitFilter(attempts), UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}
