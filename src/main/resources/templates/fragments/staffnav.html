@@ -9,6 +9,9 @@
 		<a th:if="${b.tournamentAccess()}" th:href="@{/isletme/subeler/{id}/ligler(id=${branchId})}" th:aria-current="${active == 'ligler'} ? 'page'">Ligler</a>
 		<a th:if="${b.reportAccess()}" th:href="@{/isletme/subeler/{id}/raporlar(id=${branchId})}" th:aria-current="${active == 'raporlar'} ? 'page'">Raporlar</a>
 		<a th:if="${b.cashAccess()}" th:href="@{/isletme/subeler/{id}/kasa(id=${branchId})}" th:aria-current="${active == 'kasa'} ? 'page'">Kasa</a>
+		<a th:if="${b.settingsAccess()}" th:href="@{/isletme/subeler/{id}/ayarlar(id=${branchId})}" th:aria-current="${active == 'ayarlar'} ? 'page'">Şube ve sahalar</a>
+		<a th:if="${b.ownerAccess()}" th:href="@{/isletme/isletmeler/{biz}/personel(biz=${b.businessId()}, sube=${branchId})}" th:aria-current="${active == 'personel'} ? 'page'">Personel</a>
+		<a th:if="${b.ownerAccess()}" th:href="@{/isletme/isletmeler/{biz}/denetim(biz=${b.businessId()}, sube=${branchId})}" th:aria-current="${active == 'denetim'} ? 'page'">Denetim kaydı</a>
 		<a th:if="${b.pricingAccess()}" th:href="@{/isletme/subeler/{id}/fiyatlar(id=${branchId})}" th:aria-current="${active == 'fiyatlar'} ? 'page'">Fiyatlandırma</a>
 	</th:block>
 </nav>

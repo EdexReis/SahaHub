@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title>Personel ve yetkiler · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide">
+	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'personel')}"></nav>
+	<div class="page-head"><div><p class="eyebrow">İşletme geneli</p><h1>Personel ve yetkiler</h1></div></div>
+
+	<div class="series-grid">
+		<form class="panel" th:action="@{/isletme/isletmeler/{b}/personel(b=${businessId}, sube=${branchId})}" method="post" aria-labelledby="as-title">
+			<h2 id="as-title" class="section-title">Görev ver</h2>
+			<div class="field">
+				<label for="as-mail">SahaHub hesabının e-postası</label>
+				<input class="input" id="as-mail" type="email" name="eposta" required autocomplete="off">
+				<p class="hint">Kişinin önce SahaHub'a kayıt olması gerekir. Davet e-postası gönderilmez.</p>
+			</div>
+			<div class="field">
+				<label for="as-role">Rol</label>
+				<select class="select" id="as-role" name="rol">
+					<option value="RECEPTION">Resepsiyon / kasa</option>
+					<option value="BRANCH_MANAGER">Şube yöneticisi</option>
+					<option value="OWNER">İşletme sahibi (tüm şubeler)</option>
+				</select>
+			</div>
+			<div class="field">
+				<label for="as-branch">Şube <span class="small muted">(sahip için gerekmez)</span></label>
+				<select class="select" id="as-branch" name="gorevSube">
+					<option th:each="b : ${businessBranches}" th:value="${b.id()}" th:text="${b.name()}" th:selected="${b.id() == branchId}">Kadıköy</option>
+				</select>
+			</div>
+			<button class="btn btn-primary" type="submit">Görevi ver</button>
+			<p class="tiny muted" style="margin:8px 0 0">Ne yapabilecekleri: <code>docs/YETKI_MATRISI.md</code>. Resepsiyon iade yapamaz, fiyat ve saha ayarlarını değiştiremez.</p>
+		</form>
+
+		<section aria-labelledby="ls-title">
+			<h2 id="ls-title" class="section-title">Görevliler</h2>
+			<ul class="res-list">
+				<li class="app-item" th:each="r : ${rows}" th:classappend="${!r.active()} ? 'is-inactive'">
+					<div style="min-width:0">
+						<h3 class="truncate" th:text="${r.name()}">Elif Kaya</h3>
+						<span class="small muted" th:text="${r.email()}">e-posta</span>
+						<div class="small">
+							<span th:text="${r.role().name() == 'OWNER'} ? 'İşletme sahibi' : (${r.role().name() == 'BRANCH_MANAGER'} ? 'Şube yöneticisi' : 'Resepsiyon / kasa')">Resepsiyon</span>
+							<span th:if="${r.branchName() != null}" th:text="' · ' + ${r.branchName()}"> · Kadıköy</span>
+						</div>
+					</div>
+					<div class="app-actions">
+						<span class="status status-COMPLETED" th:unless="${r.active()}">Görevi bitti</span>
+						<form th:if="${r.active() and r.userId() != me.id()}"
+						      th:action="@{/isletme/isletmeler/{b}/personel/{m}/kaldir(b=${businessId}, m=${r.membershipId()}, sube=${branchId})}" method="post"
+						      th:data-confirm="${r.name()} + ' görevinden alınsın mı? Yetkisi hemen kalkar.'">
+							<button class="btn btn-danger btn-sm" type="submit">Görevi kaldır</button>
+						</form>
+					</div>
+				</li>
+			</ul>
+		</section>
+	</div>
+</main>
+</body>
+</html>

@@ -53,7 +53,7 @@ public class CatalogService {
 	/** Saha keşfi kartı. */
 	public record PitchCard(Long id, String name, String branchName, String businessName, String district,
 			String city, String surfaceLabel, boolean indoor, int capacityPlayers, Integer lengthM, Integer widthM,
-			List<String> amenities, BigDecimal fromHourlyPrice, String currency, int slotMinutes) {
+			List<String> amenities, BigDecimal fromHourlyPrice, String currency, int slotMinutes, boolean hasPhoto) {
 	}
 
 	private final BusinessRepository businesses;
@@ -152,7 +152,7 @@ public class CatalogService {
 				.orElseThrow();
 			return new PitchCard(p.getId(), p.getName(), b.getName(), bu.getName(), b.getDistrict(), b.getCity(),
 					p.getSurface().label(), p.isIndoor(), p.getCapacityPlayers(), p.getLengthM(), p.getWidthM(),
-					amenities(p), from, p.getCurrency(), p.getSlotMinutes());
+					amenities(p), from, p.getCurrency(), p.getSlotMinutes(), p.getPhotoPath() != null);
 		}).toList();
 	}
 

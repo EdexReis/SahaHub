@@ -67,6 +67,8 @@
 		</section>
 
 		<aside class="panel pitch-facts" aria-label="Saha bilgileri">
+			<img th:if="${ctx.pitch().photoPath != null}" class="pitch-photo" th:src="@{/saha-fotograf/{id}(id=${ctx.pitch().id})}"
+			     th:alt="${ctx.pitch().name} + ' fotoğrafı'" width="800" height="500" loading="lazy">
 			<h2 class="h3" style="font-size:18px">Saha bilgileri</h2>
 			<dl class="kv">
 				<dt>Kapasite</dt><dd th:text="${ctx.pitch().capacityPlayers / 2} + '+' + ${ctx.pitch().capacityPlayers / 2} + ' oyuncu'">7+7</dd>

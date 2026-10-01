@@ -151,6 +151,7 @@ a:hover { color: var(--ink); }
 }
 .alert svg { flex: none; margin-top: 2px; }
 .alert-success { background: var(--green-soft); border-color: #A9D8BB; color: var(--green-ink); }
+.alert-warning { background: var(--amber-soft); border-color: #F0D29C; color: var(--amber); }
 .alert-error { background: var(--red-soft); border-color: #F2B8B2; color: var(--red); }
 .alert-warn { background: var(--amber-soft); border-color: #F0D29C; color: var(--amber); }
 .alert-info { background: var(--surface); border-color: var(--line); color: var(--ink-2); }
@@ -768,3 +769,22 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .rank li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--line); }
 .defs { margin-top: 8px; }
 .defs summary { cursor: pointer; color: var(--green-ink); font-weight: 600; font-size: 14px; }
+
+/* ------------------------------------------------------------ yönetim ekranları */
+.hours-table { border-collapse: collapse; width: 100%; }
+.hours-table th, .hours-table td { padding: 4px 6px; text-align: left; font-size: 14px; }
+.hours-table thead th { color: var(--ink-3); font-weight: 600; font-size: 13px; }
+.hours-table tbody th { font-weight: 600; width: 48px; }
+.hours-table input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--green); }
+.hours-table .input { min-height: 40px; padding: 6px 8px; }
+.pitch-photo { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--r); border: 1px solid var(--line); margin-bottom: 12px; background: var(--grey-soft); }
+.app-item.is-inactive h3, .app-item.is-inactive .small { color: var(--ink-3); }
+.audit-table td { vertical-align: top; font-size: 14px; }
+.audit-table .details { overflow-wrap: anywhere; max-width: 420px; }
+.nowrap { white-space: nowrap; }
+.pitch-row.with-photo { grid-template-columns: 160px minmax(0, 1fr) auto; }
+.pitch-thumb { width: 160px; height: 100px; object-fit: cover; border-radius: var(--r); border: 1px solid var(--line); background: var(--grey-soft); }
+@media (max-width: 560px) {
+	.pitch-row.with-photo { grid-template-columns: minmax(0, 1fr) auto; }
+	.pitch-row.with-photo .pitch-thumb { grid-column: 1 / -1; width: 100%; height: 140px; }
+}

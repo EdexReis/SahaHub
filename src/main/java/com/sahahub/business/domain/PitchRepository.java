@@ -8,4 +8,6 @@ public interface PitchRepository extends JpaRepository<Pitch, Long> {
 
 	List<Pitch> findByBranchIdAndActiveTrueOrderByName(Long branchId);
 
+	List<Pitch> findByBranchIdOrderByName(Long branchId);
+
 }

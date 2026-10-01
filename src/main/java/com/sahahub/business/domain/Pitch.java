@@ -123,6 +123,26 @@ public class Pitch {
 		this.hasLockerRoom = lockerRoom;
 	}
 
+	public void rename(String name, int capacityPlayers, Surface surface) {
+		this.name = name;
+		this.capacityPlayers = capacityPlayers;
+		this.surface = surface;
+	}
+
+	/** Rezervasyona kapatır; geçmiş kayıtlar ve sahanın kendisi silinmez. */
+	public void deactivate() {
+		this.active = false;
+	}
+
+	public void activate() {
+		this.active = true;
+	}
+
+	/** Sunucunun ürettiği dosya adı (yükleme klasörü içinde); null = fotoğraf yok. */
+	public void changePhoto(String fileName) {
+		this.photoPath = fileName;
+	}
+
 	public void changeBasePrice(BigDecimal baseHourlyPrice) {
 		this.baseHourlyPrice = baseHourlyPrice;
 	}

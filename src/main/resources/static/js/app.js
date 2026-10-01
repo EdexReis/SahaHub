@@ -32,6 +32,15 @@
 		if (msg && !window.confirm(msg)) e.preventDefault();
 	}, true);
 
+	// Dosya boyutu ön kontrolü: <input type="file" data-max-bytes="..."> (asıl sınır sunucuda)
+	document.addEventListener("change", function (e) {
+		var el = e.target;
+		if (!el.matches || !el.matches("input[type=file][data-max-bytes]") || !el.files || !el.files[0]) return;
+		var max = parseInt(el.dataset.maxBytes, 10);
+		el.setCustomValidity(el.files[0].size > max ? "Dosya en fazla " + Math.round(max / 1048576) + " MB olabilir." : "");
+		el.reportValidity();
+	});
+
 	// Yazdır düğmesi (satır içi script CSP ile yasak olduğu için buradan bağlanır)
 	document.addEventListener("click", function (e) {
 		if (e.target.matches && e.target.matches("[data-print]")) window.print();

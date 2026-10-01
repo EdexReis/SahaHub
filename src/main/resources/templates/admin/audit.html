@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title>Denetim kaydı · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide">
+	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'denetim')}"></nav>
+	<div class="page-head"><div><p class="eyebrow">İşletme geneli</p><h1>Denetim kaydı</h1></div></div>
+	<p class="small muted">Personelin kritik işlemleri (iptal, iade, indirim, kasa, fiyat, saha ve yetki değişiklikleri) burada; kayıtlar değiştirilemez ve silinmez.</p>
+
+	<form class="report-filter" method="get" th:action="@{/isletme/isletmeler/{b}/denetim(b=${businessId})}">
+		<input type="hidden" name="sube" th:value="${branchId}">
+		<div class="field"><label for="au-act">İşlem</label>
+			<select class="select" id="au-act" name="islem">
+				<option value="">Tümü</option>
+				<option th:each="a : ${p.actions()}" th:value="${a}" th:text="${a}" th:selected="${a == action}">RESERVATION_CANCELLED</option>
+			</select></div>
+		<div class="field"><label for="au-from">Başlangıç</label><input class="input num" id="au-from" type="date" name="bas" th:value="${from}"></div>
+		<div class="field"><label for="au-to">Bitiş</label><input class="input num" id="au-to" type="date" name="bit" th:value="${to}"></div>
+		<button class="btn btn-primary" type="submit">Süz</button>
+	</form>
+
+	<div class="empty" th:if="${#lists.isEmpty(p.rows())}"><p>Bu ölçütlere uyan kayıt yok.</p></div>
+	<div class="table-wrap" th:unless="${#lists.isEmpty(p.rows())}">
+		<table class="table audit-table">
+			<thead><tr><th scope="col">Zaman</th><th scope="col">Kim</th><th scope="col">İşlem</th><th scope="col">Kayıt</th><th scope="col">Ayrıntı</th></tr></thead>
+			<tbody>
+			<tr th:each="r : ${p.rows()}">
+				<td class="num nowrap" th:text="${@fmt.at(r.at())}">1 Eki 2026 20:00</td>
+				<td th:text="${r.actor() != null} ? ${r.actor()} : 'Sistem'">Elif Kaya</td>
+				<td><code th:text="${r.action()}">RESERVATION_CANCELLED</code></td>
+				<td class="nowrap" th:text="${r.entityType()} + (${r.entityId() != null} ? ' #' + ${r.entityId()} : '')">Reservation #12</td>
+				<td class="details" th:text="${r.details()}" th:title="${r.requestId() != null} ? 'Takip kodu: ' + ${r.requestId()} : null">Müşteri iptali</td>
+			</tr>
+			</tbody>
+		</table>
+	</div>
+	<nav class="pager" aria-label="Sayfalar" th:if="${p.page() > 0 or p.hasNext()}">
+		<a class="btn btn-secondary btn-sm" th:if="${p.page() > 0}" th:href="@{/isletme/isletmeler/{b}/denetim(b=${businessId}, sube=${branchId}, islem=${action}, bas=${from}, bit=${to}, sayfa=${p.page() - 1})}">← Daha yeni</a>
+		<span class="small muted" th:text="'Sayfa ' + (${p.page()} + 1)">Sayfa 1</span>
+		<a class="btn btn-secondary btn-sm" th:if="${p.hasNext()}" th:href="@{/isletme/isletmeler/{b}/denetim(b=${businessId}, sube=${branchId}, islem=${action}, bas=${from}, bit=${to}, sayfa=${p.page() + 1})}">Daha eski →</a>
+	</nav>
+</main>
+</body>
+</html>

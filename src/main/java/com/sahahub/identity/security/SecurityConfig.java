@@ -32,7 +32,7 @@ public class SecurityConfig {
 				.permitAll()
 				// Herkese açık okuma: ilan listesi/ayrıntısı, ligler, davet önizlemesi (katılmak için giriş gerekir)
 				.requestMatchers(org.springframework.http.HttpMethod.GET, "/ilanlar", "/ilanlar/{id:[0-9]+}", "/ligler",
-						"/ligler/{id:[0-9]+}", "/davet/*")
+						"/ligler/{id:[0-9]+}", "/davet/*", "/saha-fotograf/*")
 				.permitAll()
 				.requestMatchers("/admin/**").hasRole("PLATFORM_ADMIN")
 				.requestMatchers("/isletme/**").hasRole("STAFF")
