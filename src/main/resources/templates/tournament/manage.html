@@ -19,6 +19,30 @@
 		</div>
 	</div>
 
+	<!-- ================= Platform takımlarına bağlama ================= -->
+	<details class="panel" id="platform" style="margin-bottom:16px" th:unless="${#lists.isEmpty(d.entries())}">
+		<summary><strong th:text="'Platform takımları (' + ${d.linkedCount()} + '/' + ${#lists.size(d.entries())} + ' bağlı)'">Platform takımları</strong></summary>
+		<p class="small" style="margin-top:8px">Bir kaydı SahaHub'daki takımına bağlamak için bağlantısını o takımın kaptanına gönderin.
+			Kaptan açıp kendi takımını seçer. Bağlı takımın oyuncuları maç saatlerini takım sayfasında görür, katılımını
+			bildirir ve bildirim alır. Saat ve skoru yine siz girersiniz.</p>
+		<ul class="res-list">
+			<li class="app-item link-row" th:each="e : ${d.entries()}">
+				<div style="min-width:0">
+					<h3 class="truncate" th:text="${e.name()}">Kartallar</h3>
+					<p class="small" style="margin:0" th:if="${e.linked()}" th:text="'Bağlı: ' + ${e.linkedTeam()}">Bağlı: Kadıköy Kartalları</p>
+					<th:block th:unless="${e.linked()}">
+						<label class="sr-only" th:for="'lk-' + ${e.id()}" th:text="${e.name()} + ' bağlantısı'">Bağlantı</label>
+						<input class="input num" th:id="'lk-' + ${e.id()}" readonly th:value="${linkBase} + ${e.linkCode()}">
+					</th:block>
+				</div>
+				<form th:if="${e.linked()}" th:action="@{/isletme/ligler/{id}/takimlar/{e}/bag-kaldir(id=${d.id()}, e=${e.id()})}" method="post"
+				      data-confirm="Bağlantı kaldırılsın mı? Takımın planlı lig maçları takım sayfasından düşer; oynanmış maçlar kalır. Kayıt yeni bir bağlantı alır.">
+					<button class="btn btn-text btn-sm" type="submit" th:aria-label="${e.name()} + ' bağlantısını kaldır'">Bağlantıyı kaldır</button>
+				</form>
+			</li>
+		</ul>
+	</details>
+
 	<!-- ================= Taslak: takımlar ================= -->
 	<div class="cash-grid" th:if="${d.draft()}">
 		<section class="panel" aria-labelledby="en-title">

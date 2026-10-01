@@ -29,7 +29,9 @@
 				<div class="tm-when">
 					<strong class="num" th:text="${when}">7 Eki 2026 20:00</strong>
 					<span class="small muted" th:text="${x.place()} + (${x.opponent() != null} ? ' · rakip ' + ${x.opponent()} : '')">Saha 1 · Kadıköy</span>
-					<span class="small" th:if="${x.note() != null}" th:text="${x.note()}">Not</span>
+					<span class="small" th:if="${x.note() != null and !x.league()}" th:text="${x.note()}">Not</span>
+					<span class="small" th:if="${x.league()}"><span class="tag">Lig maçı</span>
+						<a th:href="@{/ligler/{id}(id=${x.leagueId()})}" th:text="${x.note()}">Kış Ligi · 2. hafta</a></span>
 				</div>
 				<p class="tm-counts small">
 					<span class="tm-c tm-going" th:text="${x.going()} + ' geliyor'">5 geliyor</span>
@@ -52,7 +54,8 @@
 							<span class="small muted" th:text="${p.answer().label()}">Geliyorum</span></li>
 					</ul>
 				</details>
-				<form th:if="${m.captain()}" th:action="@{/takim-maclari/{mid}/iptal(mid=${x.id()})}" method="post"
+				<p class="tiny muted" style="margin:0" th:if="${m.captain() and x.league()}">Lig maçının saatini ve skorunu şube girer.</p>
+				<form th:if="${m.captain() and !x.league()}" th:action="@{/takim-maclari/{mid}/iptal(mid=${x.id()})}" method="post"
 				      data-confirm="Takım maçı iptal edilsin mi? Oyunculara bildirim gider. Bağlı rezervasyon iptal edilmez.">
 					<input type="hidden" name="takim" th:value="${t.id()}">
 					<button class="btn btn-text btn-sm" type="submit">Maçı iptal et</button>
@@ -90,7 +93,7 @@
 		<ul class="res-list" th:unless="${#lists.isEmpty(m.history())}">
 			<li class="app-item" th:each="x : ${m.history()}">
 				<div style="min-width:0">
-					<h3 class="truncate" th:text="(${x.opponent() != null} ? ${x.opponent()} : 'Rakip belirtilmedi')">Rakip</h3>
+					<h3 class="truncate" th:text="(${x.opponent() != null} ? ${x.opponent()} : 'Rakip belirtilmedi') + (${x.league()} ? ' · ' + ${x.note()} : '')">Rakip</h3>
 					<span class="small muted" th:text="${@fmt.at(x.startsAt())} + ' · ' + ${x.place()} + ' · ' + ${x.going()} + ' kişi gelecekti'">tarih</span>
 				</div>
 				<div class="app-actions">
@@ -105,6 +108,22 @@
 						<button class="btn btn-secondary btn-sm" type="submit" th:text="${x.ourScore() != null} ? 'Düzelt' : 'Skoru kaydet'">Skoru kaydet</button>
 					</form>
 				</div>
+			</li>
+		</ul>
+	</section>
+
+	<section id="ligler" style="margin-top:24px" aria-labelledby="lg-title" th:unless="${#lists.isEmpty(leagues)}">
+		<h2 id="lg-title" style="font-size:18px">Lig ve turnuvalar</h2>
+		<ul class="res-list">
+			<li class="app-item" th:each="l : ${leagues}">
+				<div style="min-width:0">
+					<h3 class="truncate">
+						<a th:if="${l.publicPage()}" th:href="@{/ligler/{id}(id=${l.tournamentId()})}" th:text="${l.name()}">Kış Ligi</a>
+						<span th:unless="${l.publicPage()}" th:text="${l.name()}">Kış Ligi</span>
+					</h3>
+					<span class="small muted" th:text="${l.format().label()} + ' · ' + ${l.statusLabel()} + (${l.entryName() != t.name()} ? ' · kayıt adı: ' + ${l.entryName()} : '')">Lig · Sürüyor</span>
+				</div>
+				<strong class="small" th:text="${l.summary()}">2. sıra · 7 puan</strong>
 			</li>
 		</ul>
 	</section>

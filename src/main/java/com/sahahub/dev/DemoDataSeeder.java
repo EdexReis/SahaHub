@@ -142,6 +142,7 @@ class DemoDataSeeder implements ApplicationRunner {
 	private final PitchPhotoService photos;
 	private final TeamMatchRepository teamMatches;
 	private final com.sahahub.community.app.TeamService teamService;
+	private final com.sahahub.tournament.app.TournamentService tournamentService;
 
 	DemoDataSeeder(TransactionTemplate tx, PasswordEncoder encoder, Clock clock, AppUserRepository users,
 			StaffMembershipRepository memberships, BusinessRepository businesses, BranchRepository branches,
@@ -154,7 +155,9 @@ class DemoDataSeeder implements ApplicationRunner {
 			TeamRepository teams, TeamMemberRepository teamMembers, ListingRepository listings,
 			ListingApplicationRepository applications, TournamentRepository tournaments,
 			TournamentEntryRepository entries, TournamentMatchRepository matches, PitchPhotoService photos,
-			TeamMatchRepository teamMatches, com.sahahub.community.app.TeamService teamService) {
+			TeamMatchRepository teamMatches, com.sahahub.community.app.TeamService teamService,
+			com.sahahub.tournament.app.TournamentService tournamentService) {
+		this.tournamentService = tournamentService;
 		this.teamMatches = teamMatches;
 		this.teamService = teamService;
 		this.photos = photos;
@@ -379,6 +382,16 @@ class DemoDataSeeder implements ApplicationRunner {
 		Team eagles = seedCommunity(captain, customer, longName, firstOfSeries, today, now);
 		seedTeamMatches(eagles, captain, customer, longName, seriesMatches.get(1), today, now);
 		seedLeague(yesil, kadikoy, k3, manager1, today, now);
+		// Lig kayıtlarından ikisi platformdaki takımlara bağlı: lig maçları takım sayfalarında (katılım yanıtıyla)
+		Team bolts = teams.findByInviteCode("SIMSEK2026").orElseThrow();
+		for (TournamentEntry e : entries.findAll()) {
+			if (e.getName().equals(eagles.getName())) {
+				tournamentService.linkForDemo(e.getId(), eagles.getId());
+			}
+			else if (e.getName().equals(bolts.getName())) {
+				tournamentService.linkForDemo(e.getId(), bolts.getId());
+			}
+		}
 		seedCup(kuzey, cankaya, c1, owner2, today, now);
 		// Kurgusal saha çizimleri (gerçek fotoğraf değil); yükleme ile aynı doğrulamadan geçer
 		photos.attachForDemo(k1, illustration(new java.awt.Color(0x1F7A47), true));
@@ -453,7 +466,7 @@ class DemoDataSeeder implements ApplicationRunner {
 		List<Long> ids = new java.util.ArrayList<>();
 		for (String n : List.of("Kadıköy Kartalları", "Moda Şimşekleri", "Fenerbahçe Mah. SK", "Göztepe Gençlik",
 				"Acıbadem Yıldızları", "Kurgusal FK")) {
-			ids.add(entries.save(new TournamentEntry(t.getId(), n, now.minus(Duration.ofDays(14)))).getId());
+			ids.add(entries.save(new TournamentEntry(t.getId(), n, TournamentEntry.newLinkCode(), now.minus(Duration.ofDays(14)))).getId());
 		}
 		int[][] scores = { { 3, 1 }, { 2, 2 }, { 0, 1 } };
 		int i = 0;
@@ -488,7 +501,7 @@ class DemoDataSeeder implements ApplicationRunner {
 		List<Long> ids = new java.util.ArrayList<>();
 		for (String n : List.of("Çankaya Kartalları", "Ankara Gençlik", "Kızılay SK", "Bahçeli Yıldızları",
 				"Tunalı FK", "Kurgusal Spor")) {
-			ids.add(entries.save(new TournamentEntry(t.getId(), n, now.minus(Duration.ofDays(10)))).getId());
+			ids.add(entries.save(new TournamentEntry(t.getId(), n, TournamentEntry.newLinkCode(), now.minus(Duration.ofDays(10)))).getId());
 		}
 		java.util.Map<String, Long> winners = new java.util.HashMap<>();
 		int hour = 20;

@@ -93,6 +93,11 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
    `musteri@sahahub.test` ile **Takımlarım → Yaklaşan maçlarım**'dan yanıt verin; kaptan kimin ne dediğini görür.
    **Maç geçmişi**'nde skorlu maç. Kaptan **Maç ekle** ile başka tesisteki bir maçı ekler (üyelere bildirim),
    **Takım bilgileri ve logo**'dan logo yükler.
+   **Lig ve turnuvalar**: takım Kadıköy Kış Ligi'ne bağlı (sıra ve puan). Yaklaşan maçlarda "Lig maçı" etiketli
+   2. hafta maçı (saat ve skoru şube girer, oyuncular katılımını bildirir); geçmişte 1. haftanın sonucu.
+   `mudur.kadikoy@yesilvadi.test` → **Ligler → Kadıköy Kış Ligi 2026 → Platform takımları**: bağlı iki takım ve
+   diğerleri için bağlantılar. Bir bağlantıyı kopyalayıp kaptan hesabıyla açın → takım seçip **Takımımı bağla**.
+   Maçın saatini değiştirin → takım sayfasında yeni saat ve "Lig maçınızın saati değişti" bildirimi.
 4. Aynı hesapla **İlanlar → Moda Şimşekleri** → mesaj yazıp **Başvur**.
 5. `musteri@sahahub.test` (Moda Şimşekleri kaptanı) → menüde bildirim → ilan sayfasında başvurular
    (Muhammed'in bekleyen başvurusu ve Emre'nin yeni başvurusu) → ikisini **Kabul et** → ilan "Doldu" olur;

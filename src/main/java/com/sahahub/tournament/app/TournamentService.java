@@ -64,10 +64,12 @@ public class TournamentService {
 	private final AuditService audit;
 	private final ApplicationEventPublisher events;
 	private final Clock clock;
+	private final TeamLinkPort teamLinks;
 
 	public TournamentService(TournamentRepository tournaments, TournamentEntryRepository entries,
 			TournamentMatchRepository matches, CatalogService catalog, AccessGuard guard, OccupancyService occupancy,
-			AuditService audit, ApplicationEventPublisher events, Clock clock) {
+			AuditService audit, ApplicationEventPublisher events, Clock clock, TeamLinkPort teamLinks) {
+		this.teamLinks = teamLinks;
 		this.tournaments = tournaments;
 		this.entries = entries;
 		this.matches = matches;
@@ -128,7 +130,7 @@ public class TournamentService {
 			throw new BusinessRuleException("Bu turnuvada en fazla " + t.maxEntries() + " takım olabilir.");
 		}
 		try {
-			entries.saveAndFlush(new TournamentEntry(tournamentId, name, Instant.now(clock)));
+			entries.saveAndFlush(new TournamentEntry(tournamentId, name, TournamentEntry.newLinkCode(), Instant.now(clock)));
 		}
 		catch (DataIntegrityViolationException ex) {
 			throw new BusinessRuleException("Bu adda bir takım ligde zaten var.");
@@ -247,6 +249,7 @@ public class TournamentService {
 		if (old != null) {
 			events.publishEvent(new BookingEvents.PitchFreed(oldPitch, old.start(), old.end()));
 		}
+		changed(t, m);
 		audit.record(user.id(), t.getBusinessId(), old == null ? "MATCH_SCHEDULED" : "MATCH_RESCHEDULED",
 				"TournamentMatch", m.getId(), "pitch=" + pitch.getId() + ", start=" + play.start());
 	}
@@ -264,6 +267,7 @@ public class TournamentService {
 		occupancy.release(PitchOccupancy.Source.TOURNAMENT_MATCH, m.getId());
 		m.unschedule();
 		events.publishEvent(new BookingEvents.PitchFreed(oldPitch, old.start(), old.end()));
+		changed(t, m);
 		audit.record(user.id(), t.getBusinessId(), "MATCH_UNSCHEDULED", "TournamentMatch", m.getId(), null);
 	}
 
@@ -316,6 +320,7 @@ public class TournamentService {
 				catch (SlotUnavailableException ex) {
 					throw new BusinessRuleException(label + ": saha dolu. Hiçbir maç planlanmadı.");
 				}
+				changed(t, m);
 				count++;
 				at = at.plusMinutes(minutes);
 			}
@@ -379,6 +384,7 @@ public class TournamentService {
 			matches.flush();
 			advance(t);
 		}
+		changed(t, m);
 	}
 
 	/**
@@ -413,6 +419,9 @@ public class TournamentService {
 				}
 				else if (!m.getHomeEntryId().equals(s.home()) || !m.getAwayEntryId().equals(s.away())) {
 					m.replaceParticipants(s.home(), s.away());
+					if (m.getStatus() != TournamentMatch.Status.UNSCHEDULED) {
+						changed(t, m); // eski takımın planlı maçı iptal, yenisininki açılır
+					}
 				}
 			}
 		}
@@ -441,6 +450,96 @@ public class TournamentService {
 			return 0;
 		}
 		return entryCount - 1 + (t.isThirdPlace() && entryCount >= Bracket.MIN_ENTRIES_THIRD_PLACE ? 1 : 0);
+	}
+
+	// ------------------------------------------------------------------ platform takımına bağlama
+
+	/**
+	 * Kaptan, personelin paylaştığı bağlantıyla kaydı kendi takımına bağlar. Turnuva satırı kilitlenir; böylece iki
+	 * kaptan aynı kaydı aynı anda alamaz. Bağlanınca kaydın planlı ve oynanmış maçları takımın sayfasına yansır.
+	 *
+	 * @return turnuva
+	 */
+	@Transactional
+	public Long linkTeam(AppUserPrincipal user, String code, Long teamId) {
+		Long tournamentId = entries.tournamentIdOfLinkCode(code).orElseThrow(() -> new NotFoundException("Bağlantı"));
+		Tournament t = tournaments.findForUpdate(tournamentId).orElseThrow();
+		TournamentEntry e = entries.findByLinkCode(code).orElseThrow(() -> new NotFoundException("Bağlantı"));
+		if (e.isLinked()) {
+			throw new BusinessRuleException("Bu kayıt zaten bir takıma bağlı.");
+		}
+		if (teamId == null || teamLinks.captainedTeams(user.id()).stream().noneMatch(o -> o.id().equals(teamId))) {
+			throw new NotFoundException("Takım");
+		}
+		e.link(teamId, Instant.now(clock));
+		try {
+			entries.flush();
+		}
+		catch (DataIntegrityViolationException ex) {
+			throw new BusinessRuleException("Bu takım bu turnuvada başka bir kayda zaten bağlı.");
+		}
+		audit.record(user.id(), t.getBusinessId(), "TOURNAMENT_ENTRY_LINKED", "TournamentEntry", e.getId(),
+				"team=" + teamId);
+		publishEntryMatches(t, e);
+		return t.getId();
+	}
+
+	/** Personel bağlantıyı kaldırır; kayıt yeni bir kod alır, takımın planlı lig maçları takım sayfasından düşer. */
+	@Transactional
+	public void unlinkTeam(AppUserPrincipal user, Long tournamentId, Long entryId) {
+		Tournament t = lockedForManage(user, tournamentId);
+		TournamentEntry e = entries.findById(entryId)
+			.filter(x -> x.getTournamentId().equals(tournamentId))
+			.orElseThrow(() -> new NotFoundException("Takım"));
+		if (!e.isLinked()) {
+			return;
+		}
+		Long old = e.getTeamId();
+		e.unlink(TournamentEntry.newLinkCode());
+		audit.record(user.id(), t.getBusinessId(), "TOURNAMENT_ENTRY_UNLINKED", "TournamentEntry", e.getId(),
+				"team=" + old);
+		publishEntryMatches(t, e);
+	}
+
+	/**
+	 * Yetki ve rıza adımı olmadan bağlar. Yalnızca dev profilindeki demo veri üreticisi kullanır (kullanıcı
+	 * isteğinden çağrılmaz).
+	 */
+	@Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+	public void linkForDemo(Long entryId, Long teamId) {
+		TournamentEntry e = entries.findById(entryId).orElseThrow();
+		e.link(teamId, Instant.now(clock));
+		publishEntryMatches(tournaments.findById(e.getTournamentId()).orElseThrow(), e);
+	}
+
+	/** Kaydın planlı ve oynanmış maçları için olay yayınlar (bağlantı değişince takım tarafı kendini günceller). */
+	private void publishEntryMatches(Tournament t, TournamentEntry e) {
+		for (TournamentMatch m : matches.findByTournamentIdOrderByRoundAscIdAsc(t.getId())) {
+			if (m.getStatus() != TournamentMatch.Status.UNSCHEDULED
+					&& (m.getHomeEntryId().equals(e.getId()) || m.getAwayEntryId().equals(e.getId()))) {
+				changed(t, m);
+			}
+		}
+	}
+
+	/** Maçın güncel hâlini olay olarak yayınlar (bkz. {@link TournamentEvents.MatchChanged}). */
+	private void changed(Tournament t, TournamentMatch m) {
+		Map<Long, TournamentEntry> es = entries.findByTournamentIdOrderById(t.getId()).stream()
+			.collect(Collectors.toMap(TournamentEntry::getId, x -> x));
+		String place = null;
+		if (m.getPitchId() != null) {
+			CatalogService.PitchContext ctx = catalog.pitchContext(m.getPitchId());
+			place = ctx.pitch().getName() + " · " + ctx.branch().getName();
+		}
+		String label = t.isKnockout()
+				? Bracket.matchName(m.getRound(), m.getBracketSlot(), es.size() >= 2 ? Bracket.rounds(es.size()) : 1)
+				: m.getRound() + ". hafta";
+		TournamentEntry h = es.get(m.getHomeEntryId());
+		TournamentEntry a = es.get(m.getAwayEntryId());
+		events.publishEvent(new TournamentEvents.MatchChanged(m.getId(), t.getId(), t.getName(), label,
+				m.getStatus(), m.getStartsAt(), place,
+				new TournamentEvents.Side(h.getId(), h.getTeamId(), h.getName(), m.getHomeScore()),
+				new TournamentEvents.Side(a.getId(), a.getTeamId(), a.getName(), m.getAwayScore())));
 	}
 
 	// ------------------------------------------------------------------ yardımcılar

@@ -797,6 +797,8 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .champion strong { font: 700 22px/1.2 var(--font-num); }
 .champion.is-third { border-left-color: var(--line); background: var(--surface); }
 .champion.is-third strong { font-size: 17px; }
+.link-row > div { flex: 1; }
+.link-row .input { width: 100%; margin-top: 4px; }
 .third-toggle { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; }
 .bracket { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; position: relative; }
 .b-round { flex: 0 0 200px; display: flex; flex-direction: column; }

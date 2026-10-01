@@ -28,6 +28,10 @@ public interface TeamMatchRepository extends JpaRepository<TeamMatch, Long> {
 			order by m.startsAt, m.id""")
 	List<TeamMatch> scheduledStartingBetween(Instant from, Instant to);
 
+	/** Bir lig maçının takımlardaki iptal edilmemiş kopyaları. */
+	@Query("select m from TeamMatch m where m.tournamentMatchId = :tournamentMatchId and m.status <> 'CANCELLED'")
+	List<TeamMatch> liveForTournamentMatch(Long tournamentMatchId);
+
 	@Query("select m from TeamMatch m where m.reservationId = :reservationId and m.status = 'SCHEDULED'")
 	List<TeamMatch> scheduledForReservation(Long reservationId);
 

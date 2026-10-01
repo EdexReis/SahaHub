@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Lige takım bağla · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<div class="panel">
+		<p class="eyebrow" th:text="${p.format().name() == 'KNOCKOUT'} ? 'Turnuvaya takım bağla' : 'Lige takım bağla'">Lige takım bağla</p>
+		<h1 th:text="${p.tournamentName()}">Kadıköy Kış Ligi 2026</h1>
+		<p class="muted" th:text="${p.businessName()} + ' · ' + ${p.branchName()} + ' · ' + ${p.statusLabel()}">Yeşil Saha · Kadıköy · Sürüyor</p>
+		<p>Şube bu bağlantıyı <strong th:text="${p.entryName()}">Kadıköy Kartalları</strong> kaydı için paylaştı.</p>
+
+		<p th:if="${p.alreadyLinked()}">Bu kayıt zaten bir takıma bağlı. Yanlışlık varsa şubeyle görüşün.</p>
+
+		<th:block th:unless="${p.alreadyLinked()}">
+			<div class="empty" th:if="${#lists.isEmpty(p.myTeams())}">
+				<p>Bağlamak için bir takımın kaptanı olmalısınız.</p>
+				<a class="btn btn-secondary" th:href="@{/takimlar}">Takımlarım</a>
+			</div>
+			<form th:unless="${#lists.isEmpty(p.myTeams())}" th:action="@{/lig-davet/{c}(c=${p.code()})}" method="post">
+				<div class="field">
+					<label for="lk-team">Takımınız</label>
+					<select class="select" id="lk-team" name="takim" required>
+						<option th:each="o : ${p.myTeams()}" th:value="${o.id()}" th:text="${o.name()}">Kadıköy Kartalları</option>
+					</select>
+				</div>
+				<button class="btn btn-primary" type="submit">Takımımı bağla</button>
+			</form>
+			<p class="tiny muted" style="margin:12px 0 0">Bağlayınca planlanan maçlar takım sayfanızda görünür, oyuncularınız
+				katılımını bildirir ve bildirim alır. Maç saatini ve skoru şube girer. Şube bağlı takımın adını görür,
+				üyelerinizi görmez.</p>
+		</th:block>
+	</div>
+</main>
+</body>
+</html>

@@ -23,11 +23,14 @@ public class TeamController {
 	private final String baseUrl;
 	private final com.sahahub.community.app.TeamMatchService teamMatches;
 	private final com.sahahub.community.app.ListingQueries listingQueries;
+	private final com.sahahub.tournament.app.TournamentQueries tournaments;
 
 	public TeamController(TeamService service, CatalogService catalog,
 			@Value("${sahahub.public-base-url:http://localhost:8080}") String baseUrl,
 			com.sahahub.community.app.TeamMatchService teamMatches,
-			com.sahahub.community.app.ListingQueries listingQueries) {
+			com.sahahub.community.app.ListingQueries listingQueries,
+			com.sahahub.tournament.app.TournamentQueries tournaments) {
+		this.tournaments = tournaments;
 		this.service = service;
 		this.catalog = catalog;
 		this.baseUrl = baseUrl;
@@ -58,6 +61,7 @@ public class TeamController {
 		model.addAttribute("t", t);
 		model.addAttribute("inviteUrl", t.inviteCode() == null ? null : baseUrl + "/davet/" + t.inviteCode());
 		model.addAttribute("m", teamMatches.forTeam(me, id));
+		model.addAttribute("leagues", tournaments.forTeam(id)); // üyelik yukarıda denetlendi
 		model.addAttribute("answers", com.sahahub.community.app.TeamMatchService.Answer.values());
 		if (t.captain()) {
 			model.addAttribute("reservations", listingQueries.reservationOptions(me));
