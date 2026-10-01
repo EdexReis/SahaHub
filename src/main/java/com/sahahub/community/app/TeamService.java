@@ -36,15 +36,18 @@ public class TeamService {
 	private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 	private static final SecureRandom RANDOM = new SecureRandom();
 
-	public record TeamCard(Long id, String name, String city, long memberCount, TeamMember.Role myRole) {
+	public record TeamCard(Long id, String name, String city, long memberCount, TeamMember.Role myRole,
+			boolean hasLogo) {
 	}
 
 	public record MemberRow(Long userId, String name, TeamMember.Role role, Instant joinedAt) {
 	}
 
 	public record TeamDetail(Long id, String name, String city, String inviteCode, boolean captain, Long myUserId,
-			List<MemberRow> members) {
+			List<MemberRow> members, String description, boolean hasLogo) {
 	}
+
+	public static final long MAX_LOGO_BYTES = 2L * 1024 * 1024;
 
 	public record InvitePreview(String code, String name, String city, long memberCount, boolean alreadyMember,
 			boolean full) {
@@ -55,9 +58,11 @@ public class TeamService {
 	private final ListingRepository listings;
 	private final AppUserRepository users;
 	private final Clock clock;
+	private final com.sahahub.shared.image.UploadStore store;
 
 	public TeamService(TeamRepository teams, TeamMemberRepository members, ListingRepository listings,
-			AppUserRepository users, Clock clock) {
+			AppUserRepository users, Clock clock, com.sahahub.shared.image.UploadStore store) {
+		this.store = store;
 		this.teams = teams;
 		this.members = members;
 		this.listings = listings;
@@ -161,6 +166,43 @@ public class TeamService {
 		next.promoteToCaptain();
 	}
 
+	/** Kaptan: takım açıklaması (en fazla 300 karakter). */
+	@Transactional
+	public void describe(AppUserPrincipal user, Long teamId, String description) {
+		if (description != null && description.strip().length() > 300) {
+			throw new BusinessRuleException("Açıklama en fazla 300 karakter.");
+		}
+		lockedCaptainTeam(user, teamId).describe(description);
+	}
+
+	/**
+	 * Kaptan: takım logosu. Saha fotoğrafıyla aynı doğrulamadan geçer (JPEG/PNG, içerikten tür tespiti,
+	 * yeniden kodlama); en fazla 2 MB, en az 64×64 piksel, 400 px genişliğe küçültülür.
+	 */
+	@Transactional
+	public void uploadLogo(AppUserPrincipal user, Long teamId, org.springframework.web.multipart.MultipartFile file) {
+		Team t = lockedCaptainTeam(user, teamId);
+		byte[] jpeg = com.sahahub.shared.image.ImageNormalizer.normalize(
+				com.sahahub.shared.image.ImageNormalizer.bytesOf(file, MAX_LOGO_BYTES, "Logo en fazla 2 MB olabilir."),
+				64, 64, 400);
+		t.changeLogo(store.replace(jpeg, t.getLogoPath()));
+	}
+
+	@Transactional
+	public void removeLogo(AppUserPrincipal user, Long teamId) {
+		Team t = lockedCaptainTeam(user, teamId);
+		if (t.getLogoPath() != null) {
+			store.removeAfterCommit(t.getLogoPath());
+			t.changeLogo(null);
+		}
+	}
+
+	/** Logo herkese açıktır (takım adı ilanlarda zaten görünür); dağılmış takımın logosu sunulmaz. */
+	@Transactional(readOnly = true)
+	public java.util.Optional<byte[]> logo(Long teamId) {
+		return teams.findById(teamId).filter(Team::isActive).flatMap(t -> store.read(t.getLogoPath()));
+	}
+
 	@Transactional
 	public void regenerateInvite(AppUserPrincipal user, Long teamId) {
 		lockedCaptainTeam(user, teamId).changeInviteCode(newCode());
@@ -175,7 +217,8 @@ public class TeamService {
 	public List<TeamCard> myTeams(AppUserPrincipal user) {
 		return teams.activeTeamsOf(user.id()).stream().map(t -> {
 			TeamMember me = members.activeMembership(t.getId(), user.id()).orElseThrow();
-			return new TeamCard(t.getId(), t.getName(), t.getCity(), members.activeCount(t.getId()), me.getRole());
+			return new TeamCard(t.getId(), t.getName(), t.getCity(), members.activeCount(t.getId()), me.getRole(),
+					t.getLogoPath() != null);
 		}).toList();
 	}
 
@@ -197,7 +240,8 @@ public class TeamService {
 				list.stream()
 					.map(m -> new MemberRow(m.getUserId(), people.get(m.getUserId()).getFullName(), m.getRole(),
 							m.getJoinedAt()))
-					.toList());
+					.toList(),
+				t.getDescription(), t.getLogoPath() != null);
 	}
 
 	// ------------------------------------------------------------------ yardımcılar

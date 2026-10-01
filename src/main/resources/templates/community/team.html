@@ -5,16 +5,112 @@
 <main id="main" class="page page-narrow">
 	<p class="small" style="margin-bottom:8px"><a th:href="@{/takimlar}">← Takımlarım</a></p>
 	<div class="page-head">
-		<div style="min-width:0">
-			<p class="eyebrow" th:text="${t.city()}">İstanbul</p>
-			<h1 th:text="${t.name()}">Kadıköy Kartalları</h1>
+		<div class="team-head" style="min-width:0">
+			<img th:if="${t.hasLogo()}" class="team-logo" th:src="@{/takim-logo/{id}(id=${t.id()})}" alt="" width="64" height="64">
+			<div style="min-width:0">
+				<p class="eyebrow" th:text="${t.city()}">İstanbul</p>
+				<h1 th:text="${t.name()}">Kadıköy Kartalları</h1>
+			</div>
 		</div>
 		<div class="btn-row" th:if="${t.captain()}">
 			<a class="btn btn-primary btn-sm" th:href="@{/ilanlar/yeni}">İlan ver</a>
 		</div>
 	</div>
+	<p th:if="${t.description() != null}" th:text="${t.description()}">Her salı akşamı oynayan keyif takımı.</p>
 
-	<section class="panel" th:if="${t.captain()}" aria-labelledby="inv-title">
+	<!-- ================= Maçlar ve katılım ================= -->
+	<section id="maclar" aria-labelledby="tm-title">
+		<h2 id="tm-title" style="font-size:18px">Yaklaşan maçlar</h2>
+		<div class="empty" th:if="${#lists.isEmpty(m.upcoming())}">
+			<p th:text="${m.captain()} ? 'Planlanmış maç yok. Aşağıdan bir rezervasyonunuzu ya da başka bir tesisteki maçı ekleyin.' : 'Planlanmış maç yok.'">Planlanmış maç yok.</p>
+		</div>
+		<ul class="tm-list" th:unless="${#lists.isEmpty(m.upcoming())}">
+			<li class="tm-item panel" th:each="x : ${m.upcoming()}" th:id="'mac-' + ${x.id()}" th:with="when=${@fmt.at(x.startsAt())}">
+				<div class="tm-when">
+					<strong class="num" th:text="${when}">7 Eki 2026 20:00</strong>
+					<span class="small muted" th:text="${x.place()} + (${x.opponent() != null} ? ' · rakip ' + ${x.opponent()} : '')">Saha 1 · Kadıköy</span>
+					<span class="small" th:if="${x.note() != null}" th:text="${x.note()}">Not</span>
+				</div>
+				<p class="tm-counts small">
+					<span class="tm-c tm-going" th:text="${x.going()} + ' geliyor'">5 geliyor</span>
+					<span class="tm-c tm-maybe" th:text="${x.maybe()} + ' kararsız'">2 kararsız</span>
+					<span class="tm-c tm-no" th:text="${x.notGoing()} + ' gelmiyor'">1 gelmiyor</span>
+					<span class="tm-c" th:text="${x.noAnswer()} + ' yanıt vermedi'">3 yanıt vermedi</span>
+				</p>
+				<div class="rsvp" role="group" th:aria-label="'Katılım yanıtınız: ' + ${when}">
+					<form th:each="a : ${answers}" th:action="@{/takim-maclari/{mid}/yanit(mid=${x.id()})}" method="post">
+						<input type="hidden" name="takim" th:value="${t.id()}">
+						<input type="hidden" name="cevap" th:value="${a}">
+						<button type="submit" class="btn btn-sm" th:classappend="${x.myAnswer() == a} ? 'btn-primary' : 'btn-secondary'"
+						        th:aria-pressed="${x.myAnswer() == a}" th:text="${a.label()}">Geliyorum</button>
+					</form>
+				</div>
+				<details th:unless="${#lists.isEmpty(x.attendees())}">
+					<summary>Kim ne dedi?</summary>
+					<ul class="att-list">
+						<li th:each="p : ${x.attendees()}"><span th:text="${p.name()}">Deniz</span>
+							<span class="small muted" th:text="${p.answer().label()}">Geliyorum</span></li>
+					</ul>
+				</details>
+				<form th:if="${m.captain()}" th:action="@{/takim-maclari/{mid}/iptal(mid=${x.id()})}" method="post"
+				      data-confirm="Takım maçı iptal edilsin mi? Oyunculara bildirim gider. Bağlı rezervasyon iptal edilmez.">
+					<input type="hidden" name="takim" th:value="${t.id()}">
+					<button class="btn btn-text btn-sm" type="submit">Maçı iptal et</button>
+				</form>
+			</li>
+		</ul>
+
+		<details class="panel" style="margin-top:12px" th:if="${m.captain()}">
+			<summary><strong>Maç ekle</strong></summary>
+			<form th:action="@{/takimlar/{id}/maclar(id=${t.id()})}" method="post" style="margin-top:12px">
+				<div class="field">
+					<label for="tm-res">Rezervasyonunuz</label>
+					<select class="select" id="tm-res" name="rezervasyon">
+						<option value="">Başka bir yerde (aşağıya yazacağım)</option>
+						<option th:each="r : ${reservations}" th:value="${r.id()}" th:text="${r.label()}">4 Eki · Saha 1</option>
+					</select>
+					<p class="hint">Rezervasyon seçerseniz yer ve saat oradan alınır; rezervasyon iptal edilirse maç da iptal olur.</p>
+				</div>
+				<div class="field-row">
+					<div class="field"><label for="tm-when">Tarih ve saat</label><input class="input num" id="tm-when" type="datetime-local" step="900" name="zaman"></div>
+					<div class="field"><label for="tm-place">Yer</label><input class="input" id="tm-place" name="yer" maxlength="120" placeholder="Tesis ve ilçe"></div>
+				</div>
+				<div class="field-row">
+					<div class="field"><label for="tm-opp">Rakip <span class="small muted">(isteğe bağlı)</span></label><input class="input" id="tm-opp" name="rakip" maxlength="60"></div>
+					<div class="field"><label for="tm-note">Not</label><input class="input" id="tm-note" name="not" maxlength="300" placeholder="Ör. formalar beyaz"></div>
+				</div>
+				<button class="btn btn-primary btn-sm" type="submit">Maçı ekle ve haber ver</button>
+			</form>
+		</details>
+	</section>
+
+	<section id="gecmis" style="margin-top:24px" aria-labelledby="th-title">
+		<h2 id="th-title" style="font-size:18px">Maç geçmişi</h2>
+		<div class="empty" th:if="${#lists.isEmpty(m.history())}"><p>Henüz oynanmış maç yok.</p></div>
+		<ul class="res-list" th:unless="${#lists.isEmpty(m.history())}">
+			<li class="app-item" th:each="x : ${m.history()}">
+				<div style="min-width:0">
+					<h3 class="truncate" th:text="(${x.opponent() != null} ? ${x.opponent()} : 'Rakip belirtilmedi')">Rakip</h3>
+					<span class="small muted" th:text="${@fmt.at(x.startsAt())} + ' · ' + ${x.place()} + ' · ' + ${x.going()} + ' kişi gelecekti'">tarih</span>
+				</div>
+				<div class="app-actions">
+					<strong class="num tm-score" th:if="${x.ourScore() != null and !x.canScore()}" th:text="${x.ourScore()} + ' – ' + ${x.theirScore()}">3 – 2</strong>
+					<form class="score-form" th:if="${x.canScore()}" th:action="@{/takim-maclari/{mid}/skor(mid=${x.id()})}" method="post">
+						<input type="hidden" name="takim" th:value="${t.id()}">
+						<label class="sr-only" th:for="'b-' + ${x.id()}">Bizim gol</label>
+						<input class="input num" th:id="'b-' + ${x.id()}" name="biz" type="number" min="0" max="99" required th:value="${x.ourScore()}">
+						<span aria-hidden="true">–</span>
+						<label class="sr-only" th:for="'r-' + ${x.id()}">Rakibin golü</label>
+						<input class="input num" th:id="'r-' + ${x.id()}" name="rakip" type="number" min="0" max="99" required th:value="${x.theirScore()}">
+						<button class="btn btn-secondary btn-sm" type="submit" th:text="${x.ourScore() != null} ? 'Düzelt' : 'Skoru kaydet'">Skoru kaydet</button>
+					</form>
+				</div>
+			</li>
+		</ul>
+	</section>
+
+	<!-- ================= Kaptan: davet, açıklama, logo ================= -->
+	<section class="panel" style="margin-top:24px" th:if="${t.captain()}" aria-labelledby="inv-title">
 		<h2 id="inv-title" class="section-title">Davet bağlantısı</h2>
 		<p class="small">Bu bağlantıyı açan ve giriş yapan herkes takıma katılabilir. Yalnızca oyuncularınızla paylaşın.</p>
 		<label class="sr-only" for="inv-link">Davet bağlantısı</label>
@@ -25,21 +121,42 @@
 		</form>
 	</section>
 
+	<details class="panel" style="margin-top:16px" th:if="${t.captain()}">
+		<summary><strong>Takım bilgileri ve logo</strong></summary>
+		<form th:action="@{/takimlar/{id}/aciklama(id=${t.id()})}" method="post" style="margin-top:12px">
+			<div class="field">
+				<label for="tm-desc">Açıklama</label>
+				<textarea class="textarea" id="tm-desc" name="aciklama" rows="2" maxlength="300" th:text="${t.description()}"></textarea>
+			</div>
+			<button class="btn btn-secondary btn-sm" type="submit">Kaydet</button>
+		</form>
+		<form th:action="@{/takimlar/{id}/logo(id=${t.id()})}" method="post" enctype="multipart/form-data" style="margin-top:16px">
+			<div class="field">
+				<label for="tm-logo">Logo (JPEG veya PNG, en fazla 2 MB)</label>
+				<input class="input" id="tm-logo" type="file" name="dosya" accept="image/jpeg,image/png" required data-max-bytes="2097152">
+			</div>
+			<button class="btn btn-secondary btn-sm" type="submit">Logoyu yükle</button>
+		</form>
+		<form th:if="${t.hasLogo()}" th:action="@{/takimlar/{id}/logo/sil(id=${t.id()})}" method="post" style="margin-top:8px">
+			<button class="btn btn-text btn-sm" type="submit">Logoyu kaldır</button>
+		</form>
+	</details>
+
 	<section style="margin-top:24px" aria-labelledby="mem-title">
 		<h2 id="mem-title" style="font-size:18px" th:text="'Oyuncular (' + ${#lists.size(t.members())} + ')'">Oyuncular</h2>
 		<ul class="res-list">
-			<li class="app-item" th:each="m : ${t.members()}">
+			<li class="app-item" th:each="mm : ${t.members()}">
 				<div style="min-width:0">
-					<h3 class="truncate" th:text="${m.name()}">Deniz Arslan</h3>
-					<span class="small muted" th:text="${m.role().label()}">Oyuncu</span>
+					<h3 class="truncate" th:text="${mm.name()}">Deniz Arslan</h3>
+					<span class="small muted" th:text="${mm.role().label()}">Oyuncu</span>
 				</div>
-				<div class="app-actions" th:if="${t.captain() and m.userId() != t.myUserId()}">
-					<form th:action="@{/takimlar/{id}/uyeler/{u}/kaptan(id=${t.id()}, u=${m.userId()})}" method="post"
-					      th:data-confirm="${m.name()} + ' kaptan olsun mu? Siz oyuncu olursunuz.'">
+				<div class="app-actions" th:if="${t.captain() and mm.userId() != t.myUserId()}">
+					<form th:action="@{/takimlar/{id}/uyeler/{u}/kaptan(id=${t.id()}, u=${mm.userId()})}" method="post"
+					      th:data-confirm="${mm.name()} + ' kaptan olsun mu? Siz oyuncu olursunuz.'">
 						<button class="btn btn-secondary btn-sm" type="submit">Kaptan yap</button>
 					</form>
-					<form th:action="@{/takimlar/{id}/uyeler/{u}/cikar(id=${t.id()}, u=${m.userId()})}" method="post"
-					      th:data-confirm="${m.name()} + ' takımdan çıkarılsın mı?'">
+					<form th:action="@{/takimlar/{id}/uyeler/{u}/cikar(id=${t.id()}, u=${mm.userId()})}" method="post"
+					      th:data-confirm="${mm.name()} + ' takımdan çıkarılsın mı?'">
 						<button class="btn btn-danger btn-sm" type="submit">Çıkar</button>
 					</form>
 				</div>

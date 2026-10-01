@@ -38,6 +38,8 @@
 | 32 | Parola sıfırlama e-postası outbox'tan değil, commit sonrası doğrudan gönderilir | Outbox gövdesi bağlantıyı (token) düz metin saklardı. Gönderim başarısızsa kullanıcı yeniden ister; bu akışta "en az bir kez" teslim gerekmiyor. |
 | 33 | `SessionRegistry` ile parola değişince oturumların sonlandırılması | Çalınmış bir oturum parola değişikliğinden sonra açık kalmaz. Tek sunucu varsayımı (kayıt bellekte). |
 | 34 | Eleme ağacı saf bir sınıfta (`Bracket`) hesaplanır; maç satırı yalnızca iki taraf belli olunca açılır | "Bekleniyor" taraflı boş satırlar ve onları sonradan doldurma mantığı gerekmez; ağaç her zaman oynanmış maçlardan yeniden hesaplanır. Düzeltmede yalnızca oynanmamış sonraki maçın takımı güncellenir. |
+| 35 | Görsel doğrulama ve saklama ortak (`shared.image`: `ImageNormalizer`, `UploadStore`) | Saha fotoğrafı ve takım logosu aynı güvenlik kurallarından geçer; kural tek yerde. |
+| 36 | Katılım yanıtı tablo satırı (`team_match_attendance`, birincil anahtar maç+kişi), `INSERT … ON CONFLICT DO UPDATE` | Yanıt değiştirmek tek ifade; aynı kişinin iki yanıtı oluşamaz. Sayımlar her açılışta hesaplanır. |
 
 ## 2. Paketler (modüller)
 
@@ -53,7 +55,7 @@ com.sahahub
 │                 ve simülasyon sağlayıcısı
 ├── notification  uygulama içi bildirim, outbox, gönderici, kanallar (e-posta; SMS/WhatsApp demo),
 │                 hatırlatma görevi
-├── community     takımlar, davet, oyuncu/rakip ilanları ve başvurular
+├── community     takımlar (logo, açıklama), davet, takım maçları ve katılım, oyuncu/rakip ilanları
 ├── tournament    lig (round-robin) ve eleme (kupa, Bracket), maç planlama, skor, puan durumu
 ├── reporting     rapor metrikleri (saf hesaplayıcı), şube raporu, şube karşılaştırması, CSV
 ├── platform      platform yöneticisi işlemleri
@@ -182,6 +184,9 @@ erDiagram
     WAITLIST_ENTRY |o--o| RESERVATION : "offer_reservation_id (HELD teklif)"
     APP_USER ||--o{ NOTIFICATION : "uygulama içi"
     APP_USER ||--o{ PASSWORD_RESET_TOKEN : "yalnızca özet"
+    TEAM ||--o{ TEAM_MATCH : ""
+    RESERVATION |o--o{ TEAM_MATCH : "isteğe bağlı"
+    TEAM_MATCH ||--o{ TEAM_MATCH_ATTENDANCE : "üye başına tek yanıt"
     TEAM ||--o{ TEAM_MEMBER : "tek aktif kaptan"
     APP_USER ||--o{ TEAM_MEMBER : ""
     TEAM ||--o{ LISTING : ""

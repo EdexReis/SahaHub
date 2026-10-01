@@ -48,6 +48,9 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | Havale bildirimi | Yalnızca kendi onaylı rezervasyonu |
 | Platform: işletme askıya alma | Gerekçe zorunlu, `PLATFORM_BUSINESS_STATUS_CHANGED` denetim kaydı |
 | Bekleme listesi | Yalnızca kayıtlı müşteri, yalnızca dolu saat; aynı saate bir kez, aynı anda en fazla 5 saat; yalnızca kendi kaydından çıkabilir |
+| Takım maçı ekleme, iptal, skor; takım açıklaması ve logo | Yalnızca takım kaptanı |
+| Takım maçına yanıt, kimin ne dediğini görme | Yalnızca takımın aktif üyeleri (üye olmayana "bulunamadı") |
+| Takım logosu (`/takim-logo/{id}`) | Herkese açık (takım adı ilanlarda zaten görünür); dağılmış takımın logosu sunulmaz |
 | Bildirimler, tercihler | Yalnızca kendi bildirimleri (`user_id`) ve kendi tercihleri |
 | Müşteri geçmişi (personel) | `CALENDAR_VIEW`; yalnızca kaydın şubesindeki rezervasyonlar (misafir telefonla eşleşir) |
 | Saha fotoğrafı (`/saha-fotograf/{id}`) | Rezervasyona açık sahada herkese açık; kapalı sahada yalnızca `PITCH_MANAGE` sahibi personel |

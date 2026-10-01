@@ -38,6 +38,11 @@ public class Team {
 	@Column(name = "disbanded_at")
 	private Instant disbandedAt;
 
+	private String description;
+
+	@Column(name = "logo_path")
+	private String logoPath;
+
 	protected Team() {
 	}
 
@@ -51,6 +56,14 @@ public class Team {
 	public void rename(String name, String city) {
 		this.name = name.strip();
 		this.city = city.strip();
+	}
+
+	public void describe(String description) {
+		this.description = description == null || description.isBlank() ? null : description.strip();
+	}
+
+	public void changeLogo(String fileName) {
+		this.logoPath = fileName;
 	}
 
 	public void changeInviteCode(String code) {
@@ -87,6 +100,14 @@ public class Team {
 
 	public Instant getDisbandedAt() {
 		return disbandedAt;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public String getLogoPath() {
+		return logoPath;
 	}
 
 }
