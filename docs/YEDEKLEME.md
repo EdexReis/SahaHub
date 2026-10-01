@@ -38,6 +38,17 @@ docker compose exec -T postgres psql -U sahahub -d sahahub_check -c "select coun
 docker compose exec -T postgres dropdb -U sahahub sahahub_check
 ```
 
+## Saha fotoğrafları
+
+Fotoğraflar veritabanında değil, `sahahub.upload-dir` klasöründedir (varsayılan `./data/uploads`, ortam
+değişkeni `UPLOAD_DIR`). Veritabanı yedeğiyle **aynı anda** bu klasörün de kopyası alınmalıdır; aksi hâlde
+geri yüklemede sahalar fotoğrafsız görünür (uygulama bozulmaz, 404 döner).
+
+```powershell
+$stamp = Get-Date -Format "yyyyMMdd-HHmm"
+Compress-Archive -Path data\uploads\* -DestinationPath "backups/uploads-$stamp.zip"
+```
+
 ## Notlar
 
 - `docker compose down -v` **veritabanı birimini (volume) siler**; yedeksiz kullanmayın.

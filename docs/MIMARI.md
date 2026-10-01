@@ -32,6 +32,11 @@
 | 26 | Puan durumu saklanmaz, hesaplanır (`Standings`) | Skor düzeltmesi tabloya kendiliğinden yansır; tutarsız "puan" sütunu oluşmaz. |
 | 27 | İlan kabulünde kilit sırası: ilan → başvuru | Kontenjan eşzamanlı kabullerde aşılmaz; geri çekme ile kabul aynı kilit sırasını izlediği için deadlock'a girmez. |
 | 28 | Takım katılımı yalnızca davet koduyla; takım sayfası yalnızca üyelere | Takım ve üye adları sızdırılmaz; kod yenilenince eski bağlantı geçersiz olur. |
+| 29 | Rapor metrikleri saf bir hesaplayıcıda (`ReportCalculator`), veri tek seferde SQL ile yüklenir | Tanımlar tek yerde ve birim testle sabit; "rezervasyon bedeli", "tahsilat" ve "nakit farkı" kod düzeyinde ayrı kavramlar. Ayrıntı: [RAPORLAR.md](RAPORLAR.md). |
+| 30 | `reservation.confirmed_at` sütunu (V5) | İptal oranında "onaydan sonra iptal" ile "tutmada bırakılan" ayrılamıyordu; eski kayıtlar migration'da doldurulur, bilinmeyenler belgelendi. |
+| 31 | Saha fotoğrafı dosya sisteminde, içerikten tür tespiti ve yeniden kodlama | Veritabanı şişmez; istemcinin bildirdiği türe güvenilmez; EXIF/konum silinir; dosya yalnızca erişim kontrollü uçtan sunulur. |
+| 32 | Parola sıfırlama e-postası outbox'tan değil, commit sonrası doğrudan gönderilir | Outbox gövdesi bağlantıyı (token) düz metin saklardı. Gönderim başarısızsa kullanıcı yeniden ister; bu akışta "en az bir kez" teslim gerekmiyor. |
+| 33 | `SessionRegistry` ile parola değişince oturumların sonlandırılması | Çalınmış bir oturum parola değişikliğinden sonra açık kalmaz. Tek sunucu varsayımı (kayıt bellekte). |
 
 ## 2. Paketler (modüller)
 
@@ -49,11 +54,13 @@ com.sahahub
 │                 hatırlatma görevi
 ├── community     takımlar, davet, oyuncu/rakip ilanları ve başvurular
 ├── tournament    lig, fikstür (round-robin), maç planlama, skor, puan durumu
+├── reporting     rapor metrikleri (saf hesaplayıcı), şube raporu, şube karşılaştırması, CSV
 ├── platform      platform yöneticisi işlemleri
 └── dev           yalnızca dev profilinde demo veri
 ```
 
-Henüz olmayan modül (Aşama 6): `reporting`.
+Tüm planlanan modüller mevcut. `business` modülü ayrıca saha/şube ayarları, fotoğraf, personel ve denetim
+ekranlarının servislerini içerir (identity'ye bağımlıdır, tersi değil).
 
 **Bağımlılık yönü**: `payment → booking → business/pricing → identity → shared`. Rezervasyon modülünün
 ödeme bilgisine ihtiyacı olan iki yer (takvim etiketi, kapora ödenmeden onay engeli) için
@@ -125,6 +132,20 @@ CustomerBookingService.hold()                        PostgreSQL
 - Loglara parola/token yazılmaz; `AppUserPrincipal.toString()` yalnızca id içerir ve parola özeti girişten
   sonra bellekten silinir.
 - Her isteğe `X-Request-Id`; loglarda `[requestId]`, hata sayfasında "Takip kodu".
+- Güvenlik başlıkları (Aşama 6'da `curl` ile doğrulandı): CSP, `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`
+  (kamera/mikrofon/konum/ödeme kapalı), oturum çerezi `HttpOnly; SameSite=Lax` (+ canlıda `Secure`).
+  Yalnızca `/actuator/health` açık, ayrıntı göstermez.
+- Parola sıfırlama: 256 bit rastgele token, veritabanında SHA-256 özeti, 30 dk, tek kullanımlık, yeni istek
+  eskileri geçersiz kılar; hesap başına saatte 3, IP başına saatte 10 istek; parola değişince oturumlar
+  sonlanır (`PasswordResetIT`).
+- Dosya yükleme: yalnızca JPEG/PNG (sihirli sayı), 3 MB ve 6000×6000 piksel üst sınırı, görüntü yeniden
+  kodlanır, rastgele dosya adı, yükleme klasörü statik kaynakların dışında (`PitchPhotoServiceTest`, `AdminIT`).
+- CSV dışa aktarmada formül enjeksiyonu koruması (`CsvWriterTest`).
+- Bilinen sınırlar: giriş/parola sıfırlama hız sınırları ve oturum kaydı bellekte (tek sunucu); 10 MB'ı aşan
+  yükleme isteği uygulamaya ulaşmadan 413 ile reddedilir ve genel "Dosya çok büyük" sayfası gösterilir
+  (3–10 MB arası dosyalar formda "en fazla 3 MB" mesajı alır; curl ile ölçüldü);
+  bağımlılık güvenlik taraması (OWASP dependency-check) NVD veri indirmesi gerektirdiği için çalıştırılmadı.
 
 ## 6. ER diyagramı
 
@@ -159,6 +180,7 @@ erDiagram
     APP_USER ||--o{ WAITLIST_ENTRY : "müşteri"
     WAITLIST_ENTRY |o--o| RESERVATION : "offer_reservation_id (HELD teklif)"
     APP_USER ||--o{ NOTIFICATION : "uygulama içi"
+    APP_USER ||--o{ PASSWORD_RESET_TOKEN : "yalnızca özet"
     TEAM ||--o{ TEAM_MEMBER : "tek aktif kaptan"
     APP_USER ||--o{ TEAM_MEMBER : ""
     TEAM ||--o{ LISTING : ""

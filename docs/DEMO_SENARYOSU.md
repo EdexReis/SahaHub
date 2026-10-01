@@ -102,7 +102,24 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
 7. Resepsiyon hesabıyla **Ligler** sekmesi görünmez; `/isletme/subeler/1/ligler` adresi 403 verir. Maçlar
    takvimde yine görünür.
 
-## 8. Platform yöneticisi
+## 8. Raporlar ve yönetim (Aşama 6)
+
+1. `mudur.kadikoy@yesilvadi.test` → **Raporlar**: bu ayın özeti. Üstteki dört kartta rezervasyon bedeli,
+   net tahsilat, kalan alacak ve doluluk ayrı ayrı görünür. "Doluluk nasıl hesaplanıyor?" açıklamasını açın.
+   Tarih aralığını değiştirin, dönemi "Haftalık" yapın, **CSV indir** ile dosyayı Excel'de açın.
+2. **Şube ve sahalar** → bir sahada **Düzenle** → JPEG/PNG fotoğraf yükleyin (3 MB üstü dosyayı tarayıcı
+   uyarır). Fotoğraf saha listesinde ve saha sayfasında görünür. Bugün rezervasyonu olan sahayı
+   **Rezervasyona kapat**mayı deneyin → reddedilir.
+3. Haftalık saatlerde bir günün kapanışını erkene çekin → "X ileri tarihli rezervasyon yeni saatlerin dışında
+   kaldı" uyarısı; rezervasyonlar silinmez. Bir **özel gün** ekleyin → müşteri ekranında o gün "kapalı".
+4. Takvimde bir rezervasyon → panelde **Müşteri geçmişi**.
+5. `sahip@yesilvadi.test` → **Personel**: kayıtlı bir hesabın e-postasıyla (ör. `kaptan@sahahub.test`)
+   resepsiyon görevi verin, sonra kaldırın. **Denetim kaydı**: tüm bu işlemler süzgeçle listelenir.
+   **Raporlar → Şubeleri karşılaştır**.
+6. Çıkış → **Giriş → Parolamı unuttum** → `musteri@sahahub.test` → <http://localhost:8025> Mailpit'te gelen
+   bağlantıyı açıp yeni parola belirleyin. Aynı bağlantı ikinci kez çalışmaz.
+
+## 9. Platform yöneticisi
 
 `admin@sahahub.test` → **Platform** → bir işletmeyi gerekçe yazarak askıya alın → müşteri listesinde o
 işletmenin sahaları kaybolur. Etkinleştirince geri gelir. Her iki işlem `audit_event` tablosuna yazılır:

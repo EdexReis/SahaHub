@@ -2,10 +2,10 @@
 
 Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 + Thymeleaf + PostgreSQL.
 
-> **Durum (1 Ekim 2026):** Aşama 1–5 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
+> **Durum (1 Ekim 2026):** Aşama 1–6 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
 > takvimi, fiyatlandırma (kapora, kupon, ek hizmet, indirim), ödeme hareketleri, iade, kasa, düzenli
-> (haftalık) rezervasyon, bekleme listesi, bildirimler, takımlar, oyuncu/rakip ilanları ve lig. Raporlar ve yönetim
-> ekranları (Aşama 6) **henüz yok**.
+> (haftalık) rezervasyon, bekleme listesi, bildirimler, takımlar, oyuncu/rakip ilanları, lig, raporlar, yönetim
+> ekranları (saha, saat, personel, denetim kaydı) ve parola sıfırlama. Açık kalanlar "Bilinen eksikler"de.
 > Ayrıntı: [PROGRESS.md](PROGRESS.md).
 >
 > **Gerçek entegrasyon yoktur:** çevrim içi ödeme bir **simülasyondur** (kart bilgisi alınmaz, para çekilmez),
@@ -18,8 +18,8 @@ Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 +
 |---|---|
 | Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, ek hizmet ve kupon ekleme, kaporayı/tamamını çevrim içi ödeme (simülasyon), havale bildirimi, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal (çevrim içi ödeme otomatik iade), yazdırılabilir özet, dolu saat için bekleme listesi (sıra numarası, boşalınca 15 dk'lık teklif), bildirim kutusu ve e-posta/SMS tercihleri, takım kurma ve davet bağlantısıyla katılma, oyuncu/rakip ilanı verme ve başvurma, ligleri izleme |
 | Resepsiyon | Şube takvimi (ödeme etiketleriyle), boş saatten hızlı rezervasyon, önizlemeli düzenli (haftalık) rezervasyon ve "bu ve sonraki maçları iptal", taşıma, geldi / tamamlandı / gelmedi, gerekçeli iptal, nakit / manuel POS tahsilat, havale doğrulama, hatalı tahsilatı ters kayıtla düzeltme, kasa açma/kapama |
-| Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma, iade, personel indirimi, gider kaydı, fiyat kuralları, ek hizmetler, kapora kuralı, lig (fikstür, maç planlama, skor) |
-| İşletme sahibi | İşletmenin tüm şubelerinde yukarıdakilerin hepsi + kuponlar |
+| Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma, iade, personel indirimi, gider kaydı, fiyat kuralları, ek hizmetler, kapora kuralı, lig (fikstür, maç planlama, skor), raporlar ve CSV, saha ekleme/düzenleme ve fotoğraf, çalışma saatleri ve özel günler |
+| İşletme sahibi | İşletmenin tüm şubelerinde yukarıdakilerin hepsi + kuponlar, personel ve yetkiler, denetim kaydı, şube karşılaştırması |
 | Platform yöneticisi | İşletmeleri listeleme, gerekçeyle askıya alma/etkinleştirme (denetim kaydına yazılır), demo SMS/WhatsApp mesaj kutusu |
 
 ## Gereksinimler
@@ -112,6 +112,7 @@ boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGR
 | [docs/MIMARI.md](docs/MIMARI.md) | Modüller, katmanlar, çakışma güvencesi, ER diyagramı |
 | [docs/YETKI_MATRISI.md](docs/YETKI_MATRISI.md) | Rol / izin matrisi |
 | [docs/DURUM_GECISLERI.md](docs/DURUM_GECISLERI.md) | Rezervasyon durum makinesi, fiyat ve iptal kuralları |
+| [docs/RAPORLAR.md](docs/RAPORLAR.md) | Rapor metriklerinin tanımları, doluluk paydası, CSV |
 | [docs/ODEME.md](docs/ODEME.md) | Ödeme durumu, hareketler, idempotency, webhook, geç ödeme, kasa |
 | [docs/YEDEKLEME.md](docs/YEDEKLEME.md) | Yedekleme ve geri yükleme |
 | [docs/DEMO_SENARYOSU.md](docs/DEMO_SENARYOSU.md) | Adım adım deneme senaryosu |
@@ -128,6 +129,9 @@ boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGR
   Canlıda `MAIL_HOST`/`MAIL_SMTP_PORT` ve gönderici alan adı (SPF/DKIM) ayrı bir karar ve adımdır.
 - **SMS/WhatsApp demo kanaldır.** Gerçek sağlayıcı ücretlidir ve gerçek kişilere ulaşır; bilinçli olarak eklenmedi.
 - Saha, çalışma saati ve personel **yönetim ekranları yok**; bu veriler şimdilik demo veriyle gelir.
-- Parola sıfırlama yok.
+- Parola sıfırlama e-postası yerelde Mailpit'e gider; canlıda gerçek SMTP ayrı bir adımdır.
+- Eleme usulü turnuva (kupa), takım maçlarına katılım (geliyor/gelmiyor), takım logosu ve takım maç geçmişi yok
+  (istek §8–9; bkz. PROGRESS.md).
+- Saha fotoğrafları `./data/uploads` klasöründe; yedeklemede bu klasör de alınmalı (bkz. docs/YEDEKLEME.md).
 - Giriş hız sınırı bellekte tutulur (tek sunucu için yeterli).
 - CI iş akışı (`.github/workflows/ci.yml`) yazıldı ama bir GitHub deposunda **henüz çalıştırılmadı**.

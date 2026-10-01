@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Dosya çok büyük · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<p class="eyebrow">Hata 413</p>
+	<h1>Dosya çok büyük</h1>
+	<p>Gönderdiğiniz dosya sunucunun kabul ettiği sınırı aşıyor. Saha fotoğrafları en fazla 3 MB olabilir; fotoğrafı küçültüp yeniden deneyin.</p>
+	<a class="btn btn-secondary" th:href="@{/isletme}">İşletme paneline dön</a>
+</main>
+</body>
+</html>

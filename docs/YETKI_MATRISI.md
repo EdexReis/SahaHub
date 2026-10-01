@@ -23,11 +23,11 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | `RESERVATION_CANCEL` personel iptali (gerekçe zorunlu) | ✓ | ✓ | ✓ | çalışıyor |
 | `RESERVATION_STATUS_UPDATE` geldi/tamamlandı/gelmedi | ✓ | ✓ | ✓ | çalışıyor |
 | `PITCH_BLOCK_MANAGE` saha kapatma | ✓ | ✓ | ✗ | çalışıyor |
-| `PITCH_MANAGE` saha düzenleme | ✓ | ✓ | ✗ | ekran yok |
+| `PITCH_MANAGE` saha ekle/düzenle/kapat, fotoğraf, çalışma saatleri, özel günler, rezervasyon kuralları | ✓ | ✓ | ✗ | çalışıyor |
 | `PRICE_MANAGE` taban ücret, fiyat kuralları, ek hizmetler, kapora | ✓ | ✓ | ✗ | çalışıyor |
-| `STAFF_MANAGE` personel atama | ✓ | ✗ | ✗ | ekran yok |
-| `REPORT_VIEW` raporlar | ✓ | ✓ | ✗ | Aşama 6 |
-| `AUDIT_VIEW` denetim kayıtları | ✓ | ✗ | ✗ | Aşama 6 |
+| `STAFF_MANAGE` personel atama ve görev kaldırma | ✓ | ✗ | ✗ | çalışıyor (işletme düzeyi; sahip kendi görevini ve son sahibi kaldıramaz) |
+| `REPORT_VIEW` şube raporları, CSV | ✓ | ✓ | ✗ | çalışıyor (şube karşılaştırması yalnızca sahip) |
+| `AUDIT_VIEW` denetim kayıtları | ✓ | ✗ | ✗ | çalışıyor (işletme düzeyi) |
 | `PAYMENT_COLLECT` nakit/POS tahsilat, havale doğrulama, ters kayıt | ✓ | ✓ | ✓ | çalışıyor |
 | `PAYMENT_REFUND` iade | ✓ | ✓ | ✗ | çalışıyor |
 | `DISCOUNT_APPLY` personel indirimi (gerekçeli) | ✓ | ✓ | ✗ | çalışıyor |
@@ -49,6 +49,9 @@ Kaynak: `identity/domain/RolePermissions.java` (test: `RolePermissionsTest`). Bi
 | Platform: işletme askıya alma | Gerekçe zorunlu, `PLATFORM_BUSINESS_STATUS_CHANGED` denetim kaydı |
 | Bekleme listesi | Yalnızca kayıtlı müşteri, yalnızca dolu saat; aynı saate bir kez, aynı anda en fazla 5 saat; yalnızca kendi kaydından çıkabilir |
 | Bildirimler, tercihler | Yalnızca kendi bildirimleri (`user_id`) ve kendi tercihleri |
+| Müşteri geçmişi (personel) | `CALENDAR_VIEW`; yalnızca kaydın şubesindeki rezervasyonlar (misafir telefonla eşleşir) |
+| Saha fotoğrafı (`/saha-fotograf/{id}`) | Rezervasyona açık sahada herkese açık; kapalı sahada yalnızca `PITCH_MANAGE` sahibi personel |
+| Parola sıfırlama | Herkese açık; yanıt hesabın var olup olmadığını belli etmez |
 | Platform: demo mesaj kutusu | Yalnızca platform yöneticisi (`/admin/**`); kayıtlar demo SMS/WhatsApp, gerçek gönderim yok |
 
 Takım ve ilan kuralları (müşteri tarafı, `CommunityIT`):
