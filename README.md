@@ -129,4 +129,5 @@ boyutlarında kaydeder.
 - Lig/kupa kaydını platform takımına bağlamak kaptanın onayını ister (personelin paylaştığı bağlantı); bağlanmayan
   takımlar yalnızca adıyla yer alır.
 - Giriş hız sınırı bellekte tutulur (tek sunucu için yeterli).
-- CI iş akışı (`.github/workflows/ci.yml`) yazıldı ama bir GitHub deposunda **henüz çalıştırılmadı**.
+- CI (`.github/workflows/ci.yml`) her push ve pull request'te birim/entegrasyon testlerini ve uçtan uca testleri
+  (Linux, Chromium) çalıştırır. Canlıya dağıtım adımı yoktur.
