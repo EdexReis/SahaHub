@@ -736,3 +736,35 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .match summary { cursor: pointer; color: var(--green-ink); font-weight: 600; font-size: 14px; text-align: center; }
 .score-form { display: flex; align-items: center; gap: 6px; margin: 0; }
 .score-form .input { width: 64px; text-align: center; }
+
+/* ------------------------------------------------------------ raporlar */
+.report-filter { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin-bottom: 4px; }
+.report-filter .field { margin: 0; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 16px 0 24px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--green); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.kpi-label { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.kpi-value { font: 700 26px/1.1 var(--font-num); }
+.kpi-note { font-size: 12px; color: var(--ink-3); }
+.report-section { margin-bottom: 28px; min-width: 0; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; align-items: start; }
+.report-table th, .report-table td { padding: 8px 10px; }
+.report-table td.num, .report-table th.num { text-align: right; white-space: nowrap; font-family: var(--font-num); font-size: 15px; }
+.report-table tbody th { font-weight: 600; text-align: left; background: none; color: var(--ink); font-size: 15px; white-space: nowrap; }
+.report-table tfoot th, .report-table tfoot td { font-weight: 700; border-top: 2px solid var(--line-strong); }
+.report-table tr.is-empty td { color: var(--ink-3); }
+.report-table .strong { font-weight: 700; }
+.bar { display: inline-block; width: 56px; height: 6px; background: var(--grey-soft); border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--green); }
+.heatmap { border-collapse: separate; border-spacing: 2px; font-family: var(--font-num); font-size: 13px; }
+.heatmap th { font-weight: 600; color: var(--ink-3); padding: 2px 4px; text-align: center; }
+.heatmap tbody th { text-align: left; }
+.heatmap td { width: 30px; height: 26px; text-align: center; border-radius: 3px; background: var(--grey-soft); color: var(--ink); }
+.heatmap td.hm-1 { background: #D7EEDF; }
+.heatmap td.hm-2 { background: #A9D8BB; }
+.heatmap td.hm-3 { background: #5DB383; color: #fff; }
+.heatmap td.hm-4 { background: var(--green-ink); color: #fff; font-weight: 700; }
+.rank { margin: 8px 0 0; padding-left: 22px; }
+.rank li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.defs { margin-top: 8px; }
+.defs summary { cursor: pointer; color: var(--green-ink); font-weight: 600; font-size: 14px; }

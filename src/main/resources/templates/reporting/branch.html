@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title th:text="${r.branchName()} + ' · Raporlar · SahaHub'">Raporlar · SahaHub</title></head>
+<body>
+<main id="main" class="page page-wide" th:with="cur=${r.currency()}, p=${r.period()}">
+	<nav th:replace="~{fragments/staffnav :: subnav(${branchId}, 'raporlar')}"></nav>
+	<div class="page-head">
+		<div><p class="eyebrow" th:text="${r.branchName()}">Şube</p><h1>Raporlar</h1></div>
+		<div class="btn-row" th:if="${canCompare}">
+			<a class="btn btn-secondary btn-sm" th:href="@{/isletme/isletmeler/{b}/sube-karsilastirma(b=${businessId}, sube=${branchId}, bas=${p.from()}, bit=${p.to()})}">Şubeleri karşılaştır</a>
+		</div>
+	</div>
+
+	<form class="report-filter" method="get" th:action="@{/isletme/subeler/{id}/raporlar(id=${branchId})}">
+		<div class="field"><label for="rf-from">Başlangıç</label><input class="input num" id="rf-from" type="date" name="bas" th:value="${p.from()}"></div>
+		<div class="field"><label for="rf-to">Bitiş</label><input class="input num" id="rf-to" type="date" name="bit" th:value="${p.to()}"></div>
+		<div class="field"><label for="rf-grp">Tahsilat dönemi</label>
+			<select class="select" id="rf-grp" name="grup">
+				<option value="DAY" th:selected="${r.grouping().name() == 'DAY'}">Günlük</option>
+				<option value="WEEK" th:selected="${r.grouping().name() == 'WEEK'}">Haftalık</option>
+				<option value="MONTH" th:selected="${r.grouping().name() == 'MONTH'}">Aylık</option>
+			</select>
+		</div>
+		<button class="btn btn-primary" type="submit">Göster</button>
+	</form>
+	<p class="small muted" th:text="${@fmt.span(p.from(), p.to())} + ' · ' + ${p.dayCount()} + ' gün · şube saatine göre'">1–31 Eki</p>
+
+	<!-- ================= Özet: üç para kavramı ayrı ================= -->
+	<section class="kpis" aria-label="Özet">
+		<div class="kpi">
+			<span class="kpi-label">Rezervasyon bedeli</span>
+			<span class="kpi-value num" th:text="${@fmt.money(r.receivables().booked(), cur)}">48.000 ₺</span>
+			<span class="kpi-note" th:text="${r.receivables().count()} + ' onaylı maç (alacak, para değil)'">32 onaylı maç</span>
+		</div>
+		<div class="kpi">
+			<span class="kpi-label">Net tahsilat</span>
+			<span class="kpi-value num" th:text="${@fmt.money(r.collectionTotal().net(), cur)}">31.200 ₺</span>
+			<span class="kpi-note">Ödeme tarihine göre, iadeler düşülmüş</span>
+		</div>
+		<div class="kpi">
+			<span class="kpi-label">Kalan alacak</span>
+			<span class="kpi-value num" th:text="${@fmt.money(r.receivables().outstanding(), cur)}">9.800 ₺</span>
+			<span class="kpi-note" th:text="'İade bekleyen: ' + ${@fmt.money(r.receivables().refundDue(), cur)}">İade bekleyen</span>
+		</div>
+		<div class="kpi">
+			<span class="kpi-label">Doluluk</span>
+			<span class="kpi-value num" th:text="${@fmt.rate(r.usageTotal().occupancy())}">%54,2</span>
+			<span class="kpi-note" th:text="'Hazırlık dahil ' + ${@fmt.rate(r.usageTotal().busy())}">Hazırlık dahil</span>
+		</div>
+	</section>
+
+	<!-- ================= Tahsilat ================= -->
+	<section class="report-section" aria-labelledby="col-title">
+		<div class="section-head">
+			<h2 id="col-title" class="section-title" th:text="${r.grouping().label()} + ' tahsilat'">Günlük tahsilat</h2>
+			<a class="btn btn-text btn-sm" th:href="@{/isletme/subeler/{id}/raporlar.csv(id=${branchId}, bas=${p.from()}, bit=${p.to()}, grup=${r.grouping()}, bolum='tahsilat')}">CSV indir</a>
+		</div>
+		<div class="table-wrap">
+			<table class="table report-table">
+				<thead><tr><th scope="col">Dönem</th><th scope="col" class="num">Nakit</th><th scope="col" class="num">POS</th><th scope="col" class="num">Havale</th>
+					<th scope="col" class="num">Çevrim içi <span class="tiny">(sim.)</span></th><th scope="col" class="num">İade</th><th scope="col" class="num">Ters kayıt</th><th scope="col" class="num">Net</th></tr></thead>
+				<tbody>
+				<tr th:each="c : ${r.collections()}" th:classappend="${c.charges().signum() == 0 and c.refunds().signum() == 0 and c.reversals().signum() == 0} ? 'is-empty'">
+					<th scope="row" th:text="${@fmt.span(c.start(), c.end())}">1 Eki</th>
+					<td class="num" th:text="${@fmt.money(c.cash(), cur)}">0</td>
+					<td class="num" th:text="${@fmt.money(c.pos(), cur)}">0</td>
+					<td class="num" th:text="${@fmt.money(c.transfer(), cur)}">0</td>
+					<td class="num" th:text="${@fmt.money(c.online(), cur)}">0</td>
+					<td class="num" th:text="${c.refunds().signum() > 0} ? '−' + ${@fmt.money(c.refunds(), cur)} : ${@fmt.money(c.refunds(), cur)}">0</td>
+					<td class="num" th:text="${c.reversals().signum() > 0} ? '−' + ${@fmt.money(c.reversals(), cur)} : ${@fmt.money(c.reversals(), cur)}">0</td>
+					<td class="num strong" th:text="${@fmt.money(c.net(), cur)}">0</td>
+				</tr>
+				</tbody>
+				<tfoot th:with="t=${r.collectionTotal()}">
+				<tr><th scope="row">Toplam</th>
+					<td class="num" th:text="${@fmt.money(t.cash(), cur)}">0</td><td class="num" th:text="${@fmt.money(t.pos(), cur)}">0</td>
+					<td class="num" th:text="${@fmt.money(t.transfer(), cur)}">0</td><td class="num" th:text="${@fmt.money(t.online(), cur)}">0</td>
+					<td class="num" th:text="${@fmt.money(t.refunds(), cur)}">0</td><td class="num" th:text="${@fmt.money(t.reversals(), cur)}">0</td>
+					<td class="num strong" th:text="${@fmt.money(t.net(), cur)}">0</td></tr>
+				</tfoot>
+			</table>
+		</div>
+	</section>
+
+	<div class="report-grid">
+		<!-- ================= Gelir / gider ================= -->
+		<section class="report-section" aria-labelledby="ge-title">
+			<h2 id="ge-title" class="section-title">Gelir / gider özeti</h2>
+			<table class="price-table">
+				<tbody>
+				<tr><td>Net tahsilat</td><td th:text="${@fmt.money(r.collectionTotal().net(), cur)}">0</td></tr>
+				<tr th:each="e : ${r.expenses().byCategory()}"><td th:text="'Gider: ' + ${e.key}">Gider</td>
+					<td th:text="'−' + ${@fmt.money(e.value, cur)}">0</td></tr>
+				</tbody>
+				<tfoot><tr><td>Nakit farkı</td><td th:text="${@fmt.money(r.cashDifference(), cur)}">0</td></tr></tfoot>
+			</table>
+			<p class="tiny muted" style="margin:6px 0 0">Nakit farkı kâr değildir: vergi, maaş, kira ve amortisman sistemde yoktur.</p>
+		</section>
+
+		<!-- ================= İptal ve gelmeme ================= -->
+		<section class="report-section" aria-labelledby="rt-title" th:with="x=${r.rates()}">
+			<h2 id="rt-title" class="section-title">İptal ve gelmeme</h2>
+			<dl class="kv">
+				<dt>İptal oranı</dt><dd><strong class="num" th:text="${@fmt.rate(x.cancelRate())}">%8</strong>
+					<span class="small muted" th:text="'(' + ${x.cancelled()} + ' / ' + ${x.confirmed()} + ' onaylı maç; müşteri ' + ${x.cancelledByCustomer()} + ', şube ' + ${x.cancelledByStaff()} + ')'">(3 / 40)</span></dd>
+				<dt>Gelmeme oranı</dt><dd><strong class="num" th:text="${@fmt.rate(x.noShowRate())}">%4</strong>
+					<span class="small muted" th:text="'(' + ${x.noShows()} + ' / ' + (${x.completed()} + ${x.noShows()}) + ' oynanması gereken maç)'">(1 / 25)</span></dd>
+				<dt>Bırakılan tutma</dt><dd th:text="${x.droppedHolds()} + ' (onaylanmadan iptal edilen veya süresi dolan; orana girmez)'">5</dd>
+				<dt th:if="${x.unmarkedPast() > 0}">İşaretlenmemiş</dt>
+				<dd th:if="${x.unmarkedPast() > 0}" th:text="${x.unmarkedPast()} + ' geçmiş maçın durumu (geldi/gelmedi) girilmemiş'">2</dd>
+			</dl>
+		</section>
+	</div>
+
+	<!-- ================= Saha karşılaştırması ve doluluk ================= -->
+	<section class="report-section" aria-labelledby="pu-title">
+		<div class="section-head">
+			<h2 id="pu-title" class="section-title">Sahalar: doluluk ve bedel</h2>
+			<a class="btn btn-text btn-sm" th:href="@{/isletme/subeler/{id}/raporlar.csv(id=${branchId}, bas=${p.from()}, bit=${p.to()}, bolum='sahalar')}">CSV indir</a>
+		</div>
+		<div class="table-wrap">
+			<table class="table report-table">
+				<thead><tr><th scope="col">Saha</th><th scope="col" class="num">Satılabilir</th><th scope="col" class="num">Rezervasyon</th>
+					<th scope="col" class="num">Lig</th><th scope="col" class="num">Hazırlık</th><th scope="col" class="num">Doluluk</th><th scope="col" class="num">Maç</th><th scope="col" class="num">Bedel</th></tr></thead>
+				<tbody>
+				<tr th:each="u : ${r.usage()}">
+					<th scope="row" th:text="${u.name()}">Saha 1</th>
+					<td class="num" th:text="${@fmt.hours(u.sellable())}" th:title="'Açık ' + ${u.open()} + ' dk, kapatma ' + ${u.blocked()} + ' dk'">120 sa</td>
+					<td class="num" th:text="${@fmt.hours(u.reserved())}">60 sa</td>
+					<td class="num" th:text="${@fmt.hours(u.match())}">3 sa</td>
+					<td class="num" th:text="${@fmt.hours(u.buffer())}">0 sa</td>
+					<td class="num"><span class="bar" aria-hidden="true"><i th:style="${u.occupancy() != null} ? 'width:' + ${u.occupancy().min(100)} + '%' : 'width:0'"></i></span>
+						<strong th:text="${@fmt.rate(u.occupancy())}">%52</strong></td>
+					<td class="num" th:text="${u.reservations()}">30</td>
+					<td class="num" th:text="${@fmt.money(u.booked(), cur)}">40.000 ₺</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+		<details class="defs">
+			<summary>Doluluk nasıl hesaplanıyor?</summary>
+			<p class="small">Payda <strong>satılabilir süre</strong>dir: aralıktaki iş günlerinin çalışma saatleri toplamından bakım/etkinlik
+				kapatmaları düşülür. Kapalı günler paydaya girmez. Pay, onaylı maçların oyun süresi ile lig maçlarının toplamıdır.
+				Geçici tutmalar ve iptaller sayılmaz. Maç sonrası <strong>hazırlık süresi</strong> paydan da paydadan da düşülmez;
+				"hazırlık dahil" oran, sahanın fiilen meşgul olduğu süreyi gösterir.</p>
+		</details>
+	</section>
+
+	<div class="report-grid">
+		<!-- ================= Yoğun saatler ================= -->
+		<section class="report-section" aria-labelledby="hm-title">
+			<div class="section-head">
+				<h2 id="hm-title" class="section-title">Yoğun saatler</h2>
+				<a class="btn btn-text btn-sm" th:href="@{/isletme/subeler/{id}/raporlar.csv(id=${branchId}, bas=${p.from()}, bit=${p.to()}, bolum='yogun-saatler')}">CSV indir</a>
+			</div>
+			<div class="empty" th:if="${#lists.isEmpty(r.heatmap().hours())}"><p>Bu aralıkta onaylı maç yok.</p></div>
+			<div class="table-wrap" th:unless="${#lists.isEmpty(r.heatmap().hours())}">
+				<table class="heatmap">
+					<caption class="sr-only">Gün ve başlangıç saatine göre onaylı maç sayısı</caption>
+					<thead><tr><th scope="col"><span class="sr-only">Gün</span></th>
+						<th scope="col" th:each="h : ${r.heatmap().hours()}" th:text="${h < 10} ? '0' + ${h} : ${h}">20</th></tr></thead>
+					<tbody>
+					<tr th:each="d : ${days}">
+						<th scope="row" th:text="${@fmt.dayShort(d)}">Pzt</th>
+						<td th:each="h, st : ${r.heatmap().hours()}" th:classappend="'hm-' + ${r.heatmap().level(d, st.index)}"
+						    th:text="${r.heatmap().count(d, st.index) > 0} ? ${r.heatmap().count(d, st.index)} : ''">3</td>
+					</tr>
+					</tbody>
+				</table>
+			</div>
+			<p class="tiny muted" style="margin:6px 0 0">Hücredeki sayı, o gün ve saatte başlayan onaylı maç sayısıdır; gece yarısından sonraki maçlar önceki günün satırındadır.</p>
+		</section>
+
+		<!-- ================= Tekrar gelen müşteriler ================= -->
+		<section class="report-section" aria-labelledby="rc-title" th:with="x=${r.repeat()}">
+			<div class="section-head">
+				<h2 id="rc-title" class="section-title">Tekrar gelen müşteriler</h2>
+				<a class="btn btn-text btn-sm" th:href="@{/isletme/subeler/{id}/raporlar.csv(id=${branchId}, bas=${p.from()}, bit=${p.to()}, bolum='musteriler')}">CSV indir</a>
+			</div>
+			<p><strong class="num" th:text="${@fmt.rate(x.repeatRate())}">%35</strong>
+				<span class="small" th:text="'(' + ${x.repeat()} + ' / ' + ${x.distinct()} + ' kayıtlı müşteri en az iki kez oynadı)'">(7 / 20)</span></p>
+			<p class="tiny muted" th:if="${x.guestBookings() > 0}" th:text="${x.guestBookings()} + ' misafir rezervasyonu (hesapsız) kişi olarak eşleştirilemediği için sayılmadı.'">misafir</p>
+			<ol class="rank" th:unless="${#lists.isEmpty(x.top())}">
+				<li th:each="v : ${x.top()}"><span class="truncate" th:text="${v.name()}">Deniz Arslan</span>
+					<span class="small muted num" th:text="${v.visits()} + ' maç · son ' + ${@fmt.dayMonth(v.last())}">4 maç</span></li>
+			</ol>
+		</section>
+	</div>
+	<p class="small muted">Metrik tanımlarının tamamı: <code>docs/RAPORLAR.md</code>.</p>
+</main>
+</body>
+</html>
