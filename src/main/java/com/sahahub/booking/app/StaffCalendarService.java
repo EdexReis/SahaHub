@@ -68,11 +68,13 @@ public class StaffCalendarService {
 	private final AvailabilityService availability;
 	private final AppUserRepository users;
 	private final PaymentStatusPort paymentStatus;
+	private final MatchCalendarPort matchPort;
 	private final Clock clock;
 
 	public StaffCalendarService(CatalogService catalog, AccessGuard guard, ReservationRepository reservations,
 			PitchBlockRepository blocks, AvailabilityService availability, AppUserRepository users,
-			PaymentStatusPort paymentStatus, Clock clock) {
+			PaymentStatusPort paymentStatus, MatchCalendarPort matchPort, Clock clock) {
+		this.matchPort = matchPort;
 		this.catalog = catalog;
 		this.guard = guard;
 		this.reservations = reservations;
@@ -183,13 +185,14 @@ public class StaffCalendarService {
 
 	/** Takvimde gösterilecek veriler tek seferde yüklenir (sahada sorgu döngüsü yok). */
 	private record Data(List<Reservation> reservations, List<PitchBlock> blocks, List<PitchOccupancy> occupancies,
-			Map<Long, String> customerNames, Map<Long, PaymentStatusPort.Badge> badges) {
+			Map<Long, String> customerNames, Map<Long, PaymentStatusPort.Badge> badges,
+			List<MatchCalendarPort.MatchSlot> matches) {
 	}
 
 	private Data load(Long branchId, List<Pitch> pitches, TimeRange range) {
 		List<Long> pitchIds = pitches.stream().map(Pitch::getId).toList();
 		if (pitchIds.isEmpty()) {
-			return new Data(List.of(), List.of(), List.of(), Map.of(), Map.of());
+			return new Data(List.of(), List.of(), List.of(), Map.of(), Map.of(), List.of());
 		}
 		List<Reservation> res = reservations.findForCalendar(branchId, range.start(), range.end(), SHOWN)
 			.stream()
@@ -202,7 +205,7 @@ public class StaffCalendarService {
 		List<Long> customerIds = res.stream().map(Reservation::getCustomerId).filter(id -> id != null).toList();
 		Map<Long, String> names = customerIds.isEmpty() ? Map.of()
 				: users.findAllById(customerIds).stream().collect(Collectors.toMap(AppUser::getId, AppUser::getFullName));
-		return new Data(res, blk, occ, names, paymentStatus.badges(res));
+		return new Data(res, blk, occ, names, paymentStatus.badges(res), matchPort.matches(pitchIds, range));
 	}
 
 	private Column column(Pitch pitch, LocalDate day, String title, String subtitle, TimeRange grid,
@@ -218,7 +221,7 @@ public class StaffCalendarService {
 			items.add(new Item(Kind.RESERVATION, row(grid, r.getStartsAt()), span(grid, r.playRange()), r.getCode(),
 					name, time(r.playRange(), zone), r.getStatus(), r.getChannel(), r.getCheckedInAt() != null,
 					pitch.getId(), null, null, badge == null ? null : badge.state(),
-					badge == null ? null : badge.label()));
+					badge == null ? null : badge.label(), null));
 			if (r.getBufferMinutes() > 0 && r.occupiedRange().end().isAfter(grid.start())) {
 				TimeRange buffer = new TimeRange(r.getEndsAt(), r.occupiedRange().end());
 				if (buffer.overlaps(grid)) {
@@ -231,7 +234,14 @@ public class StaffCalendarService {
 			if (b.getPitchId().equals(pitch.getId()) && b.range().overlaps(grid)) {
 				items.add(new Item(Kind.BLOCK, row(grid, b.getStartsAt()), span(grid, b.range()), null,
 						b.getReason().label(), b.getNote() == null ? time(b.range(), zone) : b.getNote(), null, null,
-						false, pitch.getId(), null, b.getId(), null, null));
+						false, pitch.getId(), null, b.getId(), null, null, null));
+			}
+		}
+		for (MatchCalendarPort.MatchSlot m : data.matches) {
+			if (m.pitchId().equals(pitch.getId()) && m.play().overlaps(grid)) {
+				items.add(new Item(Kind.MATCH, row(grid, m.play().start()), span(grid, m.play()), null, m.title(),
+						time(m.play(), zone) + " · " + m.subtitle(), null, null, false, pitch.getId(), null, null, null,
+						null, m.link()));
 			}
 		}
 		if (openWindow.isPresent()) {
@@ -254,7 +264,7 @@ public class StaffCalendarService {
 	private static Item item(Kind kind, TimeRange grid, TimeRange range, String code, String title, String subtitle,
 			ReservationStatus status, Channel channel, boolean checkedIn, Long pitchId, LocalDateTime start) {
 		return new Item(kind, row(grid, range.start()), span(grid, range), code, title, subtitle, status, channel,
-				checkedIn, pitchId, start, null, null, null);
+				checkedIn, pitchId, start, null, null, null, null);
 	}
 
 	/** Anın ızgaradaki satır numarası (1'den başlar), ızgara dışına taşanlar kenara kırpılır. */

@@ -28,6 +28,8 @@ public enum Permission {
 	/** Gider kaydı. */
 	EXPENSE_MANAGE,
 	/** İşletme geneli kupon tanımlama (yalnızca işletme sahibi). */
-	COUPON_MANAGE
+	COUPON_MANAGE,
+	/** Lig açma, takım ekleme, fikstür, maç planlama ve skor girişi. */
+	TOURNAMENT_MANAGE
 
 }

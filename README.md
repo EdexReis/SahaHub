@@ -2,9 +2,10 @@
 
 Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 + Thymeleaf + PostgreSQL.
 
-> **Durum (1 Ekim 2026):** Aşama 1–4 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
+> **Durum (1 Ekim 2026):** Aşama 1–5 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
 > takvimi, fiyatlandırma (kapora, kupon, ek hizmet, indirim), ödeme hareketleri, iade, kasa, düzenli
-> (haftalık) rezervasyon, bekleme listesi ve bildirimler. Takım, ilan, turnuva ve raporlar **henüz yok**.
+> (haftalık) rezervasyon, bekleme listesi, bildirimler, takımlar, oyuncu/rakip ilanları ve lig. Raporlar ve yönetim
+> ekranları (Aşama 6) **henüz yok**.
 > Ayrıntı: [PROGRESS.md](PROGRESS.md).
 >
 > **Gerçek entegrasyon yoktur:** çevrim içi ödeme bir **simülasyondur** (kart bilgisi alınmaz, para çekilmez),
@@ -15,9 +16,9 @@ Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 +
 
 | Kim | Ne yapabilir |
 |---|---|
-| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, ek hizmet ve kupon ekleme, kaporayı/tamamını çevrim içi ödeme (simülasyon), havale bildirimi, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal (çevrim içi ödeme otomatik iade), yazdırılabilir özet, dolu saat için bekleme listesi (sıra numarası, boşalınca 15 dk'lık teklif), bildirim kutusu ve e-posta/SMS tercihleri |
+| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, ek hizmet ve kupon ekleme, kaporayı/tamamını çevrim içi ödeme (simülasyon), havale bildirimi, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal (çevrim içi ödeme otomatik iade), yazdırılabilir özet, dolu saat için bekleme listesi (sıra numarası, boşalınca 15 dk'lık teklif), bildirim kutusu ve e-posta/SMS tercihleri, takım kurma ve davet bağlantısıyla katılma, oyuncu/rakip ilanı verme ve başvurma, ligleri izleme |
 | Resepsiyon | Şube takvimi (ödeme etiketleriyle), boş saatten hızlı rezervasyon, önizlemeli düzenli (haftalık) rezervasyon ve "bu ve sonraki maçları iptal", taşıma, geldi / tamamlandı / gelmedi, gerekçeli iptal, nakit / manuel POS tahsilat, havale doğrulama, hatalı tahsilatı ters kayıtla düzeltme, kasa açma/kapama |
-| Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma, iade, personel indirimi, gider kaydı, fiyat kuralları, ek hizmetler, kapora kuralı |
+| Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma, iade, personel indirimi, gider kaydı, fiyat kuralları, ek hizmetler, kapora kuralı, lig (fikstür, maç planlama, skor) |
 | İşletme sahibi | İşletmenin tüm şubelerinde yukarıdakilerin hepsi + kuponlar |
 | Platform yöneticisi | İşletmeleri listeleme, gerekçeyle askıya alma/etkinleştirme (denetim kaydına yazılır), demo SMS/WhatsApp mesaj kutusu |
 

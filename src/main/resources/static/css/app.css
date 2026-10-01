@@ -561,6 +561,8 @@ legend { font: 600 14px var(--font); margin-bottom: 8px; padding: 0; }
 	background: repeating-linear-gradient(135deg, #EEF0EC 0 7px, #E1E5DF 7px 14px);
 	border-color: var(--line-strong); border-left-color: var(--ink-2); color: var(--ink-2);
 }
+/* Lig maçı: rezervasyondan ayrılsın diye lacivert kenar; renk tek başına anlam taşımaz, metinde "lig maçı" yazar */
+.ev-match { background: #EAF0F8; border-color: #B7C7DD; border-left-color: var(--ink); }
 .ev-buffer {
 	background: repeating-linear-gradient(135deg, transparent 0 4px, #E3E7E1 4px 6px);
 	border: 0; margin: 0 6px; padding: 0 6px; color: var(--ink-3); font-size: 11px; justify-content: center;
@@ -701,3 +703,36 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .series-table input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--green); margin: 0; }
 .series-table tr.is-unavailable td { background: #FAFBF9; color: var(--ink-3); }
 .series-table .status + .tiny { display: block; margin-top: 2px; }
+
+/* ------------------------------------------------------------ topluluk: ilanlar, başvurular, takımlar */
+.app-item { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.app-item h3 { font-size: 16px; margin: 0 0 2px; }
+.app-item h3 a { color: var(--ink); }
+.app-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.app-actions form { margin: 0; }
+.field-row.three { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 480px) { .field-row.three { grid-template-columns: 1fr 1fr; } }
+
+/* ------------------------------------------------------------ lig: puan durumu ve fikstür */
+.league-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; align-items: start; margin-top: 8px; }
+@media (max-width: 900px) { .league-grid { grid-template-columns: minmax(0, 1fr); } }
+.standings th, .standings td { padding: 8px 8px; }
+.standings .num { text-align: right; font-family: var(--font-num); font-size: 16px; }
+.standings .team-cell { font-weight: 600; text-align: left; background: none; color: var(--ink); font-size: 15px; }
+.standings .pts { font-weight: 700; }
+.standings abbr { text-decoration: none; }
+@media (max-width: 480px) { .hide-xs { display: none; } }
+.round { margin-bottom: 18px; }
+.round h3 { font-size: 14px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 6px; }
+.match-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.match { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 2px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.match .m-home { text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.match .m-away { font-weight: 600; overflow-wrap: anywhere; }
+.match .m-score { font-size: 20px; font-weight: 700; min-width: 64px; text-align: center; }
+.match .m-vs { color: var(--ink-3); font-weight: 400; }
+.match .m-when, .match .m-actions { grid-column: 1 / -1; text-align: center; }
+.match .m-actions { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 4px; }
+.match details { width: 100%; max-width: 420px; text-align: left; }
+.match summary { cursor: pointer; color: var(--green-ink); font-weight: 600; font-size: 14px; text-align: center; }
+.score-form { display: flex; align-items: center; gap: 6px; margin: 0; }
+.score-form .input { width: 64px; text-align: center; }

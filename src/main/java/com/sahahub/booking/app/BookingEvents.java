@@ -27,6 +27,13 @@ public final class BookingEvents {
 	public record SlotReleased(Long reservationId, Long pitchId, Instant start, Instant end) {
 	}
 
+	/**
+	 * Rezervasyon dışı bir doluluk (ör. lig maçı) kaldırıldı veya taşındı. Bekleme listesi bu aralık için
+	 * de sıradakine teklif açmayı dener.
+	 */
+	public record PitchFreed(Long pitchId, Instant start, Instant end) {
+	}
+
 	/** Düzenli rezervasyon serisi oluşturuldu (her maç için ayrı bildirim yerine tek bildirim). */
 	public record SeriesCreated(Long seriesId, int count) {
 	}

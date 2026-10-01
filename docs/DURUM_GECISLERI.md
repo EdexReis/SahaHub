@@ -99,6 +99,37 @@ stateDiagram-v2
 Uygulama içi bildirim her zaman yazılır. E-posta (varsayılan açık) ve SMS (varsayılan kapalı, telefon
 gerekli) müşterinin tercihidir. Misafir rezervasyonunda telefon varsa yalnızca demo SMS oluşur.
 
+## Lig
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT: personel ligi açar
+    DRAFT --> ACTIVE: fikstür oluşturuldu (3-20 takım)
+    ACTIVE --> FINISHED: tüm maçlar oynandı, personel bitirdi
+```
+
+Maç: `UNSCHEDULED → SCHEDULED` (saha ve saat; `pitch_occupancy` kaynak `TOURNAMENT_MATCH`) → `PLAYED` (skor,
+yalnızca maç başladıktan sonra). Planlı maç yeniden planlanabilir veya planı kaldırılabilir (saha boşalır, bekleme
+listesine teklif açılır). Oynanmış maçın skoru düzeltilebilir (denetim kaydı `MATCH_RESULT_CORRECTED`); saati
+değişmez.
+
+- **Fikstür**: round-robin ("daire yöntemi"). n takımda n−1 hafta (tek sayıda takımda her hafta bir takım "bay"
+  geçer, n hafta). Tek devrede her ikili bir kez, çift devrede ev/deplasman değişerek iki kez karşılaşır.
+- **Haftalık planlama**: k. haftanın maçları ilk tarih + (k−1) hafta günü, seçilen sahada art arda. Tek
+  transaction: bir maçın saati dolu, geçmiş veya şube kapalıysa hiçbir maç planlanmaz, hata maçı adıyla söyler.
+- **Puan durumu** saklanmaz; oynanmış maçlardan hesaplanır. Sıralama: puan → averaj → atılan gol → ad.
+  İkili averaj uygulanmaz.
+
+## Takım ve ilan
+
+- Takım: kuran kaptandır. Kaptan, başka üye varken ayrılamaz (önce kaptanlığı devreder); tek üye kaptan ayrılırsa
+  takım dağılır. Dağılan takımın açık ilanları kapanır.
+- İlan: `OPEN → FILLED` (kontenjan doldu; oyuncu ilanında aranan sayı, rakip ilanında 1) veya `OPEN → CLOSED`
+  (ilan sahibi kapattı, bağlı rezervasyon iptal edildi, takım dağıldı). Süre dolumu ayrı durum değildir:
+  `expires_at` geçmişse ilan "Süresi doldu" görünür ve başvuru almaz. Maç zamanı varsa bitiş odur, yoksa 7 gün.
+- Başvuru: `PENDING → ACCEPTED / REJECTED / WITHDRAWN`. İlan dolunca bekleyen başvurular "kabul edilmedi" olur
+  ve başvuranlara bildirim gider.
+
 ## Fiyat hesabı
 
 1. Süre dakika dakika ele alınır; her dakikaya, şubenin yerel saatinde o dakikanın başlangıcına uyan

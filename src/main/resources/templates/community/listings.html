@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>İlanlar · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<nav th:replace="~{fragments/communitynav :: tabs('ilanlar')}"></nav>
+	<div class="page-head">
+		<div>
+			<p class="eyebrow">Oyuncu ve rakip</p>
+			<h1>İlanlar</h1>
+		</div>
+		<div class="btn-row">
+			<a class="btn btn-primary btn-sm" th:href="@{/ilanlar/yeni}">İlan ver</a>
+		</div>
+	</div>
+
+	<nav class="filters" aria-label="İlan türü">
+		<a class="chip-link" th:href="@{/ilanlar(sehir=${city})}" th:aria-current="${kind == null} ? 'true'">Tümü</a>
+		<a class="chip-link" th:href="@{/ilanlar(sehir=${city}, tur='PLAYERS_WANTED')}" th:aria-current="${kind != null and kind.name() == 'PLAYERS_WANTED'} ? 'true'">Oyuncu arıyoruz</a>
+		<a class="chip-link" th:href="@{/ilanlar(sehir=${city}, tur='OPPONENT_WANTED')}" th:aria-current="${kind != null and kind.name() == 'OPPONENT_WANTED'} ? 'true'">Rakip arıyoruz</a>
+	</nav>
+	<nav class="filters" aria-label="Şehre göre süz" th:if="${#lists.size(cities) > 1}">
+		<a class="chip-link" th:href="@{/ilanlar(tur=${kind})}" th:aria-current="${city == null or city == ''} ? 'true'">Tüm şehirler</a>
+		<a class="chip-link" th:each="c : ${cities}" th:href="@{/ilanlar(sehir=${c}, tur=${kind})}" th:text="${c}"
+		   th:aria-current="${c == city} ? 'true'">İstanbul</a>
+	</nav>
+
+	<ul class="pitch-list" th:if="${!#lists.isEmpty(cards)}">
+		<li class="pitch-row" th:each="c : ${cards}">
+			<div style="min-width:0">
+				<p class="eyebrow" style="margin:0" th:text="${c.kind().label()}">Oyuncu arıyoruz</p>
+				<h2><a th:href="@{/ilanlar/{id}(id=${c.id()})}" th:text="${c.teamName()}">Kadıköy Kartalları</a></h2>
+				<div class="pitch-meta">
+					<span th:if="${c.playAt() != null}" class="num" th:text="${@fmt.at(c.playAt())}">4 Eki 2026 21:00</span>
+					<span th:if="${c.place() != null}" class="truncate" th:text="${c.place()}">Saha 1 · Kadıköy Şubesi</span>
+					<span th:text="${c.district() != null} ? ${c.district()} + ', ' + ${c.city()} : ${c.city()}">Kadıköy, İstanbul</span>
+				</div>
+				<div class="tags"><span class="tag" th:text="${c.level().label()}">Keyif maçı</span></div>
+			</div>
+			<div class="price-from">
+				<th:block th:if="${c.kind().name() == 'PLAYERS_WANTED'}">
+					<span class="num" th:text="${c.playersNeeded() - c.accepted()}">2</span>
+					<span class="tiny">oyuncu aranıyor</span>
+				</th:block>
+				<span class="tiny" th:unless="${c.kind().name() == 'PLAYERS_WANTED'}">Rakip aranıyor</span>
+			</div>
+		</li>
+	</ul>
+
+	<div class="empty" th:if="${#lists.isEmpty(cards)}">
+		<p>Şu an açık ilan yok.</p>
+		<a class="btn btn-secondary" th:href="@{/ilanlar/yeni}">İlk ilanı siz verin</a>
+	</div>
+</main>
+</body>
+</html>

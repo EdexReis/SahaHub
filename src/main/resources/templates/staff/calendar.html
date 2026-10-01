@@ -130,6 +130,12 @@
 								<button class="btn btn-text btn-sm" type="submit" style="min-height:28px;padding:0">Kaldır</button>
 							</form>
 						</div>
+						<a th:if="${it.kind().name() == 'MATCH'}" class="ev ev-match" th:classappend="${it.compact()} ? 'compact'"
+						   th:href="@{${it.link()}}" th:aria-label="${c.title()} + ', lig maçı: ' + ${it.title()} + ', ' + ${it.subtitle()}"
+						   th:style="|grid-row:${it.rowStart()} / span ${it.rowSpan()}|">
+							<span class="ev-sub truncate" th:text="${it.subtitle()}">20:00–21:00 · Kış Ligi</span>
+							<span class="ev-title truncate" th:text="${it.title()}" th:title="${it.title()}">Kartallar – Şimşekler</span>
+						</a>
 						<a th:if="${it.kind().name() == 'FREE'}" class="ev ev-free"
 						   th:href="@{/isletme/subeler/{id}/hizli-rezervasyon(id=${cal.branchId}, saha=${it.pitchId()}, baslangic=${it.start()})}"
 						   th:hx-get="@{/isletme/subeler/{id}/hizli-rezervasyon(id=${cal.branchId}, saha=${it.pitchId()}, baslangic=${it.start()})}" th:aria-label="${c.title()} + ', ' + ${it.subtitle()} + ' boş, rezervasyon ekle'"

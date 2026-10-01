@@ -27,7 +27,7 @@ public record CalendarView(Long branchId, String branchName, String businessName
 	}
 
 	public enum Kind {
-		RESERVATION, BLOCK, BUFFER, FREE
+		RESERVATION, BLOCK, BUFFER, FREE, MATCH
 	}
 
 	public record PitchOption(Long id, String name) {
@@ -42,11 +42,11 @@ public record CalendarView(Long branchId, String branchName, String businessName
 
 	/**
 	 * Takvim öğesi. FREE öğeler tıklanınca hızlı rezervasyon formunu açar; start, formun
-	 * önceden dolacağı yerel başlangıç zamanıdır.
+	 * önceden dolacağı yerel başlangıç zamanıdır. MATCH öğelerinde link lig sayfasıdır.
 	 */
 	public record Item(Kind kind, int rowStart, int rowSpan, String code, String title, String subtitle,
 			ReservationStatus status, Channel channel, boolean checkedIn, Long pitchId, LocalDateTime start,
-			Long blockId, String payState, String payLabel) {
+			Long blockId, String payState, String payLabel, String link) {
 
 		public boolean compact() {
 			return rowSpan <= 3;

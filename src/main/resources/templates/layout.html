@@ -22,6 +22,8 @@
 			<nav class="nav" aria-label="Ana menü">
 				<a th:href="@{/sahalar}" th:aria-current="${currentPath != null and (currentPath == '/' or #strings.startsWith(currentPath, '/sahalar'))} ? 'page'">Sahalar</a>
 				<a th:if="${me != null}" th:href="@{/rezervasyonlarim}" th:aria-current="${currentPath != null and #strings.startsWith(currentPath, '/rezervasyon')} ? 'page'"><span class="long">Rezervasyonlarım</span><span class="short">Rezervasyonlar</span></a>
+				<a th:href="@{/ilanlar}" th:classappend="${me != null and me.staff()} ? 'hide-sm'"
+				   th:aria-current="${currentPath != null and (#strings.startsWith(currentPath, '/ilanlar') or #strings.startsWith(currentPath, '/takimlar') or #strings.startsWith(currentPath, '/ligler') or #strings.startsWith(currentPath, '/davet'))} ? 'page'">İlanlar</a>
 				<a th:if="${me != null}" th:href="@{/bildirimler}" th:aria-current="${currentPath != null and (#strings.startsWith(currentPath, '/bildirimler') or #strings.startsWith(currentPath, '/profil'))} ? 'page'"
 				   th:aria-label="${unreadCount != null and unreadCount > 0} ? 'Bildirimler, ' + ${unreadCount} + ' okunmamış' : 'Bildirimler'">
 					<span class="long">Bildirimler</span>

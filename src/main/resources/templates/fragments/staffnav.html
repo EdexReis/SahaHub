@@ -6,6 +6,7 @@
 	<a th:href="@{/isletme/subeler/{id}/takvim(id=${branchId})}" th:aria-current="${active == 'takvim'} ? 'page'">Takvim</a>
 	<th:block th:each="b : ${branches}" th:if="${b.id() == branchId}">
 		<a th:if="${b.seriesAccess()}" th:href="@{/isletme/subeler/{id}/duzenli(id=${branchId})}" th:aria-current="${active == 'duzenli'} ? 'page'">Düzenli rezervasyon</a>
+		<a th:if="${b.tournamentAccess()}" th:href="@{/isletme/subeler/{id}/ligler(id=${branchId})}" th:aria-current="${active == 'ligler'} ? 'page'">Ligler</a>
 		<a th:if="${b.cashAccess()}" th:href="@{/isletme/subeler/{id}/kasa(id=${branchId})}" th:aria-current="${active == 'kasa'} ? 'page'">Kasa</a>
 		<a th:if="${b.pricingAccess()}" th:href="@{/isletme/subeler/{id}/fiyatlar(id=${branchId})}" th:aria-current="${active == 'fiyatlar'} ? 'page'">Fiyatlandırma</a>
 	</th:block>

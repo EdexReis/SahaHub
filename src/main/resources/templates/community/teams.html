@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Takımlarım · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<nav th:replace="~{fragments/communitynav :: tabs('takimlar')}"></nav>
+	<div class="page-head"><h1>Takımlarım</h1></div>
+
+	<div class="empty" th:if="${#lists.isEmpty(teams)}">
+		<p>Henüz bir takımda değilsiniz. Takım kurun ya da kaptanınızdan davet bağlantısı isteyin.</p>
+	</div>
+	<ul class="res-list" th:unless="${#lists.isEmpty(teams)}">
+		<li class="app-item" th:each="t : ${teams}">
+			<div style="min-width:0">
+				<h3 class="truncate"><a th:href="@{/takimlar/{id}(id=${t.id()})}" th:text="${t.name()}">Kadıköy Kartalları</a></h3>
+				<span class="small muted" th:text="${t.city()} + ' · ' + ${t.memberCount()} + ' oyuncu'">İstanbul · 8 oyuncu</span>
+			</div>
+			<span class="status" th:classappend="${t.myRole().name() == 'CAPTAIN'} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${t.myRole().label()}">Kaptan</span>
+		</li>
+	</ul>
+
+	<form class="panel" style="margin-top:24px" th:action="@{/takimlar}" method="post">
+		<h2 class="section-title">Takım kur</h2>
+		<div class="field-row">
+			<div class="field">
+				<label for="tm-name">Takım adı</label>
+				<input class="input" id="tm-name" name="ad" required maxlength="60">
+			</div>
+			<div class="field">
+				<label for="tm-city">Şehir</label>
+				<input class="input" id="tm-city" name="sehir" required maxlength="60" list="tm-cities">
+				<datalist id="tm-cities"><option th:each="c : ${cities}" th:value="${c}"></option></datalist>
+			</div>
+		</div>
+		<button class="btn btn-primary" type="submit">Takımı kur</button>
+		<p class="tiny muted" style="margin:8px 0 0">Kuran kişi kaptan olur. Oyuncular davet bağlantısıyla katılır.</p>
+	</form>
+</main>
+</body>
+</html>

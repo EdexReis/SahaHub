@@ -53,7 +53,22 @@ import com.sahahub.identity.domain.AppUserRepository;
 import com.sahahub.identity.domain.StaffMembership;
 import com.sahahub.identity.domain.StaffMembershipRepository;
 import com.sahahub.identity.domain.StaffRole;
+import com.sahahub.community.domain.Listing;
+import com.sahahub.community.domain.ListingApplication;
+import com.sahahub.community.domain.ListingApplicationRepository;
+import com.sahahub.community.domain.ListingRepository;
+import com.sahahub.community.domain.Team;
+import com.sahahub.community.domain.TeamMember;
+import com.sahahub.community.domain.TeamMemberRepository;
+import com.sahahub.community.domain.TeamRepository;
 import com.sahahub.notification.app.NotificationWriter;
+import com.sahahub.tournament.domain.RoundRobin;
+import com.sahahub.tournament.domain.Tournament;
+import com.sahahub.tournament.domain.TournamentEntry;
+import com.sahahub.tournament.domain.TournamentEntryRepository;
+import com.sahahub.tournament.domain.TournamentMatch;
+import com.sahahub.tournament.domain.TournamentMatchRepository;
+import com.sahahub.tournament.domain.TournamentRepository;
 import com.sahahub.pricing.domain.PriceCalculator;
 import com.sahahub.pricing.domain.PriceQuote;
 import com.sahahub.pricing.domain.PriceRule;
@@ -113,6 +128,13 @@ class DemoDataSeeder implements ApplicationRunner {
 	private final ReservationSeriesRepository seriesRepo;
 	private final WaitlistRepository waitlist;
 	private final NotificationWriter notifications;
+	private final TeamRepository teams;
+	private final TeamMemberRepository teamMembers;
+	private final ListingRepository listings;
+	private final ListingApplicationRepository applications;
+	private final TournamentRepository tournaments;
+	private final TournamentEntryRepository entries;
+	private final TournamentMatchRepository matches;
 
 	DemoDataSeeder(TransactionTemplate tx, PasswordEncoder encoder, Clock clock, AppUserRepository users,
 			StaffMembershipRepository memberships, BusinessRepository businesses, BranchRepository branches,
@@ -121,7 +143,10 @@ class DemoDataSeeder implements ApplicationRunner {
 			ReservationPriceLineRepository priceLines, OccupancyService occupancy, ExtraServiceRepository extras,
 			CouponRepository coupons, PaymentRepository payments, CashSessionRepository cashSessions,
 			ExpenseRepository expenses, SimulatedPaymentProvider simProvider, JdbcTemplate jdbc,
-			ReservationSeriesRepository seriesRepo, WaitlistRepository waitlist, NotificationWriter notifications) {
+			ReservationSeriesRepository seriesRepo, WaitlistRepository waitlist, NotificationWriter notifications,
+			TeamRepository teams, TeamMemberRepository teamMembers, ListingRepository listings,
+			ListingApplicationRepository applications, TournamentRepository tournaments,
+			TournamentEntryRepository entries, TournamentMatchRepository matches) {
 		this.tx = tx;
 		this.encoder = encoder;
 		this.clock = clock;
@@ -147,6 +172,13 @@ class DemoDataSeeder implements ApplicationRunner {
 		this.seriesRepo = seriesRepo;
 		this.waitlist = waitlist;
 		this.notifications = notifications;
+		this.teams = teams;
+		this.teamMembers = teamMembers;
+		this.listings = listings;
+		this.applications = applications;
+		this.tournaments = tournaments;
+		this.entries = entries;
+		this.matches = matches;
 	}
 
 	@Override
@@ -331,10 +363,69 @@ class DemoDataSeeder implements ApplicationRunner {
 		notifications.write(new NotificationWriter.Recipient(captain.getId(), captain.getEmail(), captain.getPhone(),
 				true, true), "SERIES_CREATED", "Düzenli rezervasyonunuz oluşturuldu",
 				"Saha 2 · Açık · Kadıköy Şubesi · her hafta 19:00 · 6 maç", null, "demo:series:" + series.getId());
+		Reservation firstOfSeries = reservations.findBySeriesIdOrderBySeriesIndex(series.getId()).getFirst();
+		seedCommunity(captain, customer, longName, firstOfSeries, today, now);
+		seedLeague(yesil, kadikoy, k3, manager1, today, now);
+
 		notifications.write(new NotificationWriter.Recipient(null, null, "0555 000 99 99", false, true),
 				"RESERVATION_CONFIRMED", "Rezervasyonunuz onaylandı",
 				"Saha 1 · Kapalı · Kadıköy Şubesi · bugün 20:00 · kod " + evening.get(2).getCode(), null,
 				"demo:guest:" + evening.get(2).getId());
+	}
+
+	/** Aşama 5: iki takım, bir rakip ilanı (rezervasyona bağlı) ve bir oyuncu ilanı (bekleyen başvurulu). */
+	private void seedCommunity(AppUser captain, AppUser customer, AppUser longName, Reservation captainsMatch,
+			LocalDate today, Instant now) {
+		Team eagles = teams.save(new Team("Kadıköy Kartalları", "İstanbul", "KARTAL2026", now));
+		teamMembers.save(new TeamMember(eagles.getId(), captain.getId(), TeamMember.Role.CAPTAIN, now));
+		teamMembers.save(new TeamMember(eagles.getId(), customer.getId(), TeamMember.Role.MEMBER, now));
+		teamMembers.save(new TeamMember(eagles.getId(), longName.getId(), TeamMember.Role.MEMBER, now));
+		Team bolts = teams.save(new Team("Moda Şimşekleri", "İstanbul", "SIMSEK2026", now));
+		teamMembers.save(new TeamMember(bolts.getId(), customer.getId(), TeamMember.Role.CAPTAIN, now));
+
+		listings.save(new Listing(Listing.Kind.OPPONENT_WANTED, eagles.getId(), captain.getId(), captainsMatch.getId(),
+				"İstanbul", "Kadıköy", captainsMatch.getStartsAt(), null, Listing.Level.INTERMEDIATE,
+				"Saha ücreti yarı yarıya. Formalarımız kırmızı.", captainsMatch.getStartsAt(), now));
+		Instant playAt = today.plusDays(5).atTime(20, 0).atZone(IST).toInstant();
+		Listing need = listings.save(new Listing(Listing.Kind.PLAYERS_WANTED, bolts.getId(), customer.getId(), null,
+				"İstanbul", "Kadıköy", playAt, 2, Listing.Level.CASUAL,
+				"Bir kaleci ve bir defans oyuncusu arıyoruz.", playAt, now));
+		applications.save(new ListingApplication(need.getId(), longName.getId(), null, "Defansta oynayabilirim.", now));
+	}
+
+	/**
+	 * Aşama 5: Kadıköy'de 6 takımlı tek devre lig. İlk hafta geçen hafta oynandı, ikinci hafta Mini Saha'da
+	 * planlandı (takvimde görünür), kalan haftalar planlanmadı.
+	 */
+	private void seedLeague(Business business, Branch branch, Pitch pitch, AppUser manager, LocalDate today,
+			Instant now) {
+		Tournament t = tournaments.save(new Tournament(business.getId(), branch.getId(), "Kadıköy Kış Ligi 2026", false,
+				3, 1, 0, manager.getId(), now.minus(Duration.ofDays(14))));
+		List<Long> ids = new java.util.ArrayList<>();
+		for (String n : List.of("Kadıköy Kartalları", "Moda Şimşekleri", "Fenerbahçe Mah. SK", "Göztepe Gençlik",
+				"Acıbadem Yıldızları", "Kurgusal FK")) {
+			ids.add(entries.save(new TournamentEntry(t.getId(), n, now.minus(Duration.ofDays(14)))).getId());
+		}
+		int[][] scores = { { 3, 1 }, { 2, 2 }, { 0, 1 } };
+		int i = 0;
+		int j = 0;
+		for (RoundRobin.Pairing p : RoundRobin.generate(ids, false)) {
+			TournamentMatch m = matches.save(new TournamentMatch(t.getId(), p.round(), p.home(), p.away()));
+			if (p.round() == 1) {
+				TimeRange play = play(today.minusDays(7), 20 + i, 60);
+				m.schedule(pitch.getId(), play);
+				occupancy.occupy(pitch.getId(), play, PitchOccupancy.Source.TOURNAMENT_MATCH, m.getId());
+				m.recordResult(scores[i][0], scores[i][1], now);
+				i++;
+			}
+			else if (p.round() == 2) {
+				TimeRange play = play(today.plusDays(6), 20 + j, 60);
+				m.schedule(pitch.getId(), play);
+				occupancy.occupy(pitch.getId(), play, PitchOccupancy.Source.TOURNAMENT_MATCH, m.getId());
+				j++;
+			}
+		}
+		t.start(now.minus(Duration.ofDays(10)));
 	}
 
 	// ------------------------------------------------------------------ yardımcılar

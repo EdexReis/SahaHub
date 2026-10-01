@@ -1,4 +1,4 @@
-# Demo senaryosu (yaklaşık 10 dakika)
+# Demo senaryosu (yaklaşık 20 dakika)
 
 Ön koşul: README'deki gibi `dev` profiliyle çalışan uygulama. Parola: `SahaHub.demo1`.
 
@@ -79,7 +79,30 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
 10. E-postalar: <http://localhost:8025> (Mailpit). Hiçbir e-posta dışarı gitmez.
 11. `admin@sahahub.test` → **Platform → Demo mesaj kutusu**: gönderilmemiş (demo) SMS'ler.
 
-## 7. Platform yöneticisi
+## 7. Takımlar, ilanlar ve lig (Aşama 5)
+
+1. Herkes: üst menü **İlanlar** → "Rakip arıyoruz" (Kadıköy Kartalları, Emre'nin seri maçına bağlı) ve
+   "Oyuncu arıyoruz" (Moda Şimşekleri, 2 oyuncu). **Ligler** sekmesi → **Kadıköy Kış Ligi 2026**: puan durumu ve
+   fikstür (1. hafta oynandı, 2. hafta planlı).
+2. `kaptan@sahahub.test` → **Takımlarım → Kadıköy Kartalları**: davet bağlantısı, oyuncular, "Kaptan yap",
+   "Çıkar". Bağlantıyı gizli pencerede açın → giriş yapmadan önizleme; `uzun.isim@sahahub.test` zaten üye.
+3. Aynı hesapla **İlanlar → Moda Şimşekleri** → mesaj yazıp **Başvur**.
+4. `musteri@sahahub.test` (Moda Şimşekleri kaptanı) → menüde bildirim → ilan sayfasında başvurular
+   (Muhammed'in bekleyen başvurusu ve Emre'nin yeni başvurusu) → ikisini **Kabul et** → ilan "Doldu" olur;
+   kabul edilenler telefon numaralarını görür.
+5. `musteri@sahahub.test` → **İlan ver**: takım seçin, "Rezervasyonunuz" listesinden bir maçınızı seçin
+   (zaman ve yer otomatik gelir).
+6. `mudur.kadikoy@yesilvadi.test` → İşletme paneli → **Ligler** → Kış Ligi:
+   - 3. haftanın bir maçında **Planla** → dolu bir saat seçin (ör. Mini Saha'da bugün 19:00, Emre'nin rezervasyonu) → "saha dolu", maç
+     planlanmaz.
+   - **Haftalık planla**: ilk hafta için 2. haftadan 7 gün sonrası, Mini Saha, 20:00 → kalan 9 maç planlanır
+     (bir maç doluysa hiçbiri planlanmaz).
+   - Takvimde 6 gün sonrasına gidin: Mini Saha'da lacivert kenarlı **lig maçı** kutuları; o saatlere
+     rezervasyon yapılamaz.
+7. Resepsiyon hesabıyla **Ligler** sekmesi görünmez; `/isletme/subeler/1/ligler` adresi 403 verir. Maçlar
+   takvimde yine görünür.
+
+## 8. Platform yöneticisi
 
 `admin@sahahub.test` → **Platform** → bir işletmeyi gerekçe yazarak askıya alın → müşteri listesinde o
 işletmenin sahaları kaybolur. Etkinleştirince geri gelir. Her iki işlem `audit_event` tablosuna yazılır:

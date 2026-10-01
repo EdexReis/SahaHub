@@ -172,6 +172,11 @@ public class WaitlistService {
 		offerNext(event.pitchId(), event.start(), event.end());
 	}
 
+	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+	void offerAfterPitchFreed(BookingEvents.PitchFreed event) {
+		offerNext(event.pitchId(), event.start(), event.end());
+	}
+
 	/**
 	 * Verilen aralıkla kesişen ve sırası olan her başlangıç saati için ilk kişiye teklif açmayı dener.
 	 * Her deneme ayrı transaction'dır: saat hâlâ doluysa (EXCLUDE kısıtı) o deneme geri alınır,

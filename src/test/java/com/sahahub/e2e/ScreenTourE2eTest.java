@@ -78,6 +78,40 @@ class ScreenTourE2eTest extends E2eTestBase {
 	}
 
 	@Test
+	void communityAndLeagueScreens() {
+		for (Size size : SIZES) {
+			BrowserContext ctx = newContext(size.width(), size.height());
+			Page p = ctx.newPage();
+			login(p, "kaptan@sahahub.test");
+			p.navigate("/ilanlar");
+			assertThat(p.locator("h1")).hasText("İlanlar");
+			check(p, size, "30-listings");
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Moda Şimşekleri")).first().click();
+			assertThat(p.locator("#apply-title")).isVisible();
+			check(p, size, "31-listing-detail");
+			p.navigate("/takimlar");
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kadıköy Kartalları")).click();
+			assertThat(p.locator("#inv-link")).isVisible();
+			check(p, size, "32-team");
+			p.navigate("/ligler");
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kadıköy Kış Ligi 2026")).click();
+			assertThat(p.locator("table.standings")).isVisible();
+			check(p, size, "33-league");
+			ctx.close();
+
+			BrowserContext c2 = newContext(size.width(), size.height());
+			Page q = c2.newPage();
+			login(q, "mudur.kadikoy@yesilvadi.test");
+			q.navigate("/isletme");
+			q.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Ligler").setExact(true)).click();
+			q.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kadıköy Kış Ligi 2026")).click();
+			assertThat(q.locator("#fx-title")).isVisible();
+			check(q, size, "34-staff-league");
+			c2.close();
+		}
+	}
+
+	@Test
 	void emptyStatesAndForms() {
 		for (Size size : SIZES) {
 			BrowserContext ctx = newContext(size.width(), size.height());

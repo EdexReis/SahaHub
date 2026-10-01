@@ -27,6 +27,11 @@
 | 21 | Bekleme teklifi = sıradaki adına HELD rezervasyon | "Bir boşluk iki kişiye verilmez" için ikinci bir kilit mekanizması yazmak yerine mevcut kısıt kullanılır; teklif süresi dolunca mevcut süre dolumu görevi serbest bırakır ve sıradakine geçilir. |
 | 22 | Bildirimler transactional outbox (`notification_outbox`), BEFORE_COMMIT'te yazılır | Geri alınan işlem e-posta üretmez; SMTP yavaşlığı kullanıcı isteğini bekletmez. Gönderici `FOR UPDATE SKIP LOCKED` ile paralel çalışabilir. |
 | 23 | `dedup_key` UNIQUE + `ON CONFLICT DO NOTHING` | Hatırlatma görevi her çalıştığında aynı mesajı yeniden üretmez; olay iki kez işlense de tek bildirim. |
+| 24 | Lig maçı `pitch_occupancy` kaynağı (`TOURNAMENT_MATCH`); planlama rezervasyonla aynı `OccupancyService` | Senaryo 14 için ikinci bir çakışma mekanizması yok; maç ve rezervasyon aynı EXCLUDE kısıtı ve advisory lock'la sıraya girer. Kaynak türü V1'de öngörülmüştü. |
+| 25 | Takvim maçları `MatchCalendarPort` ile alır | Rezervasyon modülü lig modülünü tanımaz (bağımlılık `tournament → booking`), PaymentStatusPort ile aynı desen. |
+| 26 | Puan durumu saklanmaz, hesaplanır (`Standings`) | Skor düzeltmesi tabloya kendiliğinden yansır; tutarsız "puan" sütunu oluşmaz. |
+| 27 | İlan kabulünde kilit sırası: ilan → başvuru | Kontenjan eşzamanlı kabullerde aşılmaz; geri çekme ile kabul aynı kilit sırasını izlediği için deadlock'a girmez. |
+| 28 | Takım katılımı yalnızca davet koduyla; takım sayfası yalnızca üyelere | Takım ve üye adları sızdırılmaz; kod yenilenince eski bağlantı geçersiz olur. |
 
 ## 2. Paketler (modüller)
 
@@ -42,11 +47,13 @@ com.sahahub
 │                 ve simülasyon sağlayıcısı
 ├── notification  uygulama içi bildirim, outbox, gönderici, kanallar (e-posta; SMS/WhatsApp demo),
 │                 hatırlatma görevi
+├── community     takımlar, davet, oyuncu/rakip ilanları ve başvurular
+├── tournament    lig, fikstür (round-robin), maç planlama, skor, puan durumu
 ├── platform      platform yöneticisi işlemleri
 └── dev           yalnızca dev profilinde demo veri
 ```
 
-Henüz olmayan modüller (sonraki aşamalar): `team`, `tournament`, `reporting`.
+Henüz olmayan modül (Aşama 6): `reporting`.
 
 **Bağımlılık yönü**: `payment → booking → business/pricing → identity → shared`. Rezervasyon modülünün
 ödeme bilgisine ihtiyacı olan iki yer (takvim etiketi, kapora ödenmeden onay engeli) için
@@ -152,6 +159,15 @@ erDiagram
     APP_USER ||--o{ WAITLIST_ENTRY : "müşteri"
     WAITLIST_ENTRY |o--o| RESERVATION : "offer_reservation_id (HELD teklif)"
     APP_USER ||--o{ NOTIFICATION : "uygulama içi"
+    TEAM ||--o{ TEAM_MEMBER : "tek aktif kaptan"
+    APP_USER ||--o{ TEAM_MEMBER : ""
+    TEAM ||--o{ LISTING : ""
+    RESERVATION |o--o{ LISTING : "isteğe bağlı maç"
+    LISTING ||--o{ LISTING_APPLICATION : ""
+    BRANCH ||--o{ TOURNAMENT : ""
+    TOURNAMENT ||--o{ TOURNAMENT_ENTRY : "3-20 takım"
+    TOURNAMENT ||--o{ TOURNAMENT_MATCH : "fikstür"
+    TOURNAMENT_MATCH ||--o| PITCH_OCCUPANCY : "source TOURNAMENT_MATCH"
 
     WAITLIST_ENTRY {
         varchar status "WAITING OFFERED ACCEPTED EXPIRED LEFT"
