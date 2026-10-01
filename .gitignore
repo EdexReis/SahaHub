@@ -4,6 +4,11 @@ target/
 uploads/
 *.log
 
+# Kişisel notlar (repoya eklenmez)
+CV_PROJECT_TR.md
+LEARNING_GUIDE_TR.md
+PROGRESS.md
+
 ### Eclipse / STS ###
 .apt_generated
 .classpath

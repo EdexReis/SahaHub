@@ -10,7 +10,7 @@ import com.sahahub.notification.domain.OutboxMessage;
 /**
  * SMTP ile e-posta. Yerelde Mailpit'e gider (localhost:1025, arayüz http://localhost:8025); gerçek bir
  * kullanıcıya ulaşmaz. Canlı ortamda MAIL_HOST / MAIL_SMTP_PORT ile gerçek SMTP verilmesi ayrı bir
- * karardır (bkz. PROGRESS.md "canlıya almadan önce").
+ * karardır (bkz. README "Bilinen eksikler").
  */
 @Component
 class EmailChannel implements MessageChannel {

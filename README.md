@@ -6,7 +6,6 @@ Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 +
 > takvimi, fiyatlandırma (kapora, kupon, ek hizmet, indirim), ödeme hareketleri, iade, kasa, düzenli
 > (haftalık) rezervasyon, bekleme listesi, bildirimler, takımlar, oyuncu/rakip ilanları, lig, raporlar, yönetim
 > ekranları (saha, saat, personel, denetim kaydı) ve parola sıfırlama. Açık kalanlar "Bilinen eksikler"de.
-> Ayrıntı: [PROGRESS.md](PROGRESS.md).
 >
 > **Gerçek entegrasyon yoktur:** çevrim içi ödeme bir **simülasyondur** (kart bilgisi alınmaz, para çekilmez),
 > "manuel POS" yalnızca slip tutarının elle girilmesidir. E-postalar yalnızca yerel Mailpit'e gider;
@@ -101,13 +100,12 @@ docker compose exec postgres psql -U sahahub -d sahahub -c "drop schema public c
 ```
 
 E2E testleri ekran görüntülerini `target/screenshots/` altına telefon (390×844) ve masaüstü (1366×900)
-boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGRESS.md).
+boyutlarında kaydeder.
 
 ## Belgeler
 
 | Belge | İçerik |
 |---|---|
-| [PROGRESS.md](PROGRESS.md) | Güncel durum, kararlar, sonraki iş |
 | [DESIGN.md](DESIGN.md) | Arayüz tasarım kararları |
 | [docs/MIMARI.md](docs/MIMARI.md) | Modüller, katmanlar, çakışma güvencesi, ER diyagramı |
 | [docs/YETKI_MATRISI.md](docs/YETKI_MATRISI.md) | Rol / izin matrisi |
@@ -116,8 +114,6 @@ boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGR
 | [docs/ODEME.md](docs/ODEME.md) | Ödeme durumu, hareketler, idempotency, webhook, geç ödeme, kasa |
 | [docs/YEDEKLEME.md](docs/YEDEKLEME.md) | Yedekleme ve geri yükleme |
 | [docs/DEMO_SENARYOSU.md](docs/DEMO_SENARYOSU.md) | Adım adım deneme senaryosu |
-| [LEARNING_GUIDE_TR.md](LEARNING_GUIDE_TR.md) | Projeyi öğrenmek için rehber |
-| [CV_PROJECT_TR.md](CV_PROJECT_TR.md) | CV metni ve mülakat soruları |
 
 ## Bilinen eksikler ve gerçek/demo ayrımı
 

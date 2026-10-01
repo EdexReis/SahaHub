@@ -10,7 +10,7 @@ import java.util.Map;
  * Puan durumu. Saklanmaz, her seferinde oynanmış maçlardan hesaplanır (skor düzeltmesi kendiliğinden yansır).
  * <p>
  * Sıralama: puan → averaj (atılan − yenilen) → atılan gol → takım adı (alfabetik, Türkçe sıralama değil;
- * eşitlik durumunda deterministik olsun diye). İkili averaj gibi kurallar uygulanmaz (bkz. PROGRESS.md).
+ * eşitlik durumunda deterministik olsun diye). İkili averaj gibi kurallar uygulanmaz.
  */
 public final class Standings {
 
