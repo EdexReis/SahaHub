@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Rezervasyonlarım · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<div class="page-head"><h1>Rezervasyonlarım</h1></div>
+
+	<div class="empty" th:if="${#lists.isEmpty(upcoming) and !page.hasContent()}">
+		<p>Henüz rezervasyonunuz yok.</p>
+		<a class="btn btn-primary" th:href="@{/sahalar}">Saha seç</a>
+	</div>
+
+	<section th:if="${!#lists.isEmpty(upcoming)}" aria-labelledby="upcoming-title">
+		<h2 id="upcoming-title" style="font-size:18px">Yaklaşan</h2>
+		<ul class="res-list">
+			<li class="res-item" th:each="r : ${upcoming}" th:insert="~{customer/my-reservations :: row(${r})}"></li>
+		</ul>
+	</section>
+
+	<section th:if="${page.hasContent()}" aria-labelledby="history-title" style="margin-top:28px">
+		<h2 id="history-title" style="font-size:18px">Geçmiş ve iptal edilenler</h2>
+		<ul class="res-list">
+			<li class="res-item" th:each="r : ${page.content}" th:insert="~{customer/my-reservations :: row(${r})}"></li>
+		</ul>
+		<nav class="pager" aria-label="Sayfalar" th:if="${page.totalPages > 1}">
+			<a class="btn btn-secondary btn-sm" th:if="${page.hasPrevious()}" th:href="@{/rezervasyonlarim(sayfa=${page.number - 1})}">← Daha yeni</a>
+			<span class="small muted" th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 2</span>
+			<a class="btn btn-secondary btn-sm" th:if="${page.hasNext()}" th:href="@{/rezervasyonlarim(sayfa=${page.number + 1})}">Daha eski →</a>
+		</nav>
+	</section>
+
+	<th:block th:if="${false}">
+		<th:block th:fragment="row(r)">
+			<div class="res-date">
+				<span class="num" th:text="${r.start().dayOfMonth}">1</span>
+				<span class="tiny" th:text="${#temporals.format(r.start(), 'MMM EEE')}">Eki Çar</span>
+			</div>
+			<div style="min-width:0">
+				<h3 class="truncate"><a th:href="@{/rezervasyon/{c}(c=${r.code()})}" th:text="${r.pitchName()}">Saha 1</a></h3>
+				<div class="small muted truncate">
+					<span class="num" th:text="${@fmt.timeRange(r.start(), r.end())}">21:00–22:00</span> ·
+					<span th:text="${r.branchName()}">Şube</span> ·
+					<span th:text="${@fmt.money(r.total(), r.currency())}">1.400 ₺</span>
+				</div>
+			</div>
+			<span class="status" th:classappend="'status-' + ${r.status().name()}" th:text="${r.status().label()}">Onaylandı</span>
+		</th:block>
+	</th:block>
+</main>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ============================================================ Hızlı rezervasyon -->
+<div th:fragment="quick-booking">
+	<div class="panel-head">
+		<h2>Hızlı rezervasyon</h2>
+		<a class="panel-close" th:href="@{/isletme/subeler/{id}/takvim(id=${cal.branchId}, tarih=${cal.day})}" aria-label="Paneli kapat">×</a>
+	</div>
+	<div class="alert alert-error" role="alert" th:if="${formError}" th:text="${formError}">Hata</div>
+	<form th:action="@{/isletme/subeler/{id}/rezervasyonlar(id=${cal.branchId})}" th:object="${form}" method="post"
+	      th:hx-post="@{/isletme/subeler/{id}/rezervasyonlar(id=${cal.branchId})}" hx-target="#panel" hx-indicator="#panel" novalidate>
+		<div class="field" th:classappend="${#fields.hasErrors('pitchId')} ? 'field-error'">
+			<label for="qb-pitch">Saha</label>
+			<select class="select" id="qb-pitch" th:field="*{pitchId}">
+				<option value="">Saha seçin</option>
+				<option th:each="p : ${cal.pitches}" th:value="${p.id()}" th:text="${p.name()}">Saha 1</option>
+			</select>
+			<p class="error-text" th:if="${#fields.hasErrors('pitchId')}" th:errors="*{pitchId}">Hata</p>
+		</div>
+		<div class="field-row">
+			<div class="field" th:classappend="${#fields.hasErrors('date')} ? 'field-error'">
+				<label for="qb-date">Tarih</label>
+				<input class="input num" id="qb-date" type="date" th:field="*{date}">
+				<p class="error-text" th:if="${#fields.hasErrors('date')}" th:errors="*{date}">Hata</p>
+			</div>
+			<div class="field" th:classappend="${#fields.hasErrors('time')} ? 'field-error'">
+				<label for="qb-time">Başlangıç</label>
+				<input class="input num" id="qb-time" type="time" step="900" th:field="*{time}">
+				<p class="error-text" th:if="${#fields.hasErrors('time')}" th:errors="*{time}">Hata</p>
+			</div>
+		</div>
+		<div class="field-row">
+			<div class="field">
+				<label for="qb-dur">Süre</label>
+				<select class="select" id="qb-dur" th:field="*{durationMinutes}">
+					<option th:each="m : ${ {30, 45, 60, 90, 120, 150, 180} }" th:value="${m}" th:text="${@fmt.duration(m)}">1 saat</option>
+				</select>
+			</div>
+			<div class="field">
+				<label for="qb-channel">Kanal</label>
+				<select class="select" id="qb-channel" th:field="*{channel}">
+					<option value="PHONE">Telefon</option>
+					<option value="WALK_IN">Yüz yüze</option>
+				</select>
+			</div>
+		</div>
+		<div class="field" th:classappend="${#fields.hasErrors('guestName')} ? 'field-error'">
+			<label for="qb-name">Müşteri adı</label>
+			<input class="input" id="qb-name" th:field="*{guestName}" autocomplete="off">
+			<p class="error-text" th:if="${#fields.hasErrors('guestName')}" th:errors="*{guestName}">Hata</p>
+		</div>
+		<div class="field" th:classappend="${#fields.hasErrors('guestPhone')} ? 'field-error'">
+			<label for="qb-phone">Telefon</label>
+			<input class="input" id="qb-phone" type="tel" inputmode="tel" th:field="*{guestPhone}" autocomplete="off">
+			<p class="error-text" th:if="${#fields.hasErrors('guestPhone')}" th:errors="*{guestPhone}">Hata</p>
+		</div>
+		<div class="field" th:classappend="${#fields.hasErrors('customerEmail')} ? 'field-error'">
+			<label for="qb-email">Kayıtlı müşteri e-postası</label>
+			<input class="input" id="qb-email" type="email" th:field="*{customerEmail}" autocomplete="off" aria-describedby="qb-email-hint">
+			<p class="hint" id="qb-email-hint">Müşterinin hesabı varsa yazın; rezervasyon onun hesabında görünür. Yoksa boş bırakın.</p>
+			<p class="error-text" th:if="${#fields.hasErrors('customerEmail')}" th:errors="*{customerEmail}">Hata</p>
+		</div>
+		<div class="field">
+			<label for="qb-note">Not</label>
+			<textarea class="textarea" id="qb-note" th:field="*{note}" rows="2"></textarea>
+		</div>
+		<button class="btn btn-primary btn-block" type="submit">Rezervasyonu oluştur</button>
+	</form>
+</div>
+
+<!-- ============================================================ Rezervasyon ayrıntısı -->
+<div th:fragment="reservation">
+	<div class="panel-head">
+		<div style="min-width:0">
+			<p class="eyebrow" th:text="'Rezervasyon ' + ${r.code()}">Rezervasyon</p>
+			<h2 class="truncate" th:text="${r.customerName()}" th:title="${r.customerName()}">Ali Vural</h2>
+		</div>
+		<a class="panel-close" th:href="@{/isletme/subeler/{id}/takvim(id=${r.branchId()}, tarih=${r.businessDay()})}" aria-label="Paneli kapat">×</a>
+	</div>
+	<p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+		<span class="status" th:classappend="'status-' + ${r.status().name()}" th:text="${r.status().label()}">Onaylandı</span>
+		<span class="status status-COMPLETED" th:if="${r.checkedInAt() != null}" th:text="'Geldi ' + ${@fmt.time(r.checkedInAt())}">Geldi</span>
+	</p>
+	<dl class="kv small">
+		<dt>Saat</dt><dd class="num" style="font-size:17px" th:text="${@fmt.timeRange(r.start(), r.end())}">21:00–22:00</dd>
+		<dt>Tarih</dt><dd><span th:text="${@fmt.dayMonth(r.start().toLocalDate())}">1 Ekim</span>
+			<span class="night-note" th:if="${r.overnight()}" th:text="'(' + ${@fmt.dayMonth(r.businessDay())} + ' gecesi)'">(gece)</span></dd>
+		<dt>Saha</dt><dd th:text="${r.pitchName()}">Saha 1</dd>
+		<dt th:if="${r.contactPhone() != null}">Telefon</dt>
+		<dd th:if="${r.contactPhone() != null}"><a th:href="'tel:' + ${#strings.replace(r.contactPhone(), ' ', '')}" th:text="${r.contactPhone()}">0555</a></dd>
+		<dt>Kanal</dt><dd th:text="${r.channel().label()}">Telefon</dd>
+		<dt>Tutar</dt><dd><strong th:text="${@fmt.money(r.total(), r.currency())}">1.400 ₺</strong></dd>
+		<dt th:if="${r.bufferMinutes() > 0}">Hazırlık</dt><dd th:if="${r.bufferMinutes() > 0}" th:text="${r.bufferMinutes()} + ' dk'">15 dk</dd>
+		<dt th:if="${r.note() != null}">Not</dt><dd th:if="${r.note() != null}" th:text="${r.note()}">Not</dd>
+		<dt th:if="${r.held()}">Tutma bitişi</dt><dd th:if="${r.held()}" th:text="${@fmt.time(r.holdExpiresAt())}">21:10</dd>
+		<dt th:if="${r.cancelReason() != null}">İptal nedeni</dt><dd th:if="${r.cancelReason() != null}" th:text="${r.cancelReason()}">…</dd>
+	</dl>
+	<p class="notice-demo">Ödeme kaydı bu sürümde yok; ücret sahada alınır.</p>
+
+	<div class="panel-section" th:if="${r.status().name() == 'CONFIRMED'}">
+		<h3>Durum</h3>
+		<div class="btn-row" th:if="${r.actions().anyStatusChange()}">
+			<form th:if="${r.actions().checkIn()}" th:action="@{/isletme/rezervasyonlar/{c}/gelis(c=${r.code()})}" method="post">
+				<button class="btn btn-primary btn-sm" type="submit">Geldi olarak işaretle</button>
+			</form>
+			<form th:if="${r.actions().complete()}" th:action="@{/isletme/rezervasyonlar/{c}/tamamla(c=${r.code()})}" method="post">
+				<button class="btn btn-secondary btn-sm" type="submit">Tamamlandı</button>
+			</form>
+			<form th:if="${r.actions().noShow()}" th:action="@{/isletme/rezervasyonlar/{c}/gelmedi(c=${r.code()})}" method="post"
+			      data-confirm="Müşteri gelmedi olarak işaretlensin mi?">
+				<button class="btn btn-danger btn-sm" type="submit">Gelmedi</button>
+			</form>
+		</div>
+		<p class="small muted" style="margin:0" th:if="${!r.actions().anyStatusChange() and r.checkedInAt() == null}"
+		   th:text="'Geliş ' + ${@fmt.time(r.checkInOpensAt())} + ' itibarıyla kaydedilebilir.'">Geliş 18:00 itibarıyla kaydedilebilir.</p>
+		<p class="small muted" style="margin:0" th:if="${!r.actions().anyStatusChange() and r.checkedInAt() != null}">Maç başlayınca tamamlandı olarak işaretlenebilir.</p>
+	</div>
+
+	<th:block th:if="${r.open()}">
+		<div class="panel-section" th:if="${r.actions().move()}">
+			<h3>Başka saate taşı</h3>
+			<form th:action="@{/isletme/rezervasyonlar/{c}/tasi(c=${r.code()})}" th:object="${moveForm}" method="post">
+				<div class="field">
+					<label for="mv-pitch">Saha</label>
+					<select class="select" id="mv-pitch" th:field="*{pitchId}">
+						<option th:each="p : ${cal.pitches}" th:value="${p.id()}" th:text="${p.name()}">Saha 1</option>
+					</select>
+				</div>
+				<div class="field-row">
+					<div class="field">
+						<label for="mv-date">Tarih</label>
+						<input class="input num" id="mv-date" type="date" th:field="*{date}">
+					</div>
+					<div class="field">
+						<label for="mv-time">Başlangıç</label>
+						<input class="input num" id="mv-time" type="time" step="900" th:field="*{time}">
+					</div>
+				</div>
+				<button class="btn btn-secondary btn-sm" type="submit">Taşı</button>
+				<p class="tiny muted" style="margin:8px 0 0">Yeni saat doluysa rezervasyon yerinde kalır. Ücret değişmez.</p>
+			</form>
+		</div>
+
+		<div class="panel-section" th:if="${r.actions().cancel()}">
+			<h3>İptal</h3>
+			<form th:action="@{/isletme/rezervasyonlar/{c}/iptal(c=${r.code()})}" method="post"
+			      data-confirm="Rezervasyon iptal edilsin mi? Saat boşa çıkar.">
+				<div class="field">
+					<label for="cx-reason">İptal nedeni <span class="req" aria-hidden="true">*</span></label>
+					<input class="input" id="cx-reason" name="reason" required maxlength="300" placeholder="Ör. Müşteri telefonla iptal etti">
+				</div>
+				<button class="btn btn-danger btn-sm" type="submit">Rezervasyonu iptal et</button>
+			</form>
+		</div>
+	</th:block>
+</div>
+
+<!-- ============================================================ Saha kapatma -->
+<div th:fragment="block">
+	<div class="panel-head">
+		<h2>Saha kapat</h2>
+		<a class="panel-close" th:href="@{/isletme/subeler/{id}/takvim(id=${cal.branchId}, tarih=${cal.day})}" aria-label="Paneli kapat">×</a>
+	</div>
+	<p class="small muted">Kapatılan aralıkta rezervasyon alınmaz. Aralıkta rezervasyon varsa önce taşıyın.</p>
+	<form th:action="@{/isletme/subeler/{id}/kapatmalar(id=${cal.branchId})}" method="post">
+		<div class="field">
+			<label for="bl-pitch">Saha</label>
+			<select class="select" id="bl-pitch" name="pitchId" required>
+				<option th:each="p : ${cal.pitches}" th:value="${p.id()}" th:text="${p.name()}">Saha 1</option>
+			</select>
+		</div>
+		<div class="field">
+			<label for="bl-from">Başlangıç</label>
+			<input class="input num" id="bl-from" type="datetime-local" step="900" name="from" required th:value="${cal.day} + 'T09:00'">
+		</div>
+		<div class="field">
+			<label for="bl-to">Bitiş</label>
+			<input class="input num" id="bl-to" type="datetime-local" step="900" name="to" required th:value="${cal.day} + 'T12:00'">
+		</div>
+		<div class="field">
+			<label for="bl-reason">Neden</label>
+			<select class="select" id="bl-reason" name="reason">
+				<option th:each="x : ${reasons}" th:value="${x.name()}" th:text="${x.label()}">Bakım</option>
+			</select>
+		</div>
+		<div class="field">
+			<label for="bl-note">Açıklama</label>
+			<input class="input" id="bl-note" name="note" maxlength="300" placeholder="Ör. Zemin bakımı">
+		</div>
+		<button class="btn btn-primary btn-block" type="submit">Sahayı kapat</button>
+	</form>
+</div>
+
+</body>
+</html>

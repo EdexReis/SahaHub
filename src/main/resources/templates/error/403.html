@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Bu sayfaya erişiminiz yok · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<p class="eyebrow">Hata 403</p>
+	<h1>Bu sayfaya erişiminiz yok</h1>
+	<p th:text="${message != null and '403' == '404'} ? ${message} : 'Bu işlem için yetkiniz bulunmuyor. Farklı bir hesapla giriş yapmanız gerekebilir.'">Bu işlem için yetkiniz bulunmuyor. Farklı bir hesapla giriş yapmanız gerekebilir.</p>
+	<p class="small muted" th:if="${requestId != null}">Takip kodu: <code th:text="${requestId}">abc</code></p>
+	<a class="btn btn-secondary" th:href="@{/}">Ana sayfaya dön</a>
+</main>
+</body>
+</html>

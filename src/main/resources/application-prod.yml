@@ -1,0 +1,16 @@
+# Canli ortam: tum sirlar ortam degiskenlerinden gelir, varsayilan deger yoktur.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+server:
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        secure: true
+logging:
+  structured:
+    format:
+      console: ecs

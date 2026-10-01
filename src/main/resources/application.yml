@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: SahaHub
+  config:
+    # Yerelde .env dosyasindaki degiskenler okunur (dosya yoksa atlanir).
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/sahahub}
+    username: ${DB_USER:sahahub}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    # Not: hibernate.jdbc.time_zone AYARLANMAMALI. Anlar (Instant) zaten timestamptz olarak UTC
+    # saklanir; bu ayar ise LocalTime degerlerini (calisma saatleri, fiyat saatleri) kaydirir.
+    # Bkz. LocalTimePersistenceTest.
+  flyway:
+    locations: classpath:db/migration
+  thymeleaf:
+    cache: true
+  servlet:
+    multipart:
+      max-file-size: 3MB
+      max-request-size: 4MB
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_SMTP_PORT:1025}
+  web:
+    locale: tr_TR
+    locale-resolver: fixed
+
+server:
+  error:
+    whitelabel:
+      enabled: false
+  servlet:
+    session:
+      timeout: 8h
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${COOKIE_SECURE:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+sahahub:
+  booking:
+    # Gecici tutma suresi subeye ozeldir (branch.hold_minutes).
+    # Suresi dolan tutmalari serbest birakan gorevin calisma araligi:
+    expiry-sweep-interval: PT30S
+    expiry-job-enabled: true
+  security:
+    login-max-failures: 5
+    login-lock-duration: PT15M
+
+logging:
+  pattern:
+    correlation: "[%X{requestId:-}] "

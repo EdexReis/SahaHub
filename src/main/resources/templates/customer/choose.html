@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Saati onayla · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<p class="small" style="margin-bottom:8px">
+		<a th:href="@{/sahalar/{id}(id=${ctx.pitch().id}, tarih=${start.toLocalDate()})}">← Saatlere dön</a>
+	</p>
+	<p class="eyebrow" th:text="${ctx.business().name} + ' · ' + ${ctx.branch().name}">İşletme · Şube</p>
+	<h1 th:text="${ctx.pitch().name}">Saha 1</h1>
+
+	<div class="panel">
+		<p class="muted small" style="margin:0" th:text="${@fmt.longDate(start.toLocalDate())}">1 Ekim 2026, Çarşamba</p>
+		<p class="summary-time num"><span th:text="${@fmt.time(start)}">21:00</span><span class="muted" th:text="'–' + ${@fmt.time(end)}">–22:00</span></p>
+
+		<table class="price-table" aria-label="Fiyat ayrıntısı">
+			<tbody>
+			<tr th:each="l : ${quote.lines()}">
+				<td><span th:text="${l.label()}">Standart ücret</span><br><span class="tiny muted" th:text="${l.minutes()} + ' dk × ' + ${@fmt.money(l.hourlyRate(), quote.currency())} + '/saat'">60 dk</span></td>
+				<td th:text="${@fmt.money(l.amount(), quote.currency())}">1.400,00 ₺</td>
+			</tr>
+			</tbody>
+			<tfoot>
+			<tr><td>Toplam</td><td th:text="${@fmt.money(quote.total(), quote.currency())}">1.400,00 ₺</td></tr>
+			</tfoot>
+		</table>
+
+		<form th:action="@{/rezervasyon}" method="post" style="margin-top:16px">
+			<input type="hidden" name="pitchId" th:value="${ctx.pitch().id}">
+			<input type="hidden" name="baslangic" th:value="${startParam}">
+			<button class="btn btn-primary btn-block" type="submit">Saati tut</button>
+		</form>
+		<p class="small muted" style="margin:12px 0 0" th:text="'Saat ' + ${ctx.branch().holdMinutes} + ' dakika sizin için tutulur; bu sürede onaylamanız gerekir.'">…</p>
+	</div>
+</main>
+</body>
+</html>

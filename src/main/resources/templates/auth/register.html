@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Kayıt ol · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<div class="auth">
+		<h1>Kayıt ol</h1>
+		<div class="panel">
+			<form th:action="@{/kayit}" th:object="${form}" method="post" novalidate>
+				<div class="field" th:classappend="${#fields.hasErrors('fullName')} ? 'field-error'">
+					<label for="fullName">Ad soyad <span class="req" aria-hidden="true">*</span></label>
+					<input class="input" id="fullName" th:field="*{fullName}" autocomplete="name" required
+					       th:aria-describedby="${#fields.hasErrors('fullName')} ? 'fullName-err'">
+					<p class="error-text" id="fullName-err" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}">Hata</p>
+				</div>
+				<div class="field" th:classappend="${#fields.hasErrors('email')} ? 'field-error'">
+					<label for="email">E-posta <span class="req" aria-hidden="true">*</span></label>
+					<input class="input" id="email" type="email" th:field="*{email}" autocomplete="email" required
+					       th:aria-describedby="${#fields.hasErrors('email')} ? 'email-err'">
+					<p class="error-text" id="email-err" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Hata</p>
+				</div>
+				<div class="field" th:classappend="${#fields.hasErrors('phone')} ? 'field-error'">
+					<label for="phone">Telefon</label>
+					<input class="input" id="phone" type="tel" th:field="*{phone}" autocomplete="tel" inputmode="tel"
+					       th:aria-describedby="${#fields.hasErrors('phone')} ? 'phone-err' : 'phone-hint'">
+					<p class="hint" id="phone-hint">İsteğe bağlı. Yalnızca rezervasyon yaptığınız işletme görür.</p>
+					<p class="error-text" id="phone-err" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}">Hata</p>
+				</div>
+				<div class="field" th:classappend="${#fields.hasErrors('password')} ? 'field-error'">
+					<label for="password">Parola <span class="req" aria-hidden="true">*</span></label>
+					<input class="input" id="password" type="password" th:field="*{password}" autocomplete="new-password" required
+					       th:aria-describedby="${#fields.hasErrors('password')} ? 'password-err' : 'password-hint'">
+					<p class="hint" id="password-hint">En az 10 karakter.</p>
+					<p class="error-text" id="password-err" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">Hata</p>
+				</div>
+				<button class="btn btn-primary btn-block" type="submit">Hesap oluştur</button>
+			</form>
+		</div>
+		<p class="small" style="margin-top:16px">Hesabınız var mı? <a th:href="@{/giris}">Giriş yapın</a></p>
+	</div>
+</main>
+</body>
+</html>

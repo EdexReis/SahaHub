@@ -1,0 +1,11 @@
+# Yalnizca yerel gelistirme. Demo hesaplar ve demo veri bu profilde olusturulur.
+spring:
+  thymeleaf:
+    cache: false
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+sahahub:
+  demo-data: true

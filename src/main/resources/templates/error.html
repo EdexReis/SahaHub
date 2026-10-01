@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Beklenmeyen bir hata oluştu · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<p class="eyebrow">Hata</p>
+	<h1>Beklenmeyen bir hata oluştu</h1>
+	<p th:text="${message != null and '500' == '404'} ? ${message} : 'İşleminiz tamamlanamadı. Lütfen tekrar deneyin; sorun sürerse aşağıdaki takip kodunu işletmeye iletin.'">İşleminiz tamamlanamadı. Lütfen tekrar deneyin; sorun sürerse aşağıdaki takip kodunu işletmeye iletin.</p>
+	<p class="small muted" th:if="${requestId != null}">Takip kodu: <code th:text="${requestId}">abc</code></p>
+	<a class="btn btn-secondary" th:href="@{/}">Ana sayfaya dön</a>
+</main>
+</body>
+</html>

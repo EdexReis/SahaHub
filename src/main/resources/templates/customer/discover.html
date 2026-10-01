@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Saha seç · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<div class="page-head">
+		<div>
+			<p class="eyebrow">Halı saha rezervasyonu</p>
+			<h1>Saha seç</h1>
+		</div>
+		<p class="muted small count" th:if="${!#lists.isEmpty(pitches)}"
+		   th:text="${#lists.size(pitches)} + ' saha listeleniyor'">5 saha</p>
+	</div>
+
+	<nav class="filters" aria-label="Şehre göre süz" th:if="${#lists.size(cities) > 1}">
+		<a class="chip-link" th:href="@{/sahalar}" th:aria-current="${city == null or city == ''} ? 'true'">Tümü</a>
+		<a class="chip-link" th:each="c : ${cities}" th:href="@{/sahalar(sehir=${c})}" th:text="${c}"
+		   th:aria-current="${c == city} ? 'true'">İstanbul</a>
+	</nav>
+
+	<ul class="pitch-list" th:if="${!#lists.isEmpty(pitches)}">
+		<li class="pitch-row" th:each="p : ${pitches}">
+			<div style="min-width:0">
+				<h2><a th:href="@{/sahalar/{id}(id=${p.id()})}" th:text="${p.name()}">Saha 1</a></h2>
+				<div class="pitch-meta">
+					<span class="truncate" th:text="${p.businessName()} + ' · ' + ${p.branchName()}">İşletme · Şube</span>
+					<span th:text="${p.district()} + ', ' + ${p.city()}">Kadıköy, İstanbul</span>
+				</div>
+				<div class="tags">
+					<span class="tag" th:text="${p.capacityPlayers() / 2} + '+' + ${p.capacityPlayers() / 2} + ' oyuncu'">7+7</span>
+					<span class="tag" th:text="${p.surfaceLabel()}">Suni çim</span>
+					<span class="tag" th:if="${p.lengthM() != null}" th:text="${p.lengthM()} + '×' + ${p.widthM()} + ' m'">50×30 m</span>
+					<span class="tag" th:each="a : ${p.amenities()}" th:text="${a}">Duş</span>
+				</div>
+			</div>
+			<div class="price-from">
+				<span class="num" th:text="${@fmt.moneyShort(p.fromHourlyPrice(), p.currency())}">1.200 ₺</span>
+				<span class="tiny">saatlik, en düşük</span>
+			</div>
+		</li>
+	</ul>
+
+	<div class="empty" th:if="${#lists.isEmpty(pitches)}">
+		<p>Bu şehirde rezervasyona açık saha yok.</p>
+		<a class="btn btn-secondary" th:href="@{/sahalar}">Tüm şehirlere bak</a>
+	</div>
+</main>
+</body>
+</html>

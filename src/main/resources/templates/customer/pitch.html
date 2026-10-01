@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title th:text="${ctx.pitch().name} + ' · Saat seç · SahaHub'">Saha · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<p class="small" style="margin-bottom:8px"><a th:href="@{/sahalar}">← Sahalar</a></p>
+	<div class="page-head">
+		<div style="min-width:0">
+			<p class="eyebrow" th:text="${ctx.business().name} + ' · ' + ${ctx.branch().name}">İşletme · Şube</p>
+			<h1 th:text="${ctx.pitch().name}">Saha 1</h1>
+		</div>
+	</div>
+
+	<div class="pitch-layout">
+		<section aria-labelledby="slot-title">
+			<div id="slot-area" th:fragment="slots">
+				<nav class="day-strip" aria-label="Gün seç">
+					<a th:each="d : ${days}" th:with="dayName=${@fmt.dayMonth(d.day())}" class="day" th:classappend="${d.closed()} ? 'is-closed'"
+					   th:href="@{/sahalar/{id}(id=${ctx.pitch().id}, tarih=${d.day()})}"
+					   th:hx-get="@{/sahalar/{id}(id=${ctx.pitch().id}, tarih=${d.day()})}" th:aria-current="${d.day() == day.day()} ? 'date'" th:aria-label="${dayName} + (${d.closed()} ? ', kapalı' : '')"
+					   hx-target="#slot-area" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#slot-area">
+						<span class="d-name" th:text="${@fmt.dayLabel(d.day(), ctx.branch().timeZone)}">Bugün</span>
+						<span class="d-num num" th:text="${d.day().dayOfMonth}">1</span>
+						<span class="d-note" th:if="${d.closed()}">Kapalı</span>
+					</a>
+				</nav>
+
+				<div class="slot-section">
+					<div class="slot-head">
+						<h2 id="slot-title" th:text="${@fmt.dayMonth(day.day())}">1 Ekim Çarşamba</h2>
+						<span class="small muted" th:if="${day.status().name() == 'OPEN'}"
+						      th:text="${day.availableCount() > 0} ? ${day.availableCount()} + ' uygun saat' : 'Uygun saat yok'">4 uygun saat</span>
+					</div>
+
+					<div class="empty" th:if="${day.status().name() == 'CLOSED'}">
+						<p>Şube bu gün kapalı.</p>
+					</div>
+					<div class="empty" th:if="${day.status().name() == 'BEYOND_HORIZON'}">
+						<p th:text="'Bu tarih için henüz rezervasyon alınmıyor. En fazla ' + ${ctx.branch().bookingHorizonDays} + ' gün sonrası seçilebilir.'">…</p>
+					</div>
+					<div class="empty" th:if="${day.status().name() == 'PAST'}">
+						<p>Geçmiş bir gün seçtiniz.</p>
+					</div>
+
+					<th:block th:if="${day.status().name() == 'OPEN'}">
+						<div class="empty" th:if="${#lists.isEmpty(day.eveningSlots()) and #lists.isEmpty(day.nightSlots())}">
+							<p>Bugün için kalan saat yok.</p>
+						</div>
+						<div class="slots">
+							<th:block th:each="s : ${day.eveningSlots()}">
+								<th:block th:replace="~{fragments/slot :: slot(${s})}"/>
+							</th:block>
+							<div class="night-divider" role="presentation" th:if="${!#lists.isEmpty(day.nightSlots())}">Gece yarısından sonra</div>
+							<th:block th:each="s : ${day.nightSlots()}">
+								<th:block th:replace="~{fragments/slot :: slot(${s})}"/>
+							</th:block>
+						</div>
+						<div class="legend" aria-hidden="true">
+							<span><i class="l-free"></i>Uygun</span>
+							<span><i class="l-off"></i>Dolu</span>
+							<span><i class="l-block"></i>Kapatıldı (bakım/etkinlik)</span>
+						</div>
+					</th:block>
+				</div>
+			</div>
+		</section>
+
+		<aside class="panel pitch-facts" aria-label="Saha bilgileri">
+			<h2 class="h3" style="font-size:18px">Saha bilgileri</h2>
+			<dl class="kv">
+				<dt>Kapasite</dt><dd th:text="${ctx.pitch().capacityPlayers / 2} + '+' + ${ctx.pitch().capacityPlayers / 2} + ' oyuncu'">7+7</dd>
+				<dt>Zemin</dt><dd th:text="${ctx.pitch().surface.label()}">Suni çim</dd>
+				<dt th:if="${ctx.pitch().lengthM != null}">Ölçü</dt><dd th:if="${ctx.pitch().lengthM != null}" th:text="${ctx.pitch().lengthM} + ' × ' + ${ctx.pitch().widthM} + ' m'">50 × 30 m</dd>
+				<dt>Maç süresi</dt><dd th:text="${@fmt.duration(ctx.pitch().slotMinutes)}">1 saat</dd>
+				<dt>Adres</dt><dd th:text="${ctx.branch().addressLine} + ', ' + ${ctx.branch().district} + ' / ' + ${ctx.branch().city}">Adres</dd>
+			</dl>
+			<div class="tags" style="margin-top:12px">
+				<span class="tag" th:each="a : ${amenities}" th:text="${a}">Duş</span>
+			</div>
+			<hr class="rule">
+			<p class="small" style="margin:0">
+				Seçtiğiniz saat <strong th:text="${ctx.branch().holdMinutes} + ' dakika'">10 dakika</strong> sizin için tutulur.
+				Onaylanan rezervasyonu maçtan <strong th:text="${ctx.branch().customerCancelCutoffHours} + ' saat'">24 saat</strong> öncesine kadar iptal edebilirsiniz.
+			</p>
+		</aside>
+	</div>
+
+</main>
+</body>
+</html>

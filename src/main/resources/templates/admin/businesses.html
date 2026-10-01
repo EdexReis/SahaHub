@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>İşletmeler · Platform · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<div class="page-head">
+		<div><p class="eyebrow">Platform yönetimi</p><h1>İşletmeler</h1></div>
+	</div>
+	<p class="small muted">Askıya alınan işletmenin sahaları müşterilere görünmez. Her müdahale gerekçesiyle denetim kaydına yazılır.</p>
+	<div class="table-wrap">
+		<table class="table">
+			<thead><tr><th scope="col">İşletme</th><th scope="col">E-posta</th><th scope="col">Durum</th><th scope="col">İşlem</th></tr></thead>
+			<tbody>
+			<tr th:each="b : ${rows}">
+				<td th:text="${b.name()}">İşletme</td>
+				<td th:text="${b.email()}">e-posta</td>
+				<td><span class="status" th:classappend="${b.status().name() == 'ACTIVE'} ? 'status-CONFIRMED' : 'status-NO_SHOW'"
+				          th:text="${b.status().name() == 'ACTIVE'} ? 'Aktif' : (${b.status().name() == 'SUSPENDED'} ? 'Askıda' : 'Arşivde')">Aktif</span></td>
+				<td>
+					<form class="inline-form" th:action="@{/admin/isletmeler/{id}/durum(id=${b.id()})}" method="post"
+					      th:data-confirm="${b.status().name() == 'ACTIVE'} ? 'İşletme askıya alınsın mı?' : 'İşletme etkinleştirilsin mi?'">
+						<input type="hidden" name="islem" th:value="${b.status().name() == 'ACTIVE'} ? 'askiya-al' : 'etkinlestir'">
+						<label class="sr-only" th:for="'reason-' + ${b.id()}">Gerekçe</label>
+						<input class="input" th:id="'reason-' + ${b.id()}" name="reason" required maxlength="300" placeholder="Gerekçe">
+						<button class="btn btn-sm" th:classappend="${b.status().name() == 'ACTIVE'} ? 'btn-danger' : 'btn-secondary'" type="submit"
+						        th:text="${b.status().name() == 'ACTIVE'} ? 'Askıya al' : 'Etkinleştir'">Askıya al</button>
+					</form>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+	</div>
+</main>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Müşteri saat ızgarasındaki tek hücre. Gerekli değişkenler: s (SlotView), ctx, me -->
+	<th:block th:fragment="slot(s)" th:with="t1=${@fmt.time(s.localStart())}, t2=${@fmt.time(s.localEnd())}, pr=${@fmt.money(s.price(), s.currency())}">
+		<form th:if="${s.available() and me != null}" class="slot-form" th:action="@{/rezervasyon}" method="post">
+			<input type="hidden" name="pitchId" th:value="${ctx.pitch().id}">
+			<input type="hidden" name="baslangic" th:value="${s.start()}">
+			<button type="submit" class="slot"
+			        th:aria-label="${t1} + ' ile ' + ${t2} + ' arası, ' + ${pr} + ', saati tut'">
+				<span><span class="s-time num" th:text="${@fmt.time(s.localStart())}">21:00</span> <span class="s-end num" th:text="'–' + ${@fmt.time(s.localEnd())}">–22:00</span></span>
+				<span class="s-price" th:text="${@fmt.moneyShort(s.price(), s.currency())}">1.900 ₺</span>
+			</button>
+		</form>
+		<a th:if="${s.available() and me == null}" class="slot"
+		   th:href="@{/sahalar/{id}/sec(id=${ctx.pitch().id}, baslangic=${s.start()})}"
+		   th:aria-label="${t1} + ' ile ' + ${t2} + ' arası, ' + ${pr}">
+			<span><span class="s-time num" th:text="${@fmt.time(s.localStart())}">21:00</span> <span class="s-end num" th:text="'–' + ${@fmt.time(s.localEnd())}">–22:00</span></span>
+			<span class="s-price" th:text="${@fmt.moneyShort(s.price(), s.currency())}">1.900 ₺</span>
+		</a>
+		<div th:unless="${s.available()}" class="slot is-off"
+		     th:classappend="${s.state().name() == 'BLOCKED'} ? 'is-blocked'"
+		     th:aria-label="${t1} + ', ' + ${s.state().label()}">
+			<span><span class="s-time num" th:text="${@fmt.time(s.localStart())}">20:00</span> <span class="s-end num" th:text="'–' + ${@fmt.time(s.localEnd())}">–21:00</span></span>
+			<span class="s-price" th:text="${s.state().label()}">Dolu</span>
+		</div>
+	</th:block>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Giriş · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<div class="auth">
+		<h1>Giriş yap</h1>
+		<div class="alert alert-error" role="alert" th:if="${param.hata}">E-posta veya parola hatalı.</div>
+		<div class="alert alert-error" role="alert" th:if="${param.kilitli}">Çok fazla hatalı deneme yapıldı. 15 dakika sonra tekrar deneyin.</div>
+		<div class="panel">
+			<form th:action="@{/giris}" method="post" novalidate>
+				<div class="field">
+					<label for="email">E-posta</label>
+					<input class="input" id="email" name="email" type="email" autocomplete="username" required autofocus>
+				</div>
+				<div class="field">
+					<label for="password">Parola</label>
+					<input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+				</div>
+				<button class="btn btn-primary btn-block" type="submit">Giriş yap</button>
+			</form>
+		</div>
+		<p class="small" style="margin-top:16px">Hesabınız yok mu? <a th:href="@{/kayit}">Kayıt olun</a></p>
+	</div>
+</main>
+</body>
+</html>

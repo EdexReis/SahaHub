@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'staff')}">
+<head><title th:text="${cal.branchName} + ' · Takvim · SahaHub'">Takvim · SahaHub</title></head>
+<body>
+<main id="main" class="staff-shell">
+	<div class="staff-main">
+		<!-- Araç çubuğu -->
+		<div class="cal-toolbar">
+			<div class="cal-title">
+				<p class="eyebrow truncate" th:text="${cal.businessName} + ' · ' + ${cal.role.label()}">İşletme · Resepsiyon</p>
+				<h1 class="truncate" th:if="${cal.mode.name() == 'DAY'}" th:text="${cal.branchName} + ' · ' + ${@fmt.dayMonth(cal.day)}">Şube · 1 Ekim Çarşamba</h1>
+				<h1 class="truncate" th:if="${cal.mode.name() == 'WEEK'}" th:text="${cal.branchName} + ' · ' + ${#temporals.format(cal.weekStart, 'd MMM')} + ' haftası'">Şube · hafta</h1>
+			</div>
+
+			<div class="branch-switch" th:if="${#lists.size(branches) > 1}">
+				<nav class="seg" aria-label="Şube seç">
+					<a th:each="b : ${branches}" th:href="@{/isletme/subeler/{id}/takvim(id=${b.id()}, tarih=${cal.day})}"
+					   th:text="${b.name()}" th:aria-current="${b.id() == cal.branchId} ? 'page'">Şube</a>
+				</nav>
+			</div>
+
+			<nav class="seg" aria-label="Görünüm">
+				<a th:href="@{/isletme/subeler/{id}/takvim(id=${cal.branchId}, tarih=${cal.day})}"
+				   th:aria-current="${cal.mode.name() == 'DAY'} ? 'page'">Gün</a>
+				<a th:href="@{/isletme/subeler/{id}/takvim(id=${cal.branchId}, tarih=${cal.day}, gorunum='hafta', saha=${cal.selectedPitchId})}"
+				   th:aria-current="${cal.mode.name() == 'WEEK'} ? 'page'">Hafta</a>
+			</nav>
+
+			<div class="date-nav" th:with="step=${cal.mode.name() == 'WEEK'} ? 7 : 1, view=${cal.mode.name() == 'WEEK'} ? 'hafta' : 'gun'">
+				<a class="icon-btn" th:href="@{/isletme/subeler/{id}/takvim(id=${cal.branchId}, tarih=${cal.day.minusDays(step)}, gorunum=${view}, saha=${cal.selectedPitchId})}"
+				   th:aria-label="${cal.mode.name() == 'WEEK'} ? 'Önceki hafta' : 'Önceki gün'">‹</a>
+				<form th:action="@{/isletme/subeler/{id}/takvim(id=${cal.branchId})}" method="get">
+					<input type="hidden" name="gorunum" th:value="${view}">
+					<input type="hidden" name="saha" th:if="${cal.selectedPitchId != null}" th:value="${cal.selectedPitchId}">
+					<label class="sr-only" for="cal-date">Tarih</label>
+					<input class="input num" id="cal-date" type="date" name="tarih" th:value="${cal.day}" data-autosubmit>
+					<noscript><button class="btn btn-secondary btn-sm" type="submit">Git</button></noscript>
+				</form>
+				<a class="icon-btn" th:href="@{/isletme/subeler/{id}/takvim(id=${cal.branchId}, tarih=${cal.day.plusDays(step)}, gorunum=${view}, saha=${cal.selectedPitchId})}"
+				   th:aria-label="${cal.mode.name() == 'WEEK'} ? 'Sonraki hafta' : 'Sonraki gün'">›</a>
+				<a class="btn btn-secondary btn-sm" th:href="@{/isletme/subeler/{id}/takvim(id=${cal.branchId}, gorunum=${view}, saha=${cal.selectedPitchId})}">Bugün</a>
+			</div>
+
+			<form th:if="${cal.mode.name() == 'WEEK'}" th:action="@{/isletme/subeler/{id}/takvim(id=${cal.branchId})}" method="get" style="margin:0">
+				<input type="hidden" name="gorunum" value="hafta">
+				<input type="hidden" name="tarih" th:value="${cal.day}">
+				<label class="sr-only" for="week-pitch">Saha</label>
+				<select class="select" id="week-pitch" name="saha" data-autosubmit style="min-height:36px;width:auto">
+					<option th:each="p : ${cal.pitches}" th:value="${p.id()}" th:text="${p.name()}" th:selected="${p.id() == cal.selectedPitchId}">Saha</option>
+				</select>
+			</form>
+
+			<div class="btn-row">
+				<a class="btn btn-primary btn-sm"
+				   th:href="@{/isletme/subeler/{id}/hizli-rezervasyon(id=${cal.branchId})}"
+				   th:hx-get="@{/isletme/subeler/{id}/hizli-rezervasyon(id=${cal.branchId})}"
+				   hx-target="#panel" hx-indicator="#panel">+ Hızlı rezervasyon</a>
+				<a class="btn btn-secondary btn-sm" th:if="${cal.canManageBlocks}"
+				   th:href="@{/isletme/subeler/{id}/kapatma(id=${cal.branchId}, tarih=${cal.day})}"
+				   th:hx-get="@{/isletme/subeler/{id}/kapatma(id=${cal.branchId}, tarih=${cal.day})}"
+				   hx-target="#panel" hx-indicator="#panel">Saha kapat</a>
+			</div>
+		</div>
+
+		<!-- Günün özeti: her sayı bir operasyon sorusuna cevap verir -->
+		<dl class="day-stats">
+			<div><dt>Rezervasyon</dt><dd class="num" th:text="${cal.summary.reservations()}">8</dd></div>
+			<div><dt>Geçici tutma</dt><dd class="num" th:text="${cal.summary.held()}">1</dd></div>
+			<div><dt>Gelen</dt><dd class="num" th:text="${cal.summary.checkedIn()}">2</dd></div>
+			<div><dt>Boş saat</dt><dd class="num" th:text="${cal.summary.freeSlots()}">5</dd></div>
+			<div><dt>Rezervasyon bedeli</dt><dd class="num" th:text="${@fmt.moneyShort(cal.summary.bookedAmount(), cal.summary.currency())}">12.000 ₺</dd></div>
+		</dl>
+
+		<div class="alert alert-info" th:if="${!cal.open and cal.mode.name() == 'DAY'}">Şube bu gün kapalı.</div>
+		<div class="empty" th:if="${#lists.isEmpty(cal.columns)}">
+			<p>Bu şubede aktif saha yok.</p>
+		</div>
+
+		<!-- Takvim ızgarası -->
+		<div class="cal-scroll" th:unless="${#lists.isEmpty(cal.columns)}" th:data-scroll-row="${cal.nowRow != null} ? ${cal.nowRow} : 1"
+		     role="region" aria-label="Saha takvimi" tabindex="0">
+			<div class="cal" th:style="|--cols:${#lists.size(cal.columns)};--rows:${cal.rowCount}|">
+				<div class="cal-head corner"><span class="sr-only">Saat</span></div>
+				<div class="cal-head" th:each="c : ${cal.columns}" th:classappend="${cal.mode.name() == 'WEEK' and c.today()} ? 'is-today'">
+					<th:block th:if="${cal.mode.name() == 'DAY'}">
+						<strong class="truncate" th:text="${c.title()}" th:title="${c.title()}">Saha 1</strong>
+						<span class="tiny" th:text="${c.subtitle()}">7+7 · Kapalı</span>
+					</th:block>
+					<a th:if="${cal.mode.name() == 'WEEK'}" th:href="@{/isletme/subeler/{id}/takvim(id=${cal.branchId}, tarih=${c.day()})}" style="text-decoration:none;color:inherit">
+						<strong th:text="${c.title()}">Pzt 29</strong>
+						<span class="tiny" th:text="${c.closed()} ? 'Kapalı' : 'Güne git'">Güne git</span>
+					</a>
+				</div>
+
+				<div class="cal-times" aria-hidden="true">
+					<span th:each="t : ${cal.timeLabels}" th:text="${t.text()}" th:style="|grid-row:${t.row()} / span 4|">18:00</span>
+				</div>
+
+				<div class="cal-col" th:each="c : ${cal.columns}" th:classappend="${c.closed()} ? 'is-closed'">
+					<div class="cal-now" th:if="${cal.nowRow != null and (cal.mode.name() == 'DAY' or c.today())}"
+					     th:style="|grid-row:${cal.nowRow}|" aria-hidden="true"></div>
+					<th:block th:each="it : ${c.items()}">
+						<a th:if="${it.kind().name() == 'RESERVATION'}" class="ev"
+						   th:classappend="${'ev-' + it.status().name() + (it.compact() ? ' compact' : '') + (it.checkedIn() ? ' checked-in' : '')}"
+						   th:href="@{/isletme/rezervasyonlar/{c}(c=${it.code()})}"
+						   th:hx-get="@{/isletme/rezervasyonlar/{c}(c=${it.code()})}" th:aria-label="${c.title()} + ', ' + ${it.subtitle()} + ', ' + ${it.title()} + ', ' + ${it.status().label()} + (${it.checkedIn()} ? ', geldi' : '')" th:aria-current="${r != null and r.code() == it.code()} ? 'true'"
+						   hx-target="#panel" hx-indicator="#panel"
+						   th:style="|grid-row:${it.rowStart()} / span ${it.rowSpan()}|">
+							<span class="ev-sub" th:text="${it.subtitle()}">21:00–22:00</span>
+							<span class="ev-title truncate" th:text="${it.title()}" th:title="${it.title()}">Ali Vural</span>
+							<span class="ev-flag" th:if="${!it.compact() and it.status().name() == 'HELD'}">Geçici tutma</span>
+							<span class="ev-flag" th:if="${!it.compact() and it.checkedIn()}">✓ Geldi</span>
+							<span class="ev-flag" th:if="${!it.compact() and it.status().name() == 'NO_SHOW'}">Gelmedi</span>
+						</a>
+						<div th:if="${it.kind().name() == 'BUFFER'}" class="ev ev-buffer" aria-hidden="true"
+						     th:style="|grid-row:${it.rowStart()} / span ${it.rowSpan()}|">hazırlık</div>
+						<div th:if="${it.kind().name() == 'BLOCK'}" class="ev ev-block" th:classappend="${it.compact()} ? 'compact'"
+						     th:style="|grid-row:${it.rowStart()} / span ${it.rowSpan()}|"
+						     th:aria-label="${c.title()} + ', kapalı: ' + ${it.title()} + ', ' + ${it.subtitle()}">
+							<span class="ev-title truncate" th:text="${it.title()}">Bakım</span>
+							<span class="ev-sub truncate" th:text="${it.subtitle()}">Çim fırçalama</span>
+							<form th:if="${cal.canManageBlocks and !it.compact()}" th:action="@{/isletme/kapatmalar/{id}/kaldir(id=${it.blockId()})}" method="post"
+							      data-confirm="Kapatmayı kaldırmak istiyor musunuz? Saat yeniden rezervasyona açılır." style="margin-top:auto">
+								<input type="hidden" name="branchId" th:value="${cal.branchId}">
+								<input type="hidden" name="tarih" th:value="${cal.day}">
+								<button class="btn btn-text btn-sm" type="submit" style="min-height:28px;padding:0">Kaldır</button>
+							</form>
+						</div>
+						<a th:if="${it.kind().name() == 'FREE'}" class="ev ev-free"
+						   th:href="@{/isletme/subeler/{id}/hizli-rezervasyon(id=${cal.branchId}, saha=${it.pitchId()}, baslangic=${it.start()})}"
+						   th:hx-get="@{/isletme/subeler/{id}/hizli-rezervasyon(id=${cal.branchId}, saha=${it.pitchId()}, baslangic=${it.start()})}" th:aria-label="${c.title()} + ', ' + ${it.subtitle()} + ' boş, rezervasyon ekle'"
+						   hx-target="#panel" hx-indicator="#panel"
+						   th:style="|grid-row:${it.rowStart()} / span ${it.rowSpan()}|">
+							<span class="ev-title">Boş</span><span class="ev-sub" th:text="${it.subtitle()}">21:00–22:00</span>
+						</a>
+					</th:block>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Yan panel: seçili rezervasyon / hızlı rezervasyon / saha kapatma / sıradaki maçlar -->
+	<aside id="panel" class="staff-panel" aria-label="Ayrıntı paneli"
+	       th:classappend="${r != null or panel != null} ? 'is-sheet'">
+		<th:block th:if="${r != null}" th:insert="~{staff/panels :: reservation}"/>
+		<th:block th:if="${r == null and panel == 'quick-booking'}" th:insert="~{staff/panels :: quick-booking}"/>
+		<th:block th:if="${r == null and panel == 'block'}" th:insert="~{staff/panels :: block}"/>
+		<th:block th:if="${r == null and panel == null}">
+			<div class="panel-head"><h2>Sıradaki maçlar</h2></div>
+			<ul class="upcoming" th:if="${!#lists.isEmpty(cal.upcoming)}">
+				<li th:each="u : ${cal.upcoming}">
+					<span class="num" th:text="${@fmt.time(u.start())}">21:00</span>
+					<span style="min-width:0">
+						<a class="truncate" style="display:block;font-weight:600" th:href="@{/isletme/rezervasyonlar/{c}(c=${u.code()})}"
+						   th:hx-get="@{/isletme/rezervasyonlar/{c}(c=${u.code()})}" hx-target="#panel" hx-indicator="#panel"
+						   th:text="${u.customerName()}" th:title="${u.customerName()}">Ali Vural</a>
+						<span class="tiny muted" th:text="${u.pitchName()} + (${u.checkedIn()} ? ' · Geldi' : '') + (${u.status().name() == 'HELD'} ? ' · Geçici tutma' : '')">Saha 1</span>
+					</span>
+				</li>
+			</ul>
+			<p class="small muted" th:if="${#lists.isEmpty(cal.upcoming) and cal.mode.name() == 'DAY'}">Bu gün için sırada maç yok.</p>
+			<p class="small muted" th:if="${cal.mode.name() == 'WEEK'}">Haftalık görünümde bir rezervasyona tıklayın.</p>
+			<div class="panel-section">
+				<h3>Takvim işaretleri</h3>
+				<ul class="marks">
+					<li><i class="m-free" aria-hidden="true"></i><span>Boş saat: tıklayınca hızlı rezervasyon açılır</span></li>
+					<li><i class="m-ok" aria-hidden="true"></i><span>Onaylı rezervasyon</span></li>
+					<li><i class="m-held" aria-hidden="true"></i><span>Geçici tutma: müşteri henüz onaylamadı</span></li>
+					<li><i class="m-block" aria-hidden="true"></i><span>Bakım/etkinlik kapatması veya hazırlık süresi</span></li>
+				</ul>
+			</div>
+		</th:block>
+	</aside>
+</main>
+</body>
+</html>

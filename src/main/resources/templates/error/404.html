@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Sayfa bulunamadı · SahaHub</title></head>
+<body>
+<main id="main" class="page page-narrow">
+	<p class="eyebrow">Hata 404</p>
+	<h1>Sayfa bulunamadı</h1>
+	<p th:text="${message != null and '404' == '404'} ? ${message} : 'Aradığınız kayıt yok ya da görüntüleme izniniz yok.'">Aradığınız kayıt yok ya da görüntüleme izniniz yok.</p>
+	<p class="small muted" th:if="${requestId != null}">Takip kodu: <code th:text="${requestId}">abc</code></p>
+	<a class="btn btn-secondary" th:href="@{/}">Ana sayfaya dön</a>
+</main>
+</body>
+</html>

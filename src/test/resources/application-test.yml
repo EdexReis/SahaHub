@@ -1,0 +1,10 @@
+# Testler: zamanlanmis gorev kapali (testler servisi dogrudan cagirir), demo veri yok.
+sahahub:
+  booking:
+    expiry-job-enabled: false
+  demo-data: false
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false

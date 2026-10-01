@@ -1,0 +1,121 @@
+# SahaHub
+
+Halı saha rezervasyon ve işletme yönetim sistemi. Java 25 + Spring Boot 4.1 + Thymeleaf + PostgreSQL.
+
+> **Durum (1 Ekim 2026):** Aşama 1–2 tamamlandı: kimlik, işletme izolasyonu, müşteri rezervasyonu, personel
+> takvimi. Ödeme, kasa, düzenli rezervasyon, bildirim, takım, turnuva ve raporlar **henüz yok**.
+> Ayrıntı: [PROGRESS.md](PROGRESS.md). Gerçek ödeme sağlayıcısı, SMS veya e-posta entegrasyonu **yoktur**.
+
+## Neler çalışıyor?
+
+| Kim | Ne yapabilir |
+|---|---|
+| Müşteri | Kayıt/giriş, saha listesi (şehir süzgeci), saha ayrıntısı, 14 günlük gün şeridi, uygun saatler ve fiyatı, saati 10 dk tutma, fiyat kalemleri, onaylama, rezervasyonlarım (yaklaşan / geçmiş), kurala uygun iptal |
+| Resepsiyon | Şube takvimi (gün: sahalar yan yana, hafta: tek saha), boş saate tıklayıp hızlı rezervasyon (hesabı olmayan misafir dahil), taşıma, geldi / tamamlandı / gelmedi, gerekçeli iptal |
+| Şube yöneticisi | Resepsiyonun yaptıkları + saha kapatma (bakım/etkinlik) |
+| İşletme sahibi | İşletmenin tüm şubelerinde yukarıdakilerin hepsi |
+| Platform yöneticisi | İşletmeleri listeleme, gerekçeyle askıya alma/etkinleştirme (denetim kaydına yazılır) |
+
+## Gereksinimler
+
+| Araç | Sürüm | Not |
+|---|---|---|
+| JDK | **25 (LTS)** | Spring Boot 4.1.1 Java 17–26 destekler. **JDK 27 desteklenmez.** Bilgisayarınızda `C:\Program Files\Java\jdk-25.0.4.1` kurulu; JDK 27'yi kaldırmanız gerekmez. |
+| Docker Desktop | 29.x | PostgreSQL 18.6 ve Mailpit konteynerleri |
+| Maven | — | Kurmanız gerekmez; proje Maven Wrapper (`mvnw.cmd`, Maven 3.9.16) içerir |
+| Git | herhangi | |
+
+## Windows PowerShell ile çalıştırma
+
+```powershell
+# 1) Bu oturum için JDK 25'i seç (JDK 27 kurulu kalır)
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-25.0.4.1"
+
+# 2) Ortam dosyasını oluştur ve parolayı değiştir
+Copy-Item .env.example .env
+notepad .env
+
+# 3) PostgreSQL ve Mailpit'i başlat (Docker Desktop açık olmalı)
+docker compose up -d
+
+# 4) Uygulamayı geliştirme profiliyle başlat (demo veri otomatik oluşur)
+$env:SPRING_PROFILES_ACTIVE = "dev"
+.\mvnw.cmd spring-boot:run
+```
+
+Tarayıcıda: <http://localhost:8080>. Durdurmak için `Ctrl+C`; veritabanını durdurmak için `docker compose down`.
+
+JDK 25'i kalıcı varsayılan yapmak isterseniz (yeni açılan terminallerde geçerli olur):
+
+```powershell
+[Environment]::SetEnvironmentVariable("JAVA_HOME", "C:\Program Files\Java\jdk-25.0.4.1", "User")
+```
+
+### Demo hesaplar (yalnızca `dev` profili)
+
+Hepsinin parolası: `SahaHub.demo1`. Tüm kişi, işletme, adres ve telefonlar kurgusaldır.
+
+| E-posta | Rol |
+|---|---|
+| `musteri@sahahub.test` | Müşteri (Deniz Arslan) |
+| `kaptan@sahahub.test` | Müşteri (Emre Yıldız) |
+| `uzun.isim@sahahub.test` | Müşteri, uzun isim testi için |
+| `resepsiyon.kadikoy@yesilvadi.test` | Yeşilvadi · Kadıköy resepsiyon |
+| `mudur.kadikoy@yesilvadi.test` | Yeşilvadi · Kadıköy şube yöneticisi |
+| `sahip@yesilvadi.test` | Yeşilvadi işletme sahibi (2 şube) |
+| `sahip@kuzeyhali.test` | Kuzey Halı Saha sahibi (ayrı işletme) |
+| `admin@sahahub.test` | Platform yöneticisi |
+
+Demo veri `dev` profili dışında **hiç oluşturulmaz** (`DemoDataSeeder` sınıfı `@Profile("dev")`). Demo veriyi sıfırlamak için:
+
+```powershell
+docker compose exec postgres psql -U sahahub -d sahahub -c "drop schema public cascade; create schema public;"
+```
+
+## Eclipse ile çalıştırma
+
+1. **Window → Preferences → Java → Installed JREs → Add…** → `C:\Program Files\Java\jdk-25.0.4.1` ekleyin ve işaretleyin.
+   Eclipse sürümünüz Java 25'i tanımıyorsa Eclipse'i güncelleyin (2025-09 veya sonrası).
+2. **File → Import → Maven → Existing Maven Projects** → proje klasörünü seçin.
+3. `docker compose up -d` ile veritabanını başlatın (PowerShell'den).
+4. `SahaHubApplication.java` → sağ tık → **Run As → Java Application**. İlk çalıştırmadan sonra
+   **Run → Run Configurations → Environment** sekmesine `SPRING_PROFILES_ACTIVE = dev` ekleyin.
+   `.env` dosyası proje kök klasöründen otomatik okunur.
+5. Veritabanı kurmadan denemek için: `src/test/java/com/sahahub/TestSahaHubApplication.java` → Run As →
+   Java Application (Testcontainers ile geçici PostgreSQL açar; demo veri için yine `dev` profili gerekir).
+
+## Testler
+
+```powershell
+# Birim + entegrasyon testleri (Testcontainers ile gerçek PostgreSQL; Docker açık olmalı)
+.\mvnw.cmd test
+
+# Uçtan uca tarayıcı testleri (Playwright). Yerel Edge ile, tarayıcı indirmeden:
+.\mvnw.cmd -Pe2e test "-De2e.channel=msedge"
+```
+
+E2E testleri ekran görüntülerini `target/screenshots/` altına telefon (390×844) ve masaüstü (1366×900)
+boyutlarında kaydeder. Son çalıştırma sonuçları için [PROGRESS.md](PROGRESS.md).
+
+## Belgeler
+
+| Belge | İçerik |
+|---|---|
+| [PROGRESS.md](PROGRESS.md) | Güncel durum, kararlar, sonraki iş |
+| [DESIGN.md](DESIGN.md) | Arayüz tasarım kararları |
+| [docs/MIMARI.md](docs/MIMARI.md) | Modüller, katmanlar, çakışma güvencesi, ER diyagramı |
+| [docs/YETKI_MATRISI.md](docs/YETKI_MATRISI.md) | Rol / izin matrisi |
+| [docs/DURUM_GECISLERI.md](docs/DURUM_GECISLERI.md) | Rezervasyon durum makinesi, fiyat ve iptal kuralları |
+| [docs/YEDEKLEME.md](docs/YEDEKLEME.md) | Yedekleme ve geri yükleme |
+| [docs/DEMO_SENARYOSU.md](docs/DEMO_SENARYOSU.md) | Adım adım deneme senaryosu |
+| [LEARNING_GUIDE_TR.md](LEARNING_GUIDE_TR.md) | Projeyi öğrenmek için rehber |
+| [CV_PROJECT_TR.md](CV_PROJECT_TR.md) | CV metni ve mülakat soruları |
+
+## Bilinen eksikler ve gerçek/demo ayrımı
+
+- **Ödeme yok.** Arayüzde "Bu sürümde çevrim içi ödeme yoktur" yazar. Kart bilgisi alınmaz/saklanmaz.
+- **E-posta/SMS yok.** Mailpit konteyneri hazır ama uygulama henüz e-posta göndermiyor.
+- Saha, fiyat, çalışma saati ve personel **yönetim ekranları yok**; bu veriler şimdilik demo veriyle gelir.
+- Parola sıfırlama yok.
+- Giriş hız sınırı bellekte tutulur (tek sunucu için yeterli).
+- CI iş akışı (`.github/workflows/ci.yml`) yazıldı ama bir GitHub deposunda **henüz çalıştırılmadı**.
