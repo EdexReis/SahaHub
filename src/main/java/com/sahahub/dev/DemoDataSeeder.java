@@ -59,6 +59,8 @@ import com.sahahub.community.domain.ListingApplication;
 import com.sahahub.community.domain.ListingApplicationRepository;
 import com.sahahub.community.domain.ListingRepository;
 import com.sahahub.community.domain.Team;
+import com.sahahub.community.domain.TeamMatch;
+import com.sahahub.community.domain.TeamMatchRepository;
 import com.sahahub.community.domain.TeamMember;
 import com.sahahub.community.domain.TeamMemberRepository;
 import com.sahahub.community.domain.TeamRepository;
@@ -138,6 +140,7 @@ class DemoDataSeeder implements ApplicationRunner {
 	private final TournamentEntryRepository entries;
 	private final TournamentMatchRepository matches;
 	private final PitchPhotoService photos;
+	private final TeamMatchRepository teamMatches;
 
 	DemoDataSeeder(TransactionTemplate tx, PasswordEncoder encoder, Clock clock, AppUserRepository users,
 			StaffMembershipRepository memberships, BusinessRepository businesses, BranchRepository branches,
@@ -149,7 +152,9 @@ class DemoDataSeeder implements ApplicationRunner {
 			ReservationSeriesRepository seriesRepo, WaitlistRepository waitlist, NotificationWriter notifications,
 			TeamRepository teams, TeamMemberRepository teamMembers, ListingRepository listings,
 			ListingApplicationRepository applications, TournamentRepository tournaments,
-			TournamentEntryRepository entries, TournamentMatchRepository matches, PitchPhotoService photos) {
+			TournamentEntryRepository entries, TournamentMatchRepository matches, PitchPhotoService photos,
+			TeamMatchRepository teamMatches) {
+		this.teamMatches = teamMatches;
 		this.photos = photos;
 		this.tx = tx;
 		this.encoder = encoder;
@@ -367,8 +372,10 @@ class DemoDataSeeder implements ApplicationRunner {
 		notifications.write(new NotificationWriter.Recipient(captain.getId(), captain.getEmail(), captain.getPhone(),
 				true, true), "SERIES_CREATED", "Düzenli rezervasyonunuz oluşturuldu",
 				"Saha 2 · Açık · Kadıköy Şubesi · her hafta 19:00 · 6 maç", null, "demo:series:" + series.getId());
-		Reservation firstOfSeries = reservations.findBySeriesIdOrderBySeriesIndex(series.getId()).getFirst();
-		seedCommunity(captain, customer, longName, firstOfSeries, today, now);
+		List<Reservation> seriesMatches = reservations.findBySeriesIdOrderBySeriesIndex(series.getId());
+		Reservation firstOfSeries = seriesMatches.getFirst();
+		Team eagles = seedCommunity(captain, customer, longName, firstOfSeries, today, now);
+		seedTeamMatches(eagles, captain, customer, longName, seriesMatches.get(1), today, now);
 		seedLeague(yesil, kadikoy, k3, manager1, today, now);
 		seedCup(kuzey, cankaya, c1, owner2, today, now);
 		// Kurgusal saha çizimleri (gerçek fotoğraf değil); yükleme ile aynı doğrulamadan geçer
@@ -384,9 +391,10 @@ class DemoDataSeeder implements ApplicationRunner {
 	}
 
 	/** Aşama 5: iki takım, bir rakip ilanı (rezervasyona bağlı) ve bir oyuncu ilanı (bekleyen başvurulu). */
-	private void seedCommunity(AppUser captain, AppUser customer, AppUser longName, Reservation captainsMatch,
+	private Team seedCommunity(AppUser captain, AppUser customer, AppUser longName, Reservation captainsMatch,
 			LocalDate today, Instant now) {
 		Team eagles = teams.save(new Team("Kadıköy Kartalları", "İstanbul", "KARTAL2026", now));
+		eagles.describe("Her pazar akşamı oynayan kurgusal mahalle takımı. Kırmızı formalı.");
 		teamMembers.save(new TeamMember(eagles.getId(), captain.getId(), TeamMember.Role.CAPTAIN, now));
 		teamMembers.save(new TeamMember(eagles.getId(), customer.getId(), TeamMember.Role.MEMBER, now));
 		teamMembers.save(new TeamMember(eagles.getId(), longName.getId(), TeamMember.Role.MEMBER, now));
@@ -401,6 +409,25 @@ class DemoDataSeeder implements ApplicationRunner {
 				"İstanbul", "Kadıköy", playAt, 2, Listing.Level.CASUAL,
 				"Bir kaleci ve bir defans oyuncusu arıyoruz.", playAt, now));
 		applications.save(new ListingApplication(need.getId(), longName.getId(), null, "Defansta oynayabilirim.", now));
+		return eagles;
+	}
+
+	/** Takım maçları: Emre'nin seri rezervasyonundan yaklaşan maç (yanıtlarıyla) ve skorlu bir geçmiş maç. */
+	private void seedTeamMatches(Team team, AppUser captain, AppUser customer, AppUser longName, Reservation next,
+			LocalDate today, Instant now) {
+		TeamMatch upcoming = teamMatches.save(new TeamMatch(team.getId(), next.getId(), next.getStartsAt(),
+				"Saha 2 · Açık · Kadıköy Şubesi", "Moda Şimşekleri", "Formalar kırmızı.", captain.getId(), now));
+		Instant past = today.minusDays(6).atTime(21, 0).atZone(IST).toInstant();
+		TeamMatch played = teamMatches.save(new TeamMatch(team.getId(), null, past, "Kurgusal Spor Tesisi, Göztepe",
+				"Göztepe Gençlik", null, captain.getId(), now.minus(Duration.ofDays(10))));
+		played.recordScore(4, 2, now);
+		java.sql.Timestamp t = java.sql.Timestamp.from(now);
+		for (Object[] row : new Object[][] { { upcoming.getId(), captain.getId(), "GOING" },
+				{ upcoming.getId(), customer.getId(), "GOING" }, { upcoming.getId(), longName.getId(), "MAYBE" },
+				{ played.getId(), captain.getId(), "GOING" }, { played.getId(), customer.getId(), "GOING" } }) {
+			jdbc.update("insert into team_match_attendance (team_match_id, user_id, status, updated_at) values (?, ?, ?, ?)",
+					row[0], row[1], row[2], t);
+		}
 	}
 
 	/**

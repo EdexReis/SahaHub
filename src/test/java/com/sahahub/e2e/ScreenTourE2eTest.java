@@ -90,8 +90,9 @@ class ScreenTourE2eTest extends E2eTestBase {
 			assertThat(p.locator("#apply-title")).isVisible();
 			check(p, size, "31-listing-detail");
 			p.navigate("/takimlar");
-			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kadıköy Kartalları")).click();
+			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kadıköy Kartalları").setExact(true)).click();
 			assertThat(p.locator("#inv-link")).isVisible();
+			assertThat(p.locator("#maclar .tm-item").first()).containsText("geliyor");
 			check(p, size, "32-team");
 			p.navigate("/ligler");
 			p.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Kadıköy Kış Ligi 2026")).click();

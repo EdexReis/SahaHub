@@ -86,25 +86,29 @@ Kadıköy şubesi %30, Ataşehir 300 ₺ kapora ister; Çankaya kapora istemez. 
    fikstür (1. hafta oynandı, 2. hafta planlı).
 2. `kaptan@sahahub.test` → **Takımlarım → Kadıköy Kartalları**: davet bağlantısı, oyuncular, "Kaptan yap",
    "Çıkar". Bağlantıyı gizli pencerede açın → giriş yapmadan önizleme; `uzun.isim@sahahub.test` zaten üye.
-3. Aynı hesapla **İlanlar → Moda Şimşekleri** → mesaj yazıp **Başvur**.
-4. `musteri@sahahub.test` (Moda Şimşekleri kaptanı) → menüde bildirim → ilan sayfasında başvurular
+3. Takım sayfasında **Yaklaşan maçlar**: Emre'nin seri rezervasyonundan eklenmiş maç, "2 geliyor · 1 kararsız".
+   `musteri@sahahub.test` ile **Takımlarım → Yaklaşan maçlarım**'dan yanıt verin; kaptan kimin ne dediğini görür.
+   **Maç geçmişi**'nde skorlu maç. Kaptan **Maç ekle** ile başka tesisteki bir maçı ekler (üyelere bildirim),
+   **Takım bilgileri ve logo**'dan logo yükler.
+4. Aynı hesapla **İlanlar → Moda Şimşekleri** → mesaj yazıp **Başvur**.
+5. `musteri@sahahub.test` (Moda Şimşekleri kaptanı) → menüde bildirim → ilan sayfasında başvurular
    (Muhammed'in bekleyen başvurusu ve Emre'nin yeni başvurusu) → ikisini **Kabul et** → ilan "Doldu" olur;
    kabul edilenler telefon numaralarını görür.
-5. `musteri@sahahub.test` → **İlan ver**: takım seçin, "Rezervasyonunuz" listesinden bir maçınızı seçin
+6. `musteri@sahahub.test` → **İlan ver**: takım seçin, "Rezervasyonunuz" listesinden bir maçınızı seçin
    (zaman ve yer otomatik gelir).
-6. `mudur.kadikoy@yesilvadi.test` → İşletme paneli → **Ligler** → Kış Ligi:
+7. `mudur.kadikoy@yesilvadi.test` → İşletme paneli → **Ligler** → Kış Ligi:
    - 3. haftanın bir maçında **Planla** → dolu bir saat seçin (ör. Mini Saha'da bugün 19:00, Emre'nin rezervasyonu) → "saha dolu", maç
      planlanmaz.
    - **Haftalık planla**: ilk hafta için 2. haftadan 7 gün sonrası, Mini Saha, 20:00 → kalan 9 maç planlanır
      (bir maç doluysa hiçbiri planlanmaz).
    - Takvimde 6 gün sonrasına gidin: Mini Saha'da lacivert kenarlı **lig maçı** kutuları; o saatlere
      rezervasyon yapılamaz.
-7. **Ligler → Çankaya Bahar Kupası** (eleme): eşleşme ağacı, ilk turu bay geçen iki üst tohum ve penaltıyla
+8. **Ligler → Çankaya Bahar Kupası** (eleme): eşleşme ağacı, ilk turu bay geçen iki üst tohum ve penaltıyla
    biten çeyrek final. Yarı finaller 4 gün sonraya planlı; skor ancak maç başladıktan sonra girilebilir.
    Hemen denemek için `sahip@kuzeyhali.test` ile **Ligler → Yeni lig veya turnuva → Eleme** açın, 3 takım
    ekleyin, **Eşleşmeleri oluştur**, maçı birkaç dakika sonrasına planlayın; maç saati gelince skoru girin.
    Berabere girerseniz penaltı galibi istenir; maç bitince final kendiliğinden açılır.
-8. Resepsiyon hesabıyla **Ligler** sekmesi görünmez; `/isletme/subeler/1/ligler` adresi 403 verir. Maçlar
+9. Resepsiyon hesabıyla **Ligler** sekmesi görünmez; `/isletme/subeler/1/ligler` adresi 403 verir. Maçlar
    takvimde yine görünür.
 
 ## 8. Raporlar ve yönetim (Aşama 6)

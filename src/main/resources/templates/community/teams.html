@@ -6,13 +6,36 @@
 	<nav th:replace="~{fragments/communitynav :: tabs('takimlar')}"></nav>
 	<div class="page-head"><h1>Takımlarım</h1></div>
 
+	<section th:unless="${#lists.isEmpty(myMatches)}" aria-labelledby="mm-title" style="margin-bottom:24px">
+		<h2 id="mm-title" style="font-size:18px">Yaklaşan maçlarım</h2>
+		<ul class="res-list">
+			<li class="app-item" th:each="x : ${myMatches}">
+				<div style="min-width:0">
+					<h3 class="truncate"><a th:href="@{/takimlar/{id}(id=${x.teamId()})} + '#mac-' + ${x.id()}"><span th:text="${x.teamName()}">Takım</span><span class="sr-only"> maçı</span></a></h3>
+					<span class="small muted" th:text="${@fmt.at(x.startsAt())} + ' · ' + ${x.place()}">tarih · yer</span>
+					<span class="small" th:text="${x.going()} + ' kişi geliyor'">5 kişi geliyor</span>
+				</div>
+				<div class="rsvp rsvp-compact" role="group" aria-label="Katılım yanıtınız">
+					<form th:each="a : ${answers}" th:action="@{/takim-maclari/{mid}/yanit(mid=${x.id()})}" method="post">
+						<input type="hidden" name="takim" th:value="${x.teamId()}">
+						<input type="hidden" name="geri" value="liste">
+						<input type="hidden" name="cevap" th:value="${a}">
+						<button type="submit" class="btn btn-sm" th:classappend="${x.myAnswer() == a} ? 'btn-primary' : 'btn-secondary'"
+						        th:aria-pressed="${x.myAnswer() == a}" th:text="${a.label()}">Geliyorum</button>
+					</form>
+				</div>
+			</li>
+		</ul>
+	</section>
+
 	<div class="empty" th:if="${#lists.isEmpty(teams)}">
 		<p>Henüz bir takımda değilsiniz. Takım kurun ya da kaptanınızdan davet bağlantısı isteyin.</p>
 	</div>
 	<ul class="res-list" th:unless="${#lists.isEmpty(teams)}">
 		<li class="app-item" th:each="t : ${teams}">
 			<div style="min-width:0">
-				<h3 class="truncate"><a th:href="@{/takimlar/{id}(id=${t.id()})}" th:text="${t.name()}">Kadıköy Kartalları</a></h3>
+				<h3 class="truncate team-line"><img th:if="${t.hasLogo()}" class="team-logo-sm" th:src="@{/takim-logo/{id}(id=${t.id()})}" alt="" width="24" height="24">
+					<a th:href="@{/takimlar/{id}(id=${t.id()})}" th:text="${t.name()}">Kadıköy Kartalları</a></h3>
 				<span class="small muted" th:text="${t.city()} + ' · ' + ${t.memberCount()} + ' oyuncu'">İstanbul · 8 oyuncu</span>
 			</div>
 			<span class="status" th:classappend="${t.myRole().name() == 'CAPTAIN'} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${t.myRole().label()}">Kaptan</span>

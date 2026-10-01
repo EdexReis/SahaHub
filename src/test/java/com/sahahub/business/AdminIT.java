@@ -178,7 +178,7 @@ class AdminIT {
 		mvc.perform(multipart("/isletme/sahalar/{id}/fotograf", p)
 			.file(new MockMultipartFile("dosya", "kotu.png", "image/png", "<svg/>".getBytes()))
 			.with(user(v.manager())).with(csrf()))
-			.andExpect(flash().attribute("flashError", "Yalnızca JPEG veya PNG fotoğraf yüklenebilir."));
+			.andExpect(flash().attribute("flashError", "Yalnızca JPEG veya PNG görsel yüklenebilir."));
 		mvc.perform(multipart("/isletme/sahalar/{id}/fotograf", p)
 			.file(new MockMultipartFile("dosya", "saha.png", "image/png", png()))
 			.with(user(v.manager())).with(csrf()))

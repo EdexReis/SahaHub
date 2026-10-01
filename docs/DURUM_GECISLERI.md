@@ -134,6 +134,15 @@ değişmez.
 - Turnuva final oynanınca bitirilebilir; şampiyon ağacın son yerindeki galiptir.
 - Tur adları: Final, Yarı final, Çeyrek final, Son 16, daha öncesi "N. tur".
 
+## Takım maçı ve katılım
+
+- Takım maçı: `SCHEDULED → PLAYED` (kaptan skoru maç başladıktan sonra girer, düzeltebilir) veya
+  `SCHEDULED → CANCELLED` (kaptan iptal etti ya da bağlı rezervasyon iptal edildi; üyelere bildirim gider).
+- Kaptanın onaylı, ileri tarihli rezervasyonuna bağlanabilir (yer/saat oradan); aynı rezervasyon aynı takıma
+  ikinci kez eklenemez. Serbest maç gelecek 90 gün içinde olmalı.
+- Üye yanıtı: Geliyorum / Kararsızım / Gelmiyorum. Maç başlayana kadar değiştirilebilir; kişi başına tek yanıt.
+  Takımdan ayrılan üyenin yanıtı sayılmaz. "Yanıt vermedi" = aktif üye − yanıt verenler.
+
 ## Takım ve ilan
 
 - Takım: kuran kaptandır. Kaptan, başka üye varken ayrılamaz (önce kaptanlığı devreder); tek üye kaptan ayrılırsa

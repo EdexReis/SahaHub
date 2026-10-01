@@ -808,3 +808,25 @@ div.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .pen-pick { display: flex; flex-direction: column; gap: 2px; margin-left: 8px; }
 .pen-pick .select { min-height: 36px; padding: 4px 8px; font-size: 14px; }
 @media (max-width: 560px) { .score-form { flex-wrap: wrap; justify-content: center; } .pen-pick { margin: 6px 0 0; width: 100%; } }
+
+/* ------------------------------------------------------------ takım maçları ve katılım */
+.team-head { display: flex; gap: 12px; align-items: center; }
+.team-logo { width: 64px; height: 64px; object-fit: cover; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); flex: none; }
+.team-line { display: flex; align-items: center; gap: 8px; }
+.team-logo-sm { width: 24px; height: 24px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); flex: none; }
+.tm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.tm-item { display: flex; flex-direction: column; gap: 8px; }
+.tm-when { display: flex; flex-direction: column; gap: 2px; }
+.tm-when strong { font-size: 18px; }
+.tm-counts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; color: var(--ink-2); }
+.tm-c::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; background: var(--line-strong); }
+.tm-going::before { background: var(--green); }
+.tm-maybe::before { background: #D9A44A; }
+.tm-no::before { background: var(--red); }
+.rsvp { display: flex; flex-wrap: wrap; gap: 6px; }
+.rsvp form { margin: 0; }
+.rsvp .btn[aria-pressed="true"]::before { content: "✓ "; }
+.att-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.att-list li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.tm-score { font: 700 20px var(--font-num); }
+@media (max-width: 520px) { .rsvp-compact { width: 100%; } }

@@ -21,17 +21,25 @@ public class TeamController {
 	private final TeamService service;
 	private final CatalogService catalog;
 	private final String baseUrl;
+	private final com.sahahub.community.app.TeamMatchService teamMatches;
+	private final com.sahahub.community.app.ListingQueries listingQueries;
 
 	public TeamController(TeamService service, CatalogService catalog,
-			@Value("${sahahub.public-base-url:http://localhost:8080}") String baseUrl) {
+			@Value("${sahahub.public-base-url:http://localhost:8080}") String baseUrl,
+			com.sahahub.community.app.TeamMatchService teamMatches,
+			com.sahahub.community.app.ListingQueries listingQueries) {
 		this.service = service;
 		this.catalog = catalog;
 		this.baseUrl = baseUrl;
+		this.teamMatches = teamMatches;
+		this.listingQueries = listingQueries;
 	}
 
 	@GetMapping("/takimlar")
 	public String mine(@AuthenticationPrincipal AppUserPrincipal me, Model model) {
 		model.addAttribute("teams", service.myTeams(me));
+		model.addAttribute("myMatches", teamMatches.myUpcoming(me));
+		model.addAttribute("answers", com.sahahub.community.app.TeamMatchService.Answer.values());
 		model.addAttribute("cities", catalog.cities());
 		return "community/teams";
 	}
@@ -49,6 +57,11 @@ public class TeamController {
 		TeamService.TeamDetail t = service.detail(me, id);
 		model.addAttribute("t", t);
 		model.addAttribute("inviteUrl", t.inviteCode() == null ? null : baseUrl + "/davet/" + t.inviteCode());
+		model.addAttribute("m", teamMatches.forTeam(me, id));
+		model.addAttribute("answers", com.sahahub.community.app.TeamMatchService.Answer.values());
+		if (t.captain()) {
+			model.addAttribute("reservations", listingQueries.reservationOptions(me));
+		}
 		return "community/team";
 	}
 
@@ -90,6 +103,83 @@ public class TeamController {
 		service.disband(me, id);
 		redirect.addFlashAttribute("flashSuccess", "Takım dağıtıldı. Açık ilanları kapatıldı.");
 		return "redirect:/takimlar";
+	}
+
+	// ------------------------------------------------------------------ takım maçları ve katılım
+
+	@PostMapping("/takimlar/{id}/maclar")
+	public String createMatch(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long id,
+			@RequestParam(name = "rezervasyon", required = false) Long reservationId,
+			@RequestParam(name = "zaman", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startsAt,
+			@RequestParam(name = "yer", required = false) String place,
+			@RequestParam(name = "rakip", required = false) String opponent,
+			@RequestParam(name = "not", required = false) String note, RedirectAttributes redirect) {
+		teamMatches.create(me, id, reservationId, startsAt, place, opponent, note);
+		redirect.addFlashAttribute("flashSuccess", "Takım maçı eklendi; oyunculara bildirim gitti.");
+		return "redirect:/takimlar/" + id + "#maclar";
+	}
+
+	@PostMapping("/takim-maclari/{matchId}/yanit")
+	public String answer(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long matchId,
+			@RequestParam("cevap") com.sahahub.community.app.TeamMatchService.Answer answer,
+			@RequestParam(name = "takim") Long teamId, @RequestParam(name = "geri", defaultValue = "takim") String back,
+			RedirectAttributes redirect) {
+		teamMatches.answer(me, matchId, answer);
+		redirect.addFlashAttribute("flashSuccess", "Yanıtınız kaydedildi: " + answer.label() + ".");
+		return "liste".equals(back) ? "redirect:/takimlar" : "redirect:/takimlar/" + teamId + "#mac-" + matchId;
+	}
+
+	@PostMapping("/takim-maclari/{matchId}/iptal")
+	public String cancelMatch(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long matchId,
+			@RequestParam(name = "takim") Long teamId, RedirectAttributes redirect) {
+		teamMatches.cancel(me, matchId);
+		redirect.addFlashAttribute("flashSuccess", "Takım maçı iptal edildi; oyunculara bildirim gitti.");
+		return "redirect:/takimlar/" + teamId + "#maclar";
+	}
+
+	@PostMapping("/takim-maclari/{matchId}/skor")
+	public String score(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long matchId,
+			@RequestParam(name = "takim") Long teamId, @RequestParam(name = "biz", required = false) Integer ours,
+			@RequestParam(name = "rakip", required = false) Integer theirs, RedirectAttributes redirect) {
+		teamMatches.recordScore(me, matchId, ours, theirs);
+		redirect.addFlashAttribute("flashSuccess", "Skor kaydedildi.");
+		return "redirect:/takimlar/" + teamId + "#gecmis";
+	}
+
+	// ------------------------------------------------------------------ açıklama ve logo
+
+	@PostMapping("/takimlar/{id}/aciklama")
+	public String describe(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long id,
+			@RequestParam(name = "aciklama", required = false) String description, RedirectAttributes redirect) {
+		service.describe(me, id, description);
+		redirect.addFlashAttribute("flashSuccess", "Takım açıklaması kaydedildi.");
+		return "redirect:/takimlar/" + id;
+	}
+
+	@PostMapping("/takimlar/{id}/logo")
+	public String uploadLogo(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long id,
+			@RequestParam("dosya") org.springframework.web.multipart.MultipartFile file, RedirectAttributes redirect) {
+		service.uploadLogo(me, id, file);
+		redirect.addFlashAttribute("flashSuccess", "Logo yüklendi.");
+		return "redirect:/takimlar/" + id;
+	}
+
+	@PostMapping("/takimlar/{id}/logo/sil")
+	public String removeLogo(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable Long id,
+			RedirectAttributes redirect) {
+		service.removeLogo(me, id);
+		redirect.addFlashAttribute("flashSuccess", "Logo kaldırıldı.");
+		return "redirect:/takimlar/" + id;
+	}
+
+	@GetMapping("/takim-logo/{id}")
+	public org.springframework.http.ResponseEntity<byte[]> logo(@PathVariable Long id) {
+		return service.logo(id)
+			.map(b -> org.springframework.http.ResponseEntity.ok()
+				.contentType(org.springframework.http.MediaType.IMAGE_JPEG)
+				.cacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofHours(1)))
+				.body(b))
+			.orElseGet(() -> org.springframework.http.ResponseEntity.notFound().build());
 	}
 
 	@GetMapping("/davet/{code}")
