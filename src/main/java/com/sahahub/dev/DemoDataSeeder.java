@@ -141,6 +141,7 @@ class DemoDataSeeder implements ApplicationRunner {
 	private final TournamentMatchRepository matches;
 	private final PitchPhotoService photos;
 	private final TeamMatchRepository teamMatches;
+	private final com.sahahub.community.app.TeamService teamService;
 
 	DemoDataSeeder(TransactionTemplate tx, PasswordEncoder encoder, Clock clock, AppUserRepository users,
 			StaffMembershipRepository memberships, BusinessRepository businesses, BranchRepository branches,
@@ -153,8 +154,9 @@ class DemoDataSeeder implements ApplicationRunner {
 			TeamRepository teams, TeamMemberRepository teamMembers, ListingRepository listings,
 			ListingApplicationRepository applications, TournamentRepository tournaments,
 			TournamentEntryRepository entries, TournamentMatchRepository matches, PitchPhotoService photos,
-			TeamMatchRepository teamMatches) {
+			TeamMatchRepository teamMatches, com.sahahub.community.app.TeamService teamService) {
 		this.teamMatches = teamMatches;
+		this.teamService = teamService;
 		this.photos = photos;
 		this.tx = tx;
 		this.encoder = encoder;
@@ -400,6 +402,9 @@ class DemoDataSeeder implements ApplicationRunner {
 		teamMembers.save(new TeamMember(eagles.getId(), longName.getId(), TeamMember.Role.MEMBER, now));
 		Team bolts = teams.save(new Team("Moda Şimşekleri", "İstanbul", "SIMSEK2026", now));
 		teamMembers.save(new TeamMember(bolts.getId(), customer.getId(), TeamMember.Role.CAPTAIN, now));
+		// Kurgusal armalar (gerçek bir kulübün logosu değil); yüklemeyle aynı doğrulamadan geçer
+		teamService.attachLogoForDemo(eagles, crest(new java.awt.Color(0xB42318), "KK"));
+		teamService.attachLogoForDemo(bolts, crest(new java.awt.Color(0x1D4ED8), "MŞ"));
 
 		listings.save(new Listing(Listing.Kind.OPPONENT_WANTED, eagles.getId(), captain.getId(), captainsMatch.getId(),
 				"İstanbul", "Kadıköy", captainsMatch.getStartsAt(), null, Listing.Level.INTERMEDIATE,
@@ -513,6 +518,39 @@ class DemoDataSeeder implements ApplicationRunner {
 			occupancy.occupy(pitch.getId(), play, PitchOccupancy.Source.TOURNAMENT_MATCH, m.getId());
 		}
 		t.start(now.minus(Duration.ofDays(7)));
+	}
+
+	/** Basit kurgusal takım arması (PNG): renkli kalkan ve baş harfler. */
+	private static byte[] crest(java.awt.Color color, String initials) {
+		int s = 256;
+		java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(s, s, java.awt.image.BufferedImage.TYPE_INT_RGB);
+		java.awt.Graphics2D g = img.createGraphics();
+		g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		g.setColor(java.awt.Color.WHITE);
+		g.fillRect(0, 0, s, s);
+		java.awt.geom.Path2D shield = new java.awt.geom.Path2D.Double();
+		shield.moveTo(40, 30);
+		shield.lineTo(216, 30);
+		shield.lineTo(216, 130);
+		shield.quadTo(216, 205, 128, 236);
+		shield.quadTo(40, 205, 40, 130);
+		shield.closePath();
+		g.setColor(color);
+		g.fill(shield);
+		g.setColor(java.awt.Color.WHITE);
+		g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 72));
+		java.awt.FontMetrics fm = g.getFontMetrics();
+		g.drawString(initials, (s - fm.stringWidth(initials)) / 2, 150);
+		g.dispose();
+		java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+		try {
+			javax.imageio.ImageIO.write(img, "png", out);
+		}
+		catch (java.io.IOException ex) {
+			throw new java.io.UncheckedIOException(ex);
+		}
+		return out.toByteArray();
 	}
 
 	/** Kuşbakışı saha çizimi (PNG). Demo veride fotoğraf yerine kullanılır; kurgusaldır. */

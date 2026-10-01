@@ -106,6 +106,14 @@ public class Team {
 		return description;
 	}
 
+	/**
+	 * Logo bağlantısındaki sürüm (?v=…): logo değişince adres de değişir, tarayıcı önbelleğindeki eski logo
+	 * gösterilmez. Dağılmış takımda ya da logo yoksa null. Dosya adının kendisi dışarı verilmez.
+	 */
+	public String logoVersion() {
+		return logoPath == null || !isActive() ? null : Integer.toHexString(logoPath.hashCode());
+	}
+
 	public String getLogoPath() {
 		return logoPath;
 	}

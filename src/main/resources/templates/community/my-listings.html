@@ -12,7 +12,7 @@
 	<ul class="res-list" th:unless="${#lists.isEmpty(cards)}">
 		<li class="app-item" th:each="c : ${cards}">
 			<div style="min-width:0">
-				<h3 class="truncate"><a th:href="@{/ilanlar/{id}(id=${c.id()})}" th:text="${c.teamName()} + ' · ' + ${c.kind().label()}">Takım · Oyuncu arıyoruz</a></h3>
+				<h3 class="team-line"><img th:if="${c.team().hasLogo()}" class="team-logo-sm" th:src="@{/takim-logo/{id}(id=${c.team().id()}, v=${c.team().logoVersion()})}" alt="" width="24" height="24"><a class="truncate" th:href="@{/ilanlar/{id}(id=${c.id()})}" th:text="${c.teamName()} + ' · ' + ${c.kind().label()}">Takım · Oyuncu arıyoruz</a></h3>
 				<span class="small muted num" th:text="${c.playAt() != null} ? ${@fmt.at(c.playAt())} : 'Zaman belirtilmedi'">4 Eki</span>
 			</div>
 			<span class="status" th:classappend="${c.open()} ? 'status-CONFIRMED' : 'status-COMPLETED'" th:text="${c.statusLabel()}">Açık</span>
@@ -24,7 +24,7 @@
 	<ul class="res-list" th:unless="${#lists.isEmpty(applications)}">
 		<li class="app-item" th:each="a : ${applications}">
 			<div style="min-width:0">
-				<h3 class="truncate"><a th:href="@{/ilanlar/{id}(id=${a.listingId()})}" th:text="${a.teamName()} + ' · ' + ${a.kind().label()}">Takım</a></h3>
+				<h3 class="team-line"><img th:if="${a.team().hasLogo()}" class="team-logo-sm" th:src="@{/takim-logo/{id}(id=${a.team().id()}, v=${a.team().logoVersion()})}" alt="" width="24" height="24"><a class="truncate" th:href="@{/ilanlar/{id}(id=${a.listingId()})}" th:text="${a.teamName()} + ' · ' + ${a.kind().label()}">Takım</a></h3>
 				<span class="small muted num" th:text="${a.playAt() != null} ? ${@fmt.at(a.playAt())} : ${@fmt.at(a.createdAt())}">4 Eki</span>
 			</div>
 			<span class="status" th:classappend="${a.status().name() == 'ACCEPTED'} ? 'status-CONFIRMED' : (${a.status().name() == 'PENDING'} ? 'status-HELD' : 'status-COMPLETED')"

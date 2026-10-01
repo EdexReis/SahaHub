@@ -6,7 +6,7 @@
 	<p class="small" style="margin-bottom:8px"><a th:href="@{/takimlar}">← Takımlarım</a></p>
 	<div class="page-head">
 		<div class="team-head" style="min-width:0">
-			<img th:if="${t.hasLogo()}" class="team-logo" th:src="@{/takim-logo/{id}(id=${t.id()})}" alt="" width="64" height="64">
+			<img th:if="${t.hasLogo()}" class="team-logo" th:src="@{/takim-logo/{id}(id=${t.id()}, v=${t.logoVersion()})}" alt="" width="64" height="64">
 			<div style="min-width:0">
 				<p class="eyebrow" th:text="${t.city()}">İstanbul</p>
 				<h1 th:text="${t.name()}">Kadıköy Kartalları</h1>
