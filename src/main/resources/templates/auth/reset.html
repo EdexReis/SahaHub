@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(~{::title}, ~{::main}, 'customer')}">
+<head><title>Yeni parola · SahaHub</title></head>
+<body>
+<main id="main" class="page">
+	<div class="auth">
+		<h1>Yeni parola</h1>
+		<div class="panel" th:unless="${usable}">
+			<p>Bu bağlantının süresi dolmuş ya da daha önce kullanılmış.</p>
+			<a class="btn btn-primary" th:href="@{/parolami-unuttum}">Yeni bağlantı iste</a>
+		</div>
+		<div class="panel" th:if="${usable}">
+			<div class="alert alert-error" role="alert" th:if="${formError}" th:text="${formError}">Hata</div>
+			<form th:action="@{/parola-sifirla/{t}(t=${token})}" method="post">
+				<div class="field">
+					<label for="password">Yeni parola</label>
+					<input class="input" id="password" name="password" type="password" autocomplete="new-password" required minlength="10" maxlength="72" aria-describedby="pw-hint">
+					<p class="hint" id="pw-hint">En az 10 karakter.</p>
+				</div>
+				<div class="field">
+					<label for="repeat">Yeni parola (tekrar)</label>
+					<input class="input" id="repeat" name="repeat" type="password" autocomplete="new-password" required minlength="10" maxlength="72">
+				</div>
+				<button class="btn btn-primary btn-block" type="submit">Parolayı değiştir</button>
+			</form>
+		</div>
+	</div>
+</main>
+</body>
+</html>

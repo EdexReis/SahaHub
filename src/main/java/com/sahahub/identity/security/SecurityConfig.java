@@ -26,6 +26,7 @@ public class SecurityConfig {
 		http
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/", "/sahalar", "/sahalar/**", "/api/sahalar/**", "/kayit", LOGIN_PATH, "/error",
+						"/parolami-unuttum", "/parola-sifirla/*",
 						"/webhooks/**",
 						"/css/**", "/js/**", "/vendor/**", "/fonts/**", "/img/**", "/favicon.svg",
 						"/actuator/health")

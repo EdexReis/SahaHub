@@ -78,6 +78,11 @@ public class AppUser {
 		return notifySms;
 	}
 
+	/** Parola sıfırlamada yeni özet (hash) yazılır; düz parola hiçbir yerde tutulmaz. */
+	public void changePasswordHash(String passwordHash) {
+		this.passwordHash = passwordHash;
+	}
+
 	public void grantPlatformAdmin() {
 		this.platformAdmin = true;
 	}
